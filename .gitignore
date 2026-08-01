@@ -1,0 +1,25 @@
+# Node / Next.js
+node_modules/
+web/.next/
+web/out/
+web/.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# Python worker
+__pycache__/
+*.py[cod]
+worker/.venv/
+.venv/
+*.egg-info/
+
+# Env / secrets (server-side only — never commit)
+.env
+.env.*
+!.env.example
+
+# Playwright
+worker/ms-playwright/
+
+# OS / editor
+.DS_Store
