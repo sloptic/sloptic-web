@@ -56,3 +56,9 @@ alter table public.grades      enable row level security;
 alter table public.results     enable row level security;
 alter table public.rate_limits enable row level security;
 -- No policies created on purpose: only the service role (used server-side) bypasses RLS.
+
+-- The web API talks to these via PostgREST as service_role. service_role bypasses RLS but still needs
+-- table privileges (Supabase auto-grants only for objects created through its own migration flow, not
+-- for tables created over a raw pooler connection). Grant ONLY service_role: anon/authenticated get
+-- nothing, and RLS-with-no-policies would block them anyway. The worker connects as postgres directly.
+grant select, insert, update, delete on public.grades, public.results, public.rate_limits to service_role;

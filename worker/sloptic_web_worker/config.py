@@ -1,9 +1,18 @@
-"""Worker configuration, read from the environment (.env in dev)."""
+"""Worker configuration, read from the environment.
+
+In dev, values come from the monorepo ROOT .env (one file for both packages). A worker/.env, if present,
+takes precedence for local overrides. In production, real environment variables win over both.
+"""
 
 import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 
-load_dotenv()
+# config.py -> sloptic_web_worker -> worker -> repo root
+_ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(_ROOT / "worker" / ".env")   # optional local override, loaded first (dotenv won't clobber)
+load_dotenv(_ROOT / ".env")              # the shared root .env
 
 
 def _require(name: str) -> str:
