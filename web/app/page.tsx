@@ -418,6 +418,22 @@ export default function Home() {
           </a>
         </div>
       </section>
+
+      <section className="section" id="name">
+        <div className="definition">
+          <p className="definition-word">
+            sloptic <span className="definition-pron">/ˈslɒp.tɪk/</span>{" "}
+            <span className="definition-pos">noun</span>
+          </p>
+          <p className="definition-body">
+            A coinage from <b>slop</b>, Merriam-Webster&apos;s word of the year for 2025 for the
+            low-effort output that generative AI now produces in bulk, and <b>optic</b>, an instrument
+            for bringing something into focus. The apparatus by which slop of the software kind, the
+            app that ships functional but unhardened, is resolved into a single comparable number,
+            serenely indifferent to whatever it was meant to be.
+          </p>
+        </div>
+      </section>
     </>
   );
 }

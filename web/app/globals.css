@@ -1045,13 +1045,18 @@ section.report h2 {
   font-weight: 600;
   margin: 0 0 0.5rem;
 }
+.definition-pron {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
 .definition-pos {
   font-family: var(--font-sans);
   font-style: italic;
   font-weight: 400;
   font-size: 0.9rem;
   color: var(--muted);
-  margin-left: 0.35rem;
 }
 .definition-body {
   margin: 0;

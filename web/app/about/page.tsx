@@ -37,7 +37,8 @@ export default function AboutPage() {
         <h2 className="section-head">The name</h2>
         <div className="definition">
           <p className="definition-word">
-            sloptic <span className="definition-pos">noun</span>
+            sloptic <span className="definition-pron">/ˈslɒp.tɪk/</span>{" "}
+            <span className="definition-pos">noun</span>
           </p>
           <p className="definition-body">
             From <b>slop</b>, Merriam-Webster&apos;s word of the year for 2025, the low-quality digital
