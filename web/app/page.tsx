@@ -16,7 +16,7 @@ const CHANNELS = [
     passive: 14,
     total: 57,
     blurb:
-      "Getting this wrong costs the people who trusted your app, not you. Sloptic looks at the defenses a browser expects you to set, secrets left sitting in the code you ship, and whether other sites can quietly read your data.",
+      "Getting this wrong costs the people who trusted your app, not you. Sloptic looks for missing defenses and secrets left in the code you ship.",
     open: [
       { name: "security headers", href: "https://owasp.org/www-project-secure-headers/" },
       {
@@ -69,7 +69,7 @@ const CHANNELS = [
     passive: 12,
     total: 22,
     blurb:
-      "An app a screen reader cannot operate is closed to the people who rely on one, and a dead link or a silent failure wastes everyone else's time. Sloptic checks the controls, the links, and whether what you shipped is a finished build.",
+      "An app a screen reader cannot operate is closed to the people who rely on one. Sloptic checks whether controls work and whether pages fail honestly.",
     open: [
       { name: "accessibility", href: "https://www.w3.org/WAI/standards-guidelines/wcag/" },
       { name: "broken links" },
@@ -101,7 +101,7 @@ const CHANNELS = [
     passive: 11,
     total: 12,
     blurb:
-      "Most people will not wait for a slow app, so Sloptic measures real load speed, how much it makes them download, and whether any of it is compressed or cached.",
+      "Most people will not wait for a slow app, so Sloptic measures real load speed and page weight.",
     open: [
       { name: "core web vitals", href: "https://web.dev/articles/vitals" },
       { name: "load time", href: "https://web.dev/articles/optimize-lcp" },
