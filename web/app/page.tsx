@@ -17,7 +17,6 @@ type Channel = {
   passive: number;
   total: number;
   blurb: string;
-  source: string;
   open: Check[];
   gated: Check[];
 };
@@ -29,9 +28,7 @@ const CHANNELS: Channel[] = [
     passive: 14,
     total: 57,
     blurb:
-      "Getting this wrong costs the people who trusted your app, not you. Sloptic looks for missing defenses and secrets left in the code you ship.",
-    source:
-      "The classes checked here are OWASP's, the reference the security industry uses for what goes wrong on the web.",
+      "Getting this wrong costs the people who trusted your app, not you. Sloptic looks for missing defenses and secrets left in the code you ship, following OWASP.",
     open: [
       { name: "security headers", href: "https://owasp.org/www-project-secure-headers/" },
       {
@@ -84,9 +81,7 @@ const CHANNELS: Channel[] = [
     passive: 12,
     total: 22,
     blurb:
-      "An app a screen reader cannot operate is closed to the people who rely on one. Sloptic checks whether controls work and whether pages fail honestly.",
-    source:
-      "Accessibility is judged by axe-core, Deque's open-source engine, against WCAG 2 levels A and AA.",
+      "An app a screen reader cannot operate is closed to the people who rely on one. Sloptic checks whether controls work and whether pages fail honestly, using axe-core against WCAG.",
     open: [
       { name: "accessibility", href: "https://www.w3.org/WAI/standards-guidelines/wcag/" },
       { name: "broken links" },
@@ -118,9 +113,7 @@ const CHANNELS: Channel[] = [
     passive: 11,
     total: 12,
     blurb:
-      "Most people will not wait for a slow app, so Sloptic measures real load speed and page weight.",
-    source:
-      "Speed is reported as Google's Core Web Vitals, sampled on the throttled mobile profile Lighthouse uses.",
+      "Most people will not wait for a slow app, so Sloptic measures real load speed and page weight as Google's Core Web Vitals.",
     open: [
       { name: "core web vitals", href: "https://web.dev/articles/vitals" },
       { name: "load time", href: "https://web.dev/articles/optimize-lcp" },
@@ -303,7 +296,6 @@ export default function Home() {
               {openCh === ch.id && (
                 <div className="channel-body">
                   <p className="channel-blurb">{ch.blurb}</p>
-                  <p className="channel-source">{ch.source}</p>
                   <p className="probe-group-label">Runs on any URL</p>
                   <ul className="probe-list">
                     {ch.open.map((p) => (
