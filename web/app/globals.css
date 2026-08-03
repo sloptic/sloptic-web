@@ -639,58 +639,80 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
-/* Flow (how it works) ---------------------------------------------------- */
-.flow {
-  margin-top: 4.5rem;
+/* What is Sloptic: prose left, flowchart right ---------------------------- */
+.what {
+  margin-top: 3.5rem;
   border-top: 1px solid var(--line);
   padding-top: 2.25rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: start;
 }
-.flow h2 {
-  font-family: var(--font-display);
-  font-size: clamp(1.5rem, 3.5vw, 2rem);
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  margin: 0 0 1.5rem;
+@media (max-width: 46rem) {
+  .what {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
 }
-.flow-steps {
-  display: flex;
-  align-items: stretch;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+.what-body .section-head {
+  margin-bottom: 1rem;
 }
-.flow-step {
-  flex: 1;
-  min-width: 14rem;
-  border: 1px solid var(--line);
-  padding: 1.1rem 1.25rem;
+.what-text {
+  margin: 0;
+  font-size: 1.08rem;
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+.what-text a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+/* the flowchart: stacked boxes joined by a ruled connector */
+.flowchart {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.flow-box {
+  border: 1px solid var(--line-strong);
   background: var(--surface);
+  padding: 1rem 1.15rem;
+  border-radius: var(--radius);
 }
-.flow-num {
+.flow-box .n {
   display: block;
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: var(--accent);
   letter-spacing: 0.05em;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
 }
-.flow-text {
+.flow-box p {
+  margin: 0;
   font-size: 0.98rem;
   line-height: 1.55;
   color: var(--ink-soft);
 }
-.flow-arrow {
-  display: flex;
-  align-items: center;
-  font-family: var(--font-mono);
-  font-size: 1.2rem;
-  color: var(--muted);
-  padding: 0 0.25rem;
+.flow-conn {
+  height: 1.6rem;
+  margin-left: 1.75rem;
+  border-left: 1px solid var(--line-strong);
+  position: relative;
 }
-@media (max-width: 42rem) {
-  .flow-arrow {
-    display: none;
-  }
+.flow-conn::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: -4px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--line-strong);
 }
+
 
 /* Pending ----------------------------------------------------------------- */
 .pending h1 {

@@ -80,7 +80,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <h4>understand</h4>
               <ul>
                 <li>
-                  <a href="/#how">How it works</a>
+                  <a href="/#what">What is Sloptic</a>
                 </li>
                 <li>
                   <a href="/#score">The score</a>

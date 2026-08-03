@@ -200,6 +200,44 @@ export default function Home() {
         )}
       </section>
 
+      <section className="what" id="what">
+        <div className="what-body">
+          <h2 className="section-head">What is Sloptic?</h2>
+          <p className="what-text">
+            Sloptic is a{" "}
+            <a
+              href="https://en.wikipedia.org/wiki/Black-box_testing"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              black box
+            </a>{" "}
+            web app grader. It checks the traits every app should get right no matter what it does in
+            terms of security, accessibility, quality, and performance. This property allows Sloptic to
+            compare and rank apps against each other based on these traits.
+          </p>
+        </div>
+
+        <ol className="flowchart">
+          <li className="flow-box">
+            <span className="n">01</span>
+            <p>Paste a URL. No setup needed.</p>
+          </li>
+          <li className="flow-conn" aria-hidden />
+          <li className="flow-box">
+            <span className="n">02</span>
+            <p>Sloptic opens it in a real browser and checks what any visitor sees.</p>
+          </li>
+          <li className="flow-conn" aria-hidden />
+          <li className="flow-box">
+            <span className="n">03</span>
+            <p>
+              You get one score with a breakdown on every issue found and what was tested.
+            </p>
+          </li>
+        </ol>
+      </section>
+
       <section className="channels" id="checks">
         <div className="channels-head">
           <h2>What it checks</h2>
@@ -314,34 +352,6 @@ export default function Home() {
               <span className="finding-cat">slow first response</span>
               <span className="finding-pen">+3</span>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="flow" id="how">
-        <h2>How it works</h2>
-        <div className="flow-steps">
-          <div className="flow-step">
-            <span className="flow-num">01</span>
-            <span className="flow-text">Paste a URL. No account, no code, no setup.</span>
-          </div>
-          <span className="flow-arrow" aria-hidden>
-            &rarr;
-          </span>
-          <div className="flow-step">
-            <span className="flow-num">02</span>
-            <span className="flow-text">
-              Sloptic opens it in a real browser and checks what any visitor sees.
-            </span>
-          </div>
-          <span className="flow-arrow" aria-hidden>
-            &rarr;
-          </span>
-          <div className="flow-step">
-            <span className="flow-num">03</span>
-            <span className="flow-text">
-              You get one score, the breakdown, every issue with evidence, and what was tested.
-            </span>
           </div>
         </div>
       </section>
