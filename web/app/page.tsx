@@ -246,9 +246,13 @@ export default function Home() {
           </a>
         </div>
         <p className="channels-intro">
-          The things every web app should get right, regardless of what it does. The other 54 checks
-          look for holes by sending real attack traffic, so they stay off until you{" "}
-          <a href="/verify">prove the site is yours</a>. Open an area to see both.
+          Sloptic checks the things every web app should get right, no matter what it does. Open an area
+          to see what gets checked.
+        </p>
+        <p className="channels-note">
+          Note that in anonymous mode, we only run a set of 37 <em>passive</em> checks, i.e. checks that
+          do not alter the site, send attack payloads, or go fishing for secrets. To run the other 54{" "}
+          <em>active</em> checks, <a href="/verify">prove the site is yours</a>.
         </p>
         <div className="channel-list">
           {CHANNELS.map((ch) => (

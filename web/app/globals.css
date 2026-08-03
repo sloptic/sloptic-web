@@ -312,7 +312,28 @@ a {
   font-size: 1.05rem;
   color: var(--ink-soft);
   max-width: 62ch;
+  margin: 0 0 1.25rem;
+}
+/* An aside, not fine print: same reading size, marked by a rule rather than shrunk. */
+.channels-note {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  max-width: 62ch;
   margin: 0 0 1.75rem;
+  padding-left: 1.1rem;
+  border-left: 2px solid var(--line-strong);
+}
+.channels-note em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--ink);
+}
+.channels-note a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
 }
 .channel-list {
   border-top: 1px solid var(--line);
