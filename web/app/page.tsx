@@ -16,7 +16,7 @@ const CHANNELS = [
     passive: 14,
     total: 57,
     blurb:
-      "The settings a browser expects, no secrets left in the code you ship, and no sharing rules that let other sites read your data.",
+      "Getting this wrong costs the people who trusted your app, not you. Sloptic looks at the defenses a browser expects you to set, secrets left sitting in the code you ship, and whether other sites can quietly read your data.",
     open: [
       { name: "security headers", href: "https://owasp.org/www-project-secure-headers/" },
       {
@@ -69,7 +69,7 @@ const CHANNELS = [
     passive: 12,
     total: 22,
     blurb:
-      "Buttons and forms a screen reader can use, links that go somewhere, pages that load instead of quietly failing, and a finished build rather than a development version left online.",
+      "An app a screen reader cannot operate is closed to the people who rely on one, and a dead link or a silent failure wastes everyone else's time. Sloptic checks the controls, the links, and whether what you shipped is a finished build.",
     open: [
       { name: "accessibility", href: "https://www.w3.org/WAI/standards-guidelines/wcag/" },
       { name: "broken links" },
@@ -101,7 +101,7 @@ const CHANNELS = [
     passive: 11,
     total: 12,
     blurb:
-      "Real load-speed measurements, how much it has to download, and whether it is compressed and cached. This is where apps built in a hurry slip most.",
+      "Most people will not wait for a slow app, so Sloptic measures real load speed, how much it makes them download, and whether any of it is compressed or cached.",
     open: [
       { name: "core web vitals", href: "https://web.dev/articles/vitals" },
       { name: "load time", href: "https://web.dev/articles/optimize-lcp" },
@@ -252,7 +252,7 @@ export default function Home() {
         <p className="channels-note">
           Note that in anonymous mode, we only run a set of 37 <em>passive</em> checks, i.e. checks that
           do not alter the site, send attack payloads, or go fishing for secrets. To run the other 54{" "}
-          <em>active</em> checks, <a href="/verify">prove the site is yours</a>.
+          <em>active</em> checks, log in and <a href="/verify">prove the site is yours</a>.
         </p>
         <div className="channel-list">
           {CHANNELS.map((ch) => (
