@@ -418,7 +418,16 @@ a {
   line-height: 1.6;
   color: var(--ink-soft);
   max-width: 60ch;
-  margin: 0 0 0.85rem;
+  margin: 0 0 0.5rem;
+}
+/* Where the checks come from. Attribution, so it sits quieter than the description
+   without shrinking into fine print. */
+.channel-source {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 60ch;
+  margin: 0 0 1rem;
 }
 .probe-group-label {
   font-family: var(--font-mono);
