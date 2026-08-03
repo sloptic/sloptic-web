@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Sloptic for organizers",
   description:
-    "Grade and rank every hackathon submission on the same scale, the same way for every team, whatever they built with.",
+    "Grade the web app entries in your hackathon on one objective scale, and give the cleanest build a prize of its own.",
 };
 
 export default function OrganizersPage() {
@@ -12,9 +12,9 @@ export default function OrganizersPage() {
       <div className="page-head">
         <h1>Sloptic for hackathon organizers</h1>
         <p className="page-lead">
-          Judging by hand means holding a hundred different apps in your head. Sloptic grades every
-          submission the same way and puts them on one scale, so how well each app holds up becomes a
-          number you can rank.
+          Judging by hand means holding a hundred different projects in your head. Sloptic takes one
+          part of that off you: it grades the web app entries the same way and puts them on one scale,
+          so whether an app holds up becomes a number instead of a hunch.
         </p>
       </div>
 
@@ -24,14 +24,15 @@ export default function OrganizersPage() {
           <div className="row2">
             <span className="term">One fair scale</span>
             <p className="desc">
-              Every entry graded the same way, whatever it was built with, so you can actually compare
-              them instead of comparing apples to oranges.
+              Every web app entry graded the same way, whatever it was built with, so you can compare
+              them on something other than which demo went smoothest.
             </p>
           </div>
           <div className="row2">
-            <span className="term">A ranked leaderboard</span>
+            <span className="term">A ranked board</span>
             <p className="desc">
-              Submissions sorted by score, with a breakdown by area and a short report for each team.
+              The gradeable entries sorted by score, with a breakdown by area and a short report for
+              each team.
             </p>
           </div>
           <div className="row2">
@@ -91,6 +92,41 @@ export default function OrganizersPage() {
         </p>
       </section>
 
+      <section className="section" id="prize">
+        <h2 className="section-head">Give it a prize of its own</h2>
+        <p className="section-intro">
+          Sloptic needs a running web app to look at. A hardware build, a trained model, a notebook, or
+          a mobile app gives it nothing to grade, and no hackathon is only web apps. That makes it a
+          poor instrument for one overall ranking and a very good one for a category prize.
+        </p>
+        <div className="rows">
+          <div className="row2">
+            <span className="term">Slopless Builder</span>
+            <p className="desc">
+              Award it to the web app entry with the lowest slop score. The criterion is published in
+              advance, applies identically to everyone competing for it, and needs no judge in the room
+              at midnight.
+            </p>
+          </div>
+          <div className="row2">
+            <span className="term">Why this category earns one</span>
+            <p className="desc">
+              A web app is the cheapest thing at a hackathon to generate and the easiest to make look
+              finished. That is exactly why the one that also holds up is worth singling out: it is the
+              part of the work no model volunteers to do.
+            </p>
+          </div>
+          <div className="row2">
+            <span className="term">It stays in its lane</span>
+            <p className="desc">
+              A category prize claims only what Sloptic actually measures. Nobody has to accept that the
+              cleanest build was the best project, and your main prizes stay where they belong, with
+              human judges.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section className="section" id="how">
         <h2 className="section-head">How it works</h2>
         <p className="section-intro">
@@ -107,15 +143,16 @@ export default function OrganizersPage() {
           <div className="row2">
             <span className="term">Pick how deep to go</span>
             <p className="desc">
-              A light grade needs nothing from teams and runs on every entry. A full grade adds the
-              deeper checks and asks each team to add a small verification file when they submit.
+              A light grade needs nothing from teams and runs on every app it can reach. A full grade
+              adds the deeper checks and asks each team to add a small verification file when they
+              submit.
             </p>
           </div>
           <div className="row2">
-            <span className="term">Grade everyone</span>
+            <span className="term">Grade the web apps</span>
             <p className="desc">
-              Sloptic confirms each submitted app really belongs to your event, then grades and ranks
-              the entries.
+              Sloptic confirms each submitted app belongs to your event, skips the entries with nothing
+              deployed to look at, and grades the rest.
             </p>
           </div>
         </div>
