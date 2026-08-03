@@ -73,6 +73,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <li>
                   <a href="/#sample">What you get back</a>
                 </li>
+                <li>
+                  <a href="/verify">Why only 37 checks</a>
+                </li>
               </ul>
             </div>
 

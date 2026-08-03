@@ -241,11 +241,14 @@ export default function Home() {
       <section className="channels" id="checks">
         <div className="channels-head">
           <h2>What it checks</h2>
-          <span className="channels-stat">37 of 91 run on any URL</span>
+          <a className="channels-stat" href="/verify">
+            37 of 91 run on any URL
+          </a>
         </div>
         <p className="channels-intro">
-          The things every web app should get right, regardless of what it does. Open an area to see 
-          what is covered and which parts need you to verify the site is yours.
+          The things every web app should get right, regardless of what it does. The other 54 checks
+          look for holes by sending real attack traffic, so they stay off until you{" "}
+          <a href="/verify">prove the site is yours</a>. Open an area to see both.
         </p>
         <div className="channel-list">
           {CHANNELS.map((ch) => (
@@ -403,15 +406,18 @@ export default function Home() {
           <div className="row2">
             <span className="term">Anyone</span>
             <p className="desc">
-              37 look-only checks run on any URL. They read only what your app already shows the public,
-              so they are safe to run on anything. This is most of what matters.
+              37 look-only checks on any URL, no account needed. They read what your app already shows
+              the public, so they are safe to point at anything. This is most of what the score is made
+              of.
             </p>
           </div>
           <div className="row2">
-            <span className="term">If it is your site</span>
+            <span className="term">Your own site</span>
             <p className="desc">
-              Prove you own the domain and Sloptic runs the full set, including the checks that actively
-              probe for holes, and ranks the result.
+              Sign in, then publish a token we give you at{" "}
+              <code>/.well-known/sloptic-verification.txt</code> on the site. Once we can fetch it back,
+              the other 54 checks run and the result gets ranked.{" "}
+              <a href="/verify">What verifying involves.</a>
             </p>
           </div>
           <div className="row2">
@@ -423,6 +429,9 @@ export default function Home() {
           </div>
         </div>
         <div className="cta-row">
+          <a className="button secondary" href="/verify">
+            Why only 37 checks
+          </a>
           <a className="button secondary" href="/methodology">
             How the grade works
           </a>

@@ -1055,6 +1055,21 @@ section.report h2 {
   border-color: var(--ink);
 }
 
+/* Inline code: token paths, DNS records, header names --------------------- */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 0.1em 0.35em;
+  word-break: break-all;
+}
+.row2 .desc code {
+  display: inline-block;
+  margin: 0.35rem 0;
+}
+
 /* Dictionary block (the name, on About) ---------------------------------- */
 .definition {
   border-left: 2px solid var(--accent);
