@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 
 // Real catalog groupings. `open` runs on any URL (look-only); `gated` needs domain verification
 // because those checks send test traffic. Counts match the grader: 37 of 91 are look-only.
+//
+// Each item may carry a link to the authority that defines it (MDN for the web platform, OWASP for
+// security, W3C for accessibility, web.dev for Core Web Vitals). Every URL here was checked. Items with
+// no single canonical source stay unlinked on purpose: a weak citation is worse than none.
 const CHANNELS = [
   {
     id: "security",
@@ -14,22 +18,49 @@ const CHANNELS = [
     blurb:
       "The settings a browser expects, no secrets left in the code you ship, and no sharing rules that let other sites read your data.",
     open: [
-      "security headers",
-      "secrets in the shipped code",
-      "exposed data",
-      "sharing rules (CORS)",
-      "mixed content",
-      "known-vulnerable dependencies",
+      { name: "security headers", href: "https://owasp.org/www-project-secure-headers/" },
+      {
+        name: "secrets in the shipped code",
+        href: "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html",
+      },
+      { name: "exposed data", href: "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/" },
+      {
+        name: "sharing rules (CORS)",
+        href: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS",
+      },
+      {
+        name: "mixed content",
+        href: "https://developer.mozilla.org/en-US/docs/Web/Security/Mixed_content",
+      },
+      {
+        name: "known-vulnerable dependencies",
+        href: "https://owasp.org/Top10/A06_2021-Vulnerable_and_Outdated_Components/",
+      },
     ],
     gated: [
-      "sql injection",
-      "cross-site scripting",
-      "login rate limiting",
-      "access control",
-      "session handling",
-      "file uploads",
-      "path traversal",
-      "open redirects",
+      {
+        name: "sql injection",
+        href: "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
+      },
+      { name: "cross-site scripting", href: "https://owasp.org/www-community/attacks/xss/" },
+      {
+        name: "login rate limiting",
+        href: "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html",
+      },
+      { name: "access control", href: "https://owasp.org/Top10/A01_2021-Broken_Access_Control/" },
+      {
+        name: "session handling",
+        href: "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html",
+      },
+      {
+        name: "file uploads",
+        href: "https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html",
+      },
+      { name: "path traversal", href: "https://owasp.org/www-community/attacks/Path_Traversal" },
+      {
+        name: "open redirects",
+        href: "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html",
+      },
     ],
   },
   {
@@ -40,15 +71,29 @@ const CHANNELS = [
     blurb:
       "Buttons and forms a screen reader can use, links that go somewhere, pages that load instead of quietly failing, and a finished build rather than a development version left online.",
     open: [
-      "accessibility",
-      "broken links",
-      "pages that fail quietly",
-      "console errors",
-      "content types",
-      "development build left online",
-      "honest navigation",
+      { name: "accessibility", href: "https://www.w3.org/WAI/standards-guidelines/wcag/" },
+      { name: "broken links" },
+      {
+        name: "pages that fail quietly",
+        href: "https://developers.google.com/search/docs/crawling-indexing/http-network-errors",
+      },
+      { name: "console errors" },
+      {
+        name: "content types",
+        href: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types",
+      },
+      { name: "development build left online" },
+      { name: "honest navigation" },
     ],
-    gated: ["crash resistance", "bad input handling", "data integrity", "dead controls"],
+    gated: [
+      { name: "crash resistance" },
+      {
+        name: "bad input handling",
+        href: "https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html",
+      },
+      { name: "data integrity" },
+      { name: "dead controls" },
+    ],
   },
   {
     id: "performance",
@@ -58,17 +103,41 @@ const CHANNELS = [
     blurb:
       "Real load-speed measurements, how much it has to download, and whether it is compressed and cached. This is where apps built in a hurry slip most.",
     open: [
-      "core web vitals",
-      "load time",
-      "time to first byte",
-      "page weight",
-      "request count",
-      "compression",
-      "caching",
+      { name: "core web vitals", href: "https://web.dev/articles/vitals" },
+      { name: "load time", href: "https://web.dev/articles/optimize-lcp" },
+      { name: "time to first byte", href: "https://web.dev/articles/ttfb" },
+      {
+        name: "page weight",
+        href: "https://developer.chrome.com/docs/lighthouse/performance/total-byte-weight",
+      },
+      { name: "request count" },
+      {
+        name: "compression",
+        href: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Compression",
+      },
+      { name: "caching", href: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching" },
     ],
-    gated: ["behavior under load"],
+    gated: [{ name: "behavior under load" }],
   },
 ];
+
+// One check. Links out to the authority that defines it when there is a canonical one.
+function ProbeItem({ name, href }: { name: string; href?: string }) {
+  return (
+    <li className="probe-item">
+      <span className="probe-id" aria-hidden>
+        +
+      </span>
+      {href ? (
+        <a href={href} target="_blank" rel="noopener noreferrer" className="probe-link">
+          {name}
+        </a>
+      ) : (
+        name
+      )}
+    </li>
+  );
+}
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -137,8 +206,8 @@ export default function Home() {
           <span className="channels-stat">37 of 91 run on any URL</span>
         </div>
         <p className="channels-intro">
-          The things every web app should get right, whatever it does. Open an area to see what is
-          covered, and which parts need you to verify the site is yours.
+          The things every web app should get right, regardless of what it does. Open an area to see 
+          what is covered and which parts need you to verify the site is yours.
         </p>
         <div className="channel-list">
           {CHANNELS.map((ch) => (
@@ -173,23 +242,13 @@ export default function Home() {
                   <p className="probe-group-label">Runs on any URL</p>
                   <ul className="probe-list">
                     {ch.open.map((p) => (
-                      <li key={p} className="probe-item">
-                        <span className="probe-id" aria-hidden>
-                          +
-                        </span>
-                        {p}
-                      </li>
+                      <ProbeItem key={p.name} name={p.name} href={p.href} />
                     ))}
                   </ul>
                   <p className="probe-group-label">Needs you to verify the site is yours</p>
                   <ul className="probe-list gated">
                     {ch.gated.map((p) => (
-                      <li key={p} className="probe-item">
-                        <span className="probe-id" aria-hidden>
-                          +
-                        </span>
-                        {p}
-                      </li>
+                      <ProbeItem key={p.name} name={p.name} href={p.href} />
                     ))}
                   </ul>
                 </div>

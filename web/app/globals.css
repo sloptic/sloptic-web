@@ -434,6 +434,16 @@ a {
 .probe-id {
   color: var(--accent);
 }
+.probe-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+.probe-link:hover {
+  text-decoration-color: var(--accent);
+  color: var(--ink);
+}
 @media (max-width: 42rem) {
   .channel-head {
     grid-template-columns: 0.65rem 1fr 1.2rem;
