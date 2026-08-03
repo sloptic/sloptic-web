@@ -47,17 +47,68 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <main className="sheet">{children}</main>
         <footer className="colophon">
-          <nav className="colophon-nav">
-            <a href="/#how">how it works</a>
-            <a href="/#score">the score</a>
-            <a href="/organizers">organizers</a>
-            <a href="/methodology">methodology</a>
-            <a href="https://github.com/sloptic/sloptic-main">grader</a>
-          </nav>
-          <p>
-            Passive check only. Sloptic reads the unauthenticated, observable surface, and only apps
-            you own or are authorized to test.
-          </p>
+          <div className="colophon-inner">
+            <div className="colophon-brand">
+              <a className="wordmark" href="/">
+                sloptic
+              </a>
+              <p>
+                One number for how well a deployed web app holds up, on the same scale for every app.
+              </p>
+              <a className="colophon-contact" href="mailto:hello@sloptic.org">
+                hello@sloptic.org
+              </a>
+            </div>
+
+            <div className="colophon-col">
+              <h4>grade</h4>
+              <ul>
+                <li>
+                  <a href="/">Grade an app</a>
+                </li>
+                <li>
+                  <a href="/#checks">What it checks</a>
+                </li>
+                <li>
+                  <a href="/#sample">What you get back</a>
+                </li>
+              </ul>
+            </div>
+
+            <div className="colophon-col">
+              <h4>understand</h4>
+              <ul>
+                <li>
+                  <a href="/#how">How it works</a>
+                </li>
+                <li>
+                  <a href="/#score">The score</a>
+                </li>
+                <li>
+                  <a href="/methodology">How grading works</a>
+                </li>
+              </ul>
+            </div>
+
+            <div className="colophon-col">
+              <h4>use it</h4>
+              <ul>
+                <li>
+                  <a href="/organizers">For organizers</a>
+                </li>
+                <li>
+                  <a href="https://github.com/sloptic/sloptic-main">The grader</a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="colophon-bar">
+            <div className="colophon-bar-inner">
+              <span>Sloptic 2026</span>
+              <span>Only test apps you own or are authorized to test.</span>
+            </div>
+          </div>
         </footer>
       </body>
     </html>
