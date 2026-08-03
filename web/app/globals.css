@@ -540,3 +540,179 @@ section.report h2 {
   font-size: 0.74rem;
   color: var(--muted);
 }
+
+/* Masthead nav ----------------------------------------------------------- */
+.mast-nav {
+  display: flex;
+  gap: 1.15rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+.mast-nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.mast-nav a:hover {
+  color: var(--ink);
+}
+@media (max-width: 42rem) {
+  .masthead-note {
+    display: none;
+  }
+  .mast-nav {
+    display: none;
+  }
+}
+
+/* Generic section (landing + subpages) ----------------------------------- */
+.section {
+  margin-top: 4.5rem;
+  padding-top: 2.25rem;
+  border-top: 1px solid var(--line);
+}
+.section-head {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.75rem;
+}
+.section-intro {
+  font-size: 1.08rem;
+  color: var(--ink-soft);
+  max-width: 62ch;
+  margin: 0 0 2.25rem;
+}
+
+/* Steps (how it works) --------------------------------------------------- */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+@media (max-width: 42rem) {
+  .steps {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+.step .num {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+.step h3 {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.4rem 0 0.5rem;
+}
+.step p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+/* Definition rows (the score, tiers) ------------------------------------- */
+.rows {
+  border-top: 1px solid var(--line);
+}
+.row2 {
+  display: grid;
+  grid-template-columns: 13rem 1fr;
+  gap: 1.75rem;
+  padding: 1.4rem 0;
+  border-bottom: 1px solid var(--line);
+}
+@media (max-width: 42rem) {
+  .row2 {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+}
+.row2 .term {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  align-self: start;
+}
+.row2 .term .sub {
+  display: block;
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.8rem;
+  margin-top: 0.3rem;
+}
+.row2 .desc {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  max-width: 60ch;
+}
+.row2 .desc a {
+  color: var(--accent);
+}
+
+/* Buttons / CTA ---------------------------------------------------------- */
+.cta-row {
+  margin-top: 1.75rem;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.button {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.7rem 1.3rem;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--on-accent);
+  text-decoration: none;
+  border: 2px solid var(--accent);
+}
+.button.secondary {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+/* Subpage head ----------------------------------------------------------- */
+.page-head {
+  padding: 2rem 0 1.5rem;
+}
+.page-head h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin: 0 0 1rem;
+}
+.page-lead {
+  font-size: 1.15rem;
+  color: var(--ink-soft);
+  max-width: 60ch;
+  margin: 0;
+}
+
+/* Expanded footer -------------------------------------------------------- */
+.colophon-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.15rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  margin-bottom: 0.9rem;
+}
+.colophon-nav a {
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+.colophon-nav a:hover {
+  color: var(--ink);
+}

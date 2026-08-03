@@ -39,10 +39,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </a>
           <span className="masthead-note">black-box web app grader</span>
           <span className="masthead-spacer" />
+          <nav className="mast-nav">
+            <a href="/#how">how it works</a>
+            <a href="/#score">the score</a>
+            <a href="/organizers">organizers</a>
+            <a href="/methodology">methodology</a>
+          </nav>
           <ThemeToggle />
         </header>
         <main className="sheet">{children}</main>
         <footer className="colophon">
+          <nav className="colophon-nav">
+            <a href="/#how">how it works</a>
+            <a href="/#score">the score</a>
+            <a href="/organizers">organizers</a>
+            <a href="/methodology">methodology</a>
+            <a href="https://github.com/sloptic/sloptic-main">grader</a>
+          </nav>
           <p>
             Passive check only. Sloptic reads the unauthenticated, observable surface, and only apps
             you own or are authorized to test.
