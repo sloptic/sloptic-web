@@ -96,8 +96,9 @@ export default function OrganizersPage() {
         <h2 className="section-head">Give it a prize of its own</h2>
         <p className="section-intro">
           Sloptic needs a running web app to look at. A hardware build, a trained model, a notebook, or
-          a mobile app gives it nothing to grade, and no hackathon is only web apps. That makes it a
-          poor instrument for one overall ranking and a very good one for a category prize.
+          a mobile app gives it nothing to grade. If your event only accepts web apps, that is your
+          whole field and you can rank it outright. If it accepts anything else, which most do, Sloptic
+          fits better as a category prize than as the overall ranking.
         </p>
         <div className="rows">
           <div className="row2">
