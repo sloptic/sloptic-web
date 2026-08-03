@@ -3,10 +3,78 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+// Real catalog groupings. `open` runs on any URL (look-only); `gated` needs domain verification
+// because those checks send test traffic. Counts match the grader: 37 of 91 are look-only.
+const CHANNELS = [
+  {
+    id: "security",
+    label: "security",
+    passive: 14,
+    total: 57,
+    blurb:
+      "The settings a browser expects, no secrets left in the code you ship, and no sharing rules that let other sites read your data.",
+    open: [
+      "security headers",
+      "secrets in the shipped code",
+      "exposed data",
+      "sharing rules (CORS)",
+      "mixed content",
+      "known-vulnerable dependencies",
+    ],
+    gated: [
+      "sql injection",
+      "cross-site scripting",
+      "login rate limiting",
+      "access control",
+      "session handling",
+      "file uploads",
+      "path traversal",
+      "open redirects",
+    ],
+  },
+  {
+    id: "qa",
+    label: "accessibility & quality",
+    passive: 12,
+    total: 22,
+    blurb:
+      "Buttons and forms a screen reader can use, links that go somewhere, pages that load instead of quietly failing, and a finished build rather than a development version left online.",
+    open: [
+      "accessibility",
+      "broken links",
+      "pages that fail quietly",
+      "console errors",
+      "content types",
+      "development build left online",
+      "honest navigation",
+    ],
+    gated: ["crash resistance", "bad input handling", "data integrity", "dead controls"],
+  },
+  {
+    id: "performance",
+    label: "performance",
+    passive: 11,
+    total: 12,
+    blurb:
+      "Real load-speed measurements, how much it has to download, and whether it is compressed and cached. This is where apps built in a hurry slip most.",
+    open: [
+      "core web vitals",
+      "load time",
+      "time to first byte",
+      "page weight",
+      "request count",
+      "compression",
+      "caching",
+    ],
+    gated: ["behavior under load"],
+  },
+];
+
 export default function Home() {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [openCh, setOpenCh] = useState<string>("security");
   const router = useRouter();
 
   async function submit(e: React.FormEvent) {
@@ -63,81 +131,158 @@ export default function Home() {
         )}
       </section>
 
-      <section className="measures" id="checks">
-        <h2 className="measures-head">What it checks</h2>
-        <p className="measures-intro">
-          The things every web app should get right, whatever it does. Sloptic looks only at what a
-          normal visitor can already see, no code and no login, and reports what it finds in three
-          areas.
+      <section className="channels" id="checks">
+        <div className="channels-head">
+          <h2>What it checks</h2>
+          <span className="channels-stat">37 of 91 run on any URL</span>
+        </div>
+        <p className="channels-intro">
+          The things every web app should get right, whatever it does. Open an area to see what is
+          covered, and which parts need you to verify the site is yours.
         </p>
-
-        <div className="measure" data-axis="security">
-          <h3>
-            <span className="measure-swatch" aria-hidden />
-            security
-            <span className="cnt">14 checks</span>
-          </h3>
-          <p>
-            The basics that keep your visitors safe: the security settings a browser expects, no
-            passwords or API keys accidentally left in the code you ship, and no sharing rules that let
-            other sites read your data.
-          </p>
-        </div>
-
-        <div className="measure" data-axis="qa">
-          <h3>
-            <span className="measure-swatch" aria-hidden />
-            accessibility &amp; quality
-            <span className="cnt">12 checks</span>
-          </h3>
-          <p>
-            Whether the app actually works for everyone: buttons and forms a screen reader can use,
-            links that go somewhere, pages that load instead of quietly failing, and a finished build
-            rather than a development version left online.
-          </p>
-        </div>
-
-        <div className="measure" data-axis="performance">
-          <h3>
-            <span className="measure-swatch" aria-hidden />
-            performance
-            <span className="cnt">11 checks</span>
-          </h3>
-          <p>
-            How fast and light the app is to load: real load-speed measurements, how much it has to
-            download, and whether it is compressed and cached. This is where apps built in a hurry slip
-            most: they work, but they are heavy and slow.
-          </p>
+        <div className="channel-list">
+          {CHANNELS.map((ch) => (
+            <div
+              key={ch.id}
+              className={"channel" + (openCh === ch.id ? " open" : "")}
+              data-axis={ch.id}
+            >
+              <button
+                className="channel-head"
+                onClick={() => setOpenCh(openCh === ch.id ? "" : ch.id)}
+                aria-expanded={openCh === ch.id}
+              >
+                <span className="channel-dot" aria-hidden />
+                <span className="channel-label">{ch.label}</span>
+                <span className="channel-count">
+                  {ch.passive} of {ch.total} run on any URL
+                </span>
+                <span className="channel-meter" aria-hidden>
+                  <span
+                    className="channel-meter-fill"
+                    style={{ width: `${(ch.passive / ch.total) * 100}%` }}
+                  />
+                </span>
+                <span className="channel-toggle" aria-hidden>
+                  {openCh === ch.id ? "-" : "+"}
+                </span>
+              </button>
+              {openCh === ch.id && (
+                <div className="channel-body">
+                  <p className="channel-blurb">{ch.blurb}</p>
+                  <p className="probe-group-label">Runs on any URL</p>
+                  <ul className="probe-list">
+                    {ch.open.map((p) => (
+                      <li key={p} className="probe-item">
+                        <span className="probe-id" aria-hidden>
+                          +
+                        </span>
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="probe-group-label">Needs you to verify the site is yours</p>
+                  <ul className="probe-list gated">
+                    {ch.gated.map((p) => (
+                      <li key={p} className="probe-item">
+                        <span className="probe-id" aria-hidden>
+                          +
+                        </span>
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </section>
 
-      <section className="section" id="how">
-        <h2 className="section-head">How it works</h2>
-        <p className="section-intro">
-          Nothing to install and nothing to set up. Sloptic looks at your app from the outside, the way
-          a first-time visitor would.
-        </p>
-        <div className="steps">
-          <div className="step">
-            <span className="num">01</span>
-            <h3>Paste your URL</h3>
-            <p>Give it the address of your live app. No account, no code, no configuration.</p>
+      <section className="sample" id="sample">
+        <div className="sample-head">
+          <h2>What you get back</h2>
+          <span className="sample-tag">sample</span>
+        </div>
+        <div className="sample-card">
+          <div className="sample-meta">
+            <span className="sample-url">https://example-hackathon-app.vercel.app</span>
+            <span className="sample-mode">37 checks</span>
           </div>
-          <div className="step">
-            <span className="num">02</span>
-            <h3>It looks at your app</h3>
-            <p>
-              It opens your app in a real browser and checks what any visitor sees: how it is set up,
-              whether it loads well, and whether it works for everyone.
-            </p>
+          <div className="sample-score">
+            <span className="sample-num">42</span>
+            <span className="sample-unit">lower is better</span>
           </div>
-          <div className="step">
-            <span className="num">03</span>
-            <h3>You get a report</h3>
-            <p>
-              One score, a breakdown by area, every issue it found with the evidence, and a note on how
-              much of the app it was able to test.
-            </p>
+          <div className="sample-axes">
+            {[
+              { id: "security", val: 20, pct: 48 },
+              { id: "quality", val: 14, pct: 33 },
+              { id: "performance", val: 8, pct: 19 },
+            ].map((a, i) => (
+              <div
+                key={a.id}
+                className="sample-axis"
+                data-axis={["security", "qa", "performance"][i]}
+              >
+                <span className="sample-axis-name">{a.id}</span>
+                <span className="sample-axis-track">
+                  <span className="sample-axis-fill" style={{ width: `${a.pct}%` }} />
+                </span>
+                <span className="sample-axis-val">{a.val}</span>
+              </div>
+            ))}
+          </div>
+          <div className="sample-coverage">
+            <span className="coverage-label">tested</span>
+            <span className="coverage-bar">
+              <span className="coverage-fill" style={{ width: "62%" }} />
+            </span>
+            <span className="coverage-val">23 of 37 applied</span>
+          </div>
+          <div className="sample-findings">
+            <div className="finding-row" data-axis="security">
+              <span className="finding-dot" />
+              <span className="finding-cat">no content security policy</span>
+              <span className="finding-pen">+5</span>
+            </div>
+            <div className="finding-row" data-axis="qa">
+              <span className="finding-dot" />
+              <span className="finding-cat">development build shipped</span>
+              <span className="finding-pen">+8</span>
+            </div>
+            <div className="finding-row" data-axis="performance">
+              <span className="finding-dot" />
+              <span className="finding-cat">slow first response</span>
+              <span className="finding-pen">+3</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="flow" id="how">
+        <h2>How it works</h2>
+        <div className="flow-steps">
+          <div className="flow-step">
+            <span className="flow-num">01</span>
+            <span className="flow-text">Paste a URL. No account, no code, no setup.</span>
+          </div>
+          <span className="flow-arrow" aria-hidden>
+            &rarr;
+          </span>
+          <div className="flow-step">
+            <span className="flow-num">02</span>
+            <span className="flow-text">
+              Sloptic opens it in a real browser and checks what any visitor sees.
+            </span>
+          </div>
+          <span className="flow-arrow" aria-hidden>
+            &rarr;
+          </span>
+          <div className="flow-step">
+            <span className="flow-num">03</span>
+            <span className="flow-text">
+              You get one score, the breakdown, every issue with evidence, and what was tested.
+            </span>
           </div>
         </div>
       </section>
@@ -165,8 +310,8 @@ export default function Home() {
           <div className="row2">
             <span className="term">Weighted by how much it matters</span>
             <p className="desc">
-              A serious security hole adds more than a small nicety, and the same problem repeated across
-              ten pages counts once, not ten times.
+              A serious security hole adds more than a small nicety, and the same problem repeated
+              across ten pages counts once, not ten times.
             </p>
           </div>
           <div className="row2">
@@ -179,7 +324,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="section" id="tiers">
+      <section className="section tiers" id="tiers">
         <h2 className="section-head">Passive by default</h2>
         <p className="section-intro">
           Some checks would send real attack traffic at a site. Pointing those at a site you have not
