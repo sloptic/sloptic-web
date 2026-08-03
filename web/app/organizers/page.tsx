@@ -44,6 +44,53 @@ export default function OrganizersPage() {
         </div>
       </section>
 
+      <section className="section" id="limits">
+        <h2 className="section-head">What it cannot judge, and why you still need judges</h2>
+        <p className="section-intro">
+          Sloptic grades the floor: the things that are wrong in any app, whatever it was built to do.
+          Everything that depends on what a team was trying to build sits outside it on purpose, because
+          a machine has no way to know what the right answer was supposed to be.
+        </p>
+        <div className="rows">
+          <div className="row2">
+            <span className="term">Whether the idea is any good</span>
+            <p className="desc">
+              Originality, ambition, usefulness, taste. Sloptic cannot tell a genuinely new idea from a
+              template with the colors changed, and it never tries.
+            </p>
+          </div>
+          <div className="row2">
+            <span className="term">Whether it does what it claims</span>
+            <p className="desc">
+              Correct behavior depends on the spec, and Sloptic has none. A feature that works and a
+              feature that quietly does the wrong thing look identical from the outside.
+            </p>
+          </div>
+          <div className="row2">
+            <span className="term">How hard it was to build</span>
+            <p className="desc">
+              A weekend of real engineering and an afternoon of gluing APIs together are the same to it.
+              Effort and difficulty are yours to weigh.
+            </p>
+          </div>
+          <div className="row2">
+            <span className="term">Simpler apps have less to get wrong</span>
+            <p className="desc">
+              This one matters most for ranking. A static page barely exposes anything, so it can score
+              better than an ambitious app that actually shipped features. The ranking does break ties in
+              favor of the app that had more to defend and defended it, but a simpler project with a
+              genuinely lower score still finishes ahead.
+            </p>
+          </div>
+        </div>
+        <p className="section-intro" style={{ marginTop: "1.75rem" }}>
+          So use it for the part it can measure. Sloptic works best as one line in your rubric, the
+          quality and durability portion, next to human judges scoring originality, usefulness, and how
+          well the team executed what they set out to build. A leaderboard sorted by slop score alone
+          would crown whoever built the least.
+        </p>
+      </section>
+
       <section className="section" id="how">
         <h2 className="section-head">How it works</h2>
         <p className="section-intro">
