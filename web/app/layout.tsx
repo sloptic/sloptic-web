@@ -37,11 +37,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <a className="wordmark" href="/">
             sloptic
           </a>
-          <span className="masthead-note">black-box web app grader</span>
+          <span className="masthead-note">grades any live web app</span>
           <span className="masthead-spacer" />
           <nav className="mast-nav">
-            <a href="/#how">how it works</a>
-            <a href="/#score">the score</a>
             <a href="/organizers">organizers</a>
             <a href="/methodology">methodology</a>
           </nav>

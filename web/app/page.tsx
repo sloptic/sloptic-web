@@ -66,34 +66,34 @@ export default function Home() {
       <section className="measures" id="checks">
         <h2 className="measures-head">What it checks</h2>
         <p className="measures-intro">
-          Sloptic grades the intent-independent floor: the parts of an app that are wrong no matter what
-          it was built to do. It reads only what any visitor already sees, no source and no login, and
-          reports what it finds across three axes.
+          The things every web app should get right, whatever it does. Sloptic looks only at what a
+          normal visitor can already see, no code and no login, and reports what it finds in three
+          areas.
         </p>
 
         <div className="measure" data-axis="security">
           <h3>
             <span className="measure-swatch" aria-hidden />
             security
-            <span className="cnt">14 passive probes</span>
+            <span className="cnt">14 checks</span>
           </h3>
           <p>
-            Whether the app sets the headers and policies that stop a browser being turned against its
-            own users, whether a secret or source file is sitting in the code it ships to everyone, and
-            whether its CORS rules, dependencies, and mixed content leave an opening.
+            The basics that keep your visitors safe: the security settings a browser expects, no
+            passwords or API keys accidentally left in the code you ship, and no sharing rules that let
+            other sites read your data.
           </p>
         </div>
 
         <div className="measure" data-axis="qa">
           <h3>
             <span className="measure-swatch" aria-hidden />
-            accessibility &amp; qa
-            <span className="cnt">12 passive probes</span>
+            accessibility &amp; quality
+            <span className="cnt">12 checks</span>
           </h3>
           <p>
-            Whether the interface actually holds up: controls a screen reader can operate, links that
-            resolve, pages that return honest status codes instead of soft 404s, and a real production
-            build rather than a dev bundle left in place.
+            Whether the app actually works for everyone: buttons and forms a screen reader can use,
+            links that go somewhere, pages that load instead of quietly failing, and a finished build
+            rather than a development version left online.
           </p>
         </div>
 
@@ -101,12 +101,12 @@ export default function Home() {
           <h3>
             <span className="measure-swatch" aria-hidden />
             performance
-            <span className="cnt">11 passive probes</span>
+            <span className="cnt">11 checks</span>
           </h3>
           <p>
-            How heavy and how slow the app is to load, measured with real Core Web Vitals, page weight,
-            request count, compression, and caching. This is where AI-built apps fall hardest: they ship
-            functional but heavy, trading load speed for build speed.
+            How fast and light the app is to load: real load-speed measurements, how much it has to
+            download, and whether it is compressed and cached. This is where apps built in a hurry slip
+            most: they work, but they are heavy and slow.
           </p>
         </div>
       </section>
@@ -114,29 +114,29 @@ export default function Home() {
       <section className="section" id="how">
         <h2 className="section-head">How it works</h2>
         <p className="section-intro">
-          No setup, no agent, no access. Sloptic works the way a careful stranger would, from the
-          outside.
+          Nothing to install and nothing to set up. Sloptic looks at your app from the outside, the way
+          a first-time visitor would.
         </p>
         <div className="steps">
           <div className="step">
             <span className="num">01</span>
-            <h3>Point it at a URL</h3>
-            <p>Paste a live URL. Sloptic needs nothing else from you: no repository, no build, no keys.</p>
+            <h3>Paste your URL</h3>
+            <p>Give it the address of your live app. No account, no code, no configuration.</p>
           </div>
           <div className="step">
             <span className="num">02</span>
-            <h3>It probes what a visitor sees</h3>
+            <h3>It looks at your app</h3>
             <p>
-              It maps the app&apos;s surface, then runs its battery over HTTP and in a real browser:
-              headers and TLS, accessibility and Core Web Vitals, broken pages and dev builds.
+              It opens your app in a real browser and checks what any visitor sees: how it is set up,
+              whether it loads well, and whether it works for everyone.
             </p>
           </div>
           <div className="step">
             <span className="num">03</span>
-            <h3>You get a comparable grade</h3>
+            <h3>You get a report</h3>
             <p>
-              One slop score, the three-axis breakdown, every finding with its evidence, and a coverage
-              report so a low score reads as clean rather than untested.
+              One score, a breakdown by area, every issue it found with the evidence, and a note on how
+              much of the app it was able to test.
             </p>
           </div>
         </div>
@@ -145,35 +145,35 @@ export default function Home() {
       <section className="section" id="score">
         <h2 className="section-head">The score</h2>
         <p className="section-intro">
-          The number is the product. It is built to mean the same thing across wildly different apps,
-          which is what a scanner&apos;s list of bugs can never do.
+          One number, so you can see how your app is doing at a glance and compare it to others.
         </p>
         <div className="rows">
           <div className="row2">
-            <span className="term">Deduction-only</span>
+            <span className="term">Lower is better</span>
             <p className="desc">
-              There is no positive credit. An app starts at zero and only accrues slop. Zero means
-              nothing was found, whether the app had no weak surface or defended all of it.
+              Like golf. A 0 means nothing was found. There is no maximum: a messier app just scores
+              higher.
             </p>
           </div>
           <div className="row2">
-            <span className="term">Lower is better, unbounded</span>
+            <span className="term">It only counts problems</span>
             <p className="desc">
-              No 0-to-100 ceiling to curve toward. A worse app simply scores higher, with no cap.
+              You do not earn points for what you did right; the score only adds up what is wrong. An
+              app with nothing to fix and an app that fixed everything both score 0.
             </p>
           </div>
           <div className="row2">
-            <span className="term">Risk-priced and damped</span>
+            <span className="term">Weighted by how much it matters</span>
             <p className="desc">
-              Each penalty is expected harm, frequency times severity, and one root cause counts once.
-              Ten pages missing a header are one finding, not ten.
+              A serious security hole adds more than a small nicety, and the same problem repeated across
+              ten pages counts once, not ten times.
             </p>
           </div>
           <div className="row2">
-            <span className="term">Comparable</span>
+            <span className="term">Compared to real apps</span>
             <p className="desc">
-              A frozen reference population turns a raw score into a rank, so a grade is not just a
-              number but a place among real apps.
+              Your score is ranked against a large set of real apps, so you see not just a number but
+              where you stand.
             </p>
           </div>
         </div>
@@ -182,35 +182,35 @@ export default function Home() {
       <section className="section" id="tiers">
         <h2 className="section-head">Passive by default</h2>
         <p className="section-intro">
-          Sloptic can fire real attack payloads: injection, fuzzing, uploads. Aiming those at a URL you
-          have not proven you own would be unauthorized testing, so it never does.
+          Some checks would send real attack traffic at a site. Pointing those at a site you have not
+          shown you own would be wrong, so by default Sloptic never does.
         </p>
         <div className="rows">
           <div className="row2">
             <span className="term">Anyone</span>
             <p className="desc">
-              37 passive probes on any URL. They read only what the app already serves, so they are safe
-              on a target you do not own. This is most of the signal.
+              37 look-only checks run on any URL. They read only what your app already shows the public,
+              so they are safe to run on anything. This is most of what matters.
             </p>
           </div>
           <div className="row2">
-            <span className="term">Domain owners</span>
+            <span className="term">If it is your site</span>
             <p className="desc">
-              Verify you control the origin and Sloptic runs the full 91, including the active probes,
-              and ranks the result against the population.
+              Prove you own the domain and Sloptic runs the full set, including the checks that actively
+              probe for holes, and ranks the result.
             </p>
           </div>
           <div className="row2">
-            <span className="term">Event organizers</span>
+            <span className="term">Running an event</span>
             <p className="desc">
-              Register a hackathon and grade every submission on one yardstick.{" "}
+              Grade and rank every hackathon submission on the same scale.{" "}
               <a href="/organizers">See how it works for organizers.</a>
             </p>
           </div>
         </div>
         <div className="cta-row">
           <a className="button secondary" href="/methodology">
-            Read the methodology
+            How the grade works
           </a>
         </div>
       </section>

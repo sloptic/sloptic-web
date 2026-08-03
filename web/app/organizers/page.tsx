@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Sloptic for organizers",
   description:
-    "Grade and rank every submission in a hackathon on one objective yardstick, the same way for every stack.",
+    "Grade and rank every hackathon submission on the same scale, the same way for every team, whatever they built with.",
 };
 
 export default function OrganizersPage() {
@@ -12,9 +12,9 @@ export default function OrganizersPage() {
       <div className="page-head">
         <h1>Sloptic for hackathon organizers</h1>
         <p className="page-lead">
-          A human judge cannot hold a hundred stacks in their head. Sloptic grades every submission the
-          same way and places each on one curve, so whether an app holds up becomes a number you can
-          rank.
+          Judging by hand means holding a hundred different apps in your head. Sloptic grades every
+          submission the same way and puts them on one scale, so how well each app holds up becomes a
+          number you can rank.
         </p>
       </div>
 
@@ -22,24 +22,23 @@ export default function OrganizersPage() {
         <h2 className="section-head">What you get</h2>
         <div className="rows">
           <div className="row2">
-            <span className="term">One yardstick</span>
+            <span className="term">One fair scale</span>
             <p className="desc">
-              Every entry graded on the same three axes, whatever it was built with. The measure is
-              objective and identical across stacks, so entries are actually comparable.
+              Every entry graded the same way, whatever it was built with, so you can actually compare
+              them instead of comparing apples to oranges.
             </p>
           </div>
           <div className="row2">
-            <span className="term">A leaderboard</span>
+            <span className="term">A ranked leaderboard</span>
             <p className="desc">
-              Submissions ranked against each other on the slop score, with the per-axis breakdown and a
-              report card for every team.
+              Submissions sorted by score, with a breakdown by area and a short report for each team.
             </p>
           </div>
           <div className="row2">
-            <span className="term">Coverage you can trust</span>
+            <span className="term">Honest results</span>
             <p className="desc">
-              Each grade ships with what was tested, so a clean score is legible as clean rather than an
-              unreachable surface left unmeasured.
+              Each grade shows how much of the app could be tested, so a clean score means clean, not
+              skipped.
             </p>
           </div>
         </div>
@@ -48,29 +47,28 @@ export default function OrganizersPage() {
       <section className="section" id="how">
         <h2 className="section-head">How it works</h2>
         <p className="section-intro">
-          Registration is bound to your event, and grading is scoped to its entries. Nothing is graded
-          on the strength of a pasted link alone.
+          Setup is quick, and Sloptic only grades apps that are actually in your event.
         </p>
         <div className="rows">
           <div className="row2">
-            <span className="term">Register the event</span>
+            <span className="term">Register your event</span>
             <p className="desc">
-              Point Sloptic at your public Devpost event and prove you organize it by placing a token
-              only an event admin can edit. That binds the event to your account.
+              Point Sloptic at your public Devpost event and prove you run it. That ties the event to
+              your account, so no one else can grade it.
             </p>
           </div>
           <div className="row2">
-            <span className="term">Choose the tier</span>
+            <span className="term">Pick how deep to go</span>
             <p className="desc">
-              A passive grade needs nothing from teams and runs on every entry. A full grade adds the
-              active probes and asks each team to serve a verification token as part of submission.
+              A light grade needs nothing from teams and runs on every entry. A full grade adds the
+              deeper checks and asks each team to add a small verification file when they submit.
             </p>
           </div>
           <div className="row2">
-            <span className="term">Grade the field</span>
+            <span className="term">Grade everyone</span>
             <p className="desc">
-              Sloptic checks each submitted URL against your event&apos;s public gallery, then grades
-              and ranks the entries that belong to it.
+              Sloptic confirms each submitted app really belongs to your event, then grades and ranks
+              the entries.
             </p>
           </div>
         </div>
@@ -80,17 +78,16 @@ export default function OrganizersPage() {
         <h2 className="section-head">Fair by construction</h2>
         <div className="rows">
           <div className="row2">
-            <span className="term">One event, one tier</span>
+            <span className="term">Everyone measured the same</span>
             <p className="desc">
-              Every app in an event is measured identically. A passive grade and a full grade are
-              different measurements and are never mixed on the same board.
+              An event runs at one setting, so no entry is judged more gently than another.
             </p>
           </div>
           <div className="row2">
-            <span className="term">Ownership, always</span>
+            <span className="term">Only with permission</span>
             <p className="desc">
-              Active grading only ever touches apps whose submission is verified, inside an event run by
-              an accountable, verified organizer. Teams can opt out.
+              The deeper checks only ever run on apps whose team has verified them, and any team can opt
+              out.
             </p>
           </div>
         </div>
@@ -99,7 +96,7 @@ export default function OrganizersPage() {
             Request organizer access
           </a>
           <a className="button secondary" href="/methodology">
-            Read the methodology
+            How the grade works
           </a>
         </div>
       </section>
