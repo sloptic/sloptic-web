@@ -1023,6 +1023,33 @@ section.report h2 {
   border-color: var(--ink);
 }
 
+/* Dictionary block (the name, on About) ---------------------------------- */
+.definition {
+  border-left: 2px solid var(--accent);
+  padding: 0.35rem 0 0.35rem 1.4rem;
+  max-width: 62ch;
+}
+.definition-word {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+.definition-pos {
+  font-family: var(--font-sans);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+.definition-body {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+
 /* Subpage head ----------------------------------------------------------- */
 .page-head {
   padding: 2rem 0 1.5rem;

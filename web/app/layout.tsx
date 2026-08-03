@@ -40,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <span className="masthead-note">grades any live web app</span>
           <span className="masthead-spacer" />
           <nav className="mast-nav">
+            <a href="/about">about</a>
             <a href="/organizers">organizers</a>
             <a href="/methodology">methodology</a>
           </nav>
@@ -93,6 +94,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="colophon-col">
               <h4>use it</h4>
               <ul>
+                <li>
+                  <a href="/about">About Sloptic</a>
+                </li>
                 <li>
                   <a href="/organizers">For organizers</a>
                 </li>
