@@ -174,9 +174,8 @@ export default function Home() {
       <section className="hero">
         <h1 className="lede">Grade a deployed web app.</h1>
         <p className="deck">
-          Give Sloptic a live URL. It returns one number for how well the app holds up along with the
-          security, accessibility, and performance issues it found. No specs needed. It only grades the
-          things every app should have.
+          Give Sloptic a live URL. It scores how well the app holds up on the things
+          every app should have, no matter what.
         </p>
 
         <form onSubmit={submit} className="grade-form">
@@ -212,9 +211,10 @@ export default function Home() {
             >
               black box
             </a>{" "}
-            web app grader. It checks the traits every app should get right no matter what it does in
-            terms of security, accessibility, quality, and performance. This property allows Sloptic to
-            compare and rank apps against each other based on these traits.
+            web app grader. It checks the security, accessibility, quality, and 
+            performance traits that every app should get right, whatever it was 
+            built to do. Because those traits do not depend on an app's purpose, 
+            Sloptic can compare and rank apps against each other.
           </p>
         </div>
 
