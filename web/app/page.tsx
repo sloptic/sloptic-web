@@ -133,6 +133,76 @@ const CHANNELS: Channel[] = [
   },
 ];
 
+// Sample grade, passive mode. Each axis splits three ways: what failed, what applied, what the mode
+// could have run. Read in checks or in slop points, since a handful of failed checks can cost more than
+// a pile of them. The point totals sum to the 42 above.
+const SAMPLE_AXES = [
+  {
+    id: "security",
+    label: "security",
+    failed: 4,
+    applied: 9,
+    possible: 14,
+    slopFailed: 20,
+    slopApplied: 46,
+    slopPossible: 62,
+  },
+  {
+    id: "qa",
+    label: "quality",
+    failed: 3,
+    applied: 8,
+    possible: 12,
+    slopFailed: 14,
+    slopApplied: 38,
+    slopPossible: 55,
+  },
+  {
+    id: "performance",
+    label: "performance",
+    failed: 2,
+    applied: 6,
+    possible: 11,
+    slopFailed: 8,
+    slopApplied: 26,
+    slopPossible: 40,
+  },
+];
+
+const SAMPLE_FINDINGS = [
+  {
+    axis: "security",
+    name: "no content security policy",
+    desc: "Nothing tells the browser which scripts may run, so an injected one would.",
+    penalty: 5,
+  },
+  {
+    axis: "qa",
+    name: "development build shipped",
+    desc: "The live site serves a dev build, which exposes internals and runs slower.",
+    penalty: 8,
+  },
+  {
+    axis: "performance",
+    name: "slow first response",
+    desc: "The server took over a second to send the first byte.",
+    penalty: 3,
+  },
+];
+
+const SAMPLE_PASSED = [
+  {
+    axis: "security",
+    name: "clickjacking defense",
+    desc: "The app refuses to be framed by another site.",
+  },
+  {
+    axis: "qa",
+    name: "images have alt text",
+    desc: "A screen reader can describe every image on the page.",
+  },
+];
+
 // One check. Links out to the authority that defines it when there is a canonical one.
 function ProbeItem({ name, href }: { name: string; href?: string }) {
   return (
@@ -156,6 +226,7 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [openCh, setOpenCh] = useState<string>("security");
+  const [unit, setUnit] = useState<"count" | "slop">("count");
   const router = useRouter();
 
   async function submit(e: React.FormEvent) {
@@ -323,54 +394,80 @@ export default function Home() {
         <div className="sample-card">
           <div className="sample-meta">
             <span className="sample-url">https://example-hackathon-app.vercel.app</span>
-            <span className="sample-mode">37 checks</span>
+            <span className="sample-mode">passive mode</span>
           </div>
           <div className="sample-score">
             <span className="sample-num">42</span>
             <span className="sample-unit">lower is better</span>
           </div>
+
+          <div className="unit-toggle" role="group" aria-label="Show counts or slop points">
+            <button
+              type="button"
+              aria-pressed={unit === "count"}
+              onClick={() => setUnit("count")}
+            >
+              checks
+            </button>
+            <button type="button" aria-pressed={unit === "slop"} onClick={() => setUnit("slop")}>
+              slop points
+            </button>
+          </div>
+
           <div className="sample-axes">
-            {[
-              { id: "security", val: 20, pct: 48 },
-              { id: "quality", val: 14, pct: 33 },
-              { id: "performance", val: 8, pct: 19 },
-            ].map((a, i) => (
-              <div
-                key={a.id}
-                className="sample-axis"
-                data-axis={["security", "qa", "performance"][i]}
-              >
-                <span className="sample-axis-name">{a.id}</span>
-                <span className="sample-axis-track">
-                  <span className="sample-axis-fill" style={{ width: `${a.pct}%` }} />
+            {SAMPLE_AXES.map((a) => {
+              const failed = unit === "count" ? a.failed : a.slopFailed;
+              const applied = unit === "count" ? a.applied : a.slopApplied;
+              const possible = unit === "count" ? a.possible : a.slopPossible;
+              return (
+                <div key={a.id} className="sample-axis" data-axis={a.id}>
+                  <span className="sample-axis-name">{a.label}</span>
+                  <span className="sample-axis-track">
+                    <span className="seg failed" style={{ flexGrow: failed }} />
+                    <span className="seg clean" style={{ flexGrow: applied - failed }} />
+                    <span className="seg na" style={{ flexGrow: possible - applied }} />
+                  </span>
+                  <span className="sample-axis-val">
+                    {failed}
+                    <span className="of">/{applied}</span>
+                    <span className="of dim">/{possible}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="sample-legend">
+            <span className="key failed" aria-hidden /> failed
+            <span className="key clean" aria-hidden /> passed
+            <span className="key na" aria-hidden /> did not apply
+            <span className="legend-note">
+              {unit === "count"
+                ? "Checks that failed, out of those that applied, out of every check in this mode."
+                : "Slop scored, out of what those checks could have cost, out of the whole mode."}
+            </span>
+          </p>
+
+          <div className="sample-findings">
+            {SAMPLE_FINDINGS.map((f) => (
+              <div className="finding-row" data-axis={f.axis} key={f.name}>
+                <span className="finding-dot" />
+                <span className="finding-body">
+                  <span className="finding-cat">{f.name}</span>
+                  <span className="finding-desc">{f.desc}</span>
                 </span>
-                <span className="sample-axis-val">{a.val}</span>
+                <span className="finding-pen">+{f.penalty}</span>
               </div>
             ))}
-          </div>
-          <div className="sample-coverage">
-            <span className="coverage-label">tested</span>
-            <span className="coverage-bar">
-              <span className="coverage-fill" style={{ width: "62%" }} />
-            </span>
-            <span className="coverage-val">23 of 37 applied</span>
-          </div>
-          <div className="sample-findings">
-            <div className="finding-row" data-axis="security">
-              <span className="finding-dot" />
-              <span className="finding-cat">no content security policy</span>
-              <span className="finding-pen">+5</span>
-            </div>
-            <div className="finding-row" data-axis="qa">
-              <span className="finding-dot" />
-              <span className="finding-cat">development build shipped</span>
-              <span className="finding-pen">+8</span>
-            </div>
-            <div className="finding-row" data-axis="performance">
-              <span className="finding-dot" />
-              <span className="finding-cat">slow first response</span>
-              <span className="finding-pen">+3</span>
-            </div>
+            {SAMPLE_PASSED.map((f) => (
+              <div className="finding-row passed" data-axis={f.axis} key={f.name}>
+                <span className="finding-dot" />
+                <span className="finding-body">
+                  <span className="finding-cat">{f.name}</span>
+                  <span className="finding-desc">{f.desc}</span>
+                </span>
+                <span className="finding-pen">0</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>

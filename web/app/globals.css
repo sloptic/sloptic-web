@@ -547,83 +547,125 @@ a {
 }
 .sample-axes {
   border-top: 1px solid var(--line);
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
 }
 .sample-axis {
   display: grid;
-  grid-template-columns: 7rem 1fr 3rem;
+  grid-template-columns: 7rem 1fr 7.5rem;
   align-items: center;
   gap: 0.85rem;
-  padding: 0.5rem 0;
+  padding: 0.55rem 0;
   border-bottom: 1px solid var(--line);
 }
 .sample-axis-name {
   font-family: var(--font-mono);
   font-size: 0.82rem;
 }
+/* Three zones on one rule: failed, passed, never applied. Widths are flex-grow, so the
+   bar always spans what the mode could have run. */
 .sample-axis-track {
-  position: relative;
-  height: 9px;
-  background: var(--paper);
+  display: flex;
+  height: 10px;
   border: 1px solid var(--line);
-  display: block;
+  background: var(--paper);
   overflow: hidden;
 }
-.sample-axis-fill {
+.sample-axis-track .seg {
   display: block;
-  height: 100%;
-  animation: fill-grow 0.9s ease-out both;
+  transition: flex-grow 0.25s ease;
 }
-@keyframes fill-grow {
-  from {
-    width: 0 !important;
-  }
-}
-.sample-axis[data-axis="security"] .sample-axis-fill {
+.sample-axis[data-axis="security"] .seg.failed {
   background: var(--security);
 }
-.sample-axis[data-axis="qa"] .sample-axis-fill {
+.sample-axis[data-axis="qa"] .seg.failed {
   background: var(--qa);
 }
-.sample-axis[data-axis="performance"] .sample-axis-fill {
+.sample-axis[data-axis="performance"] .seg.failed {
   background: var(--performance);
+}
+.sample-axis[data-axis="security"] .seg.clean {
+  background: color-mix(in srgb, var(--security) 26%, transparent);
+}
+.sample-axis[data-axis="qa"] .seg.clean {
+  background: color-mix(in srgb, var(--qa) 26%, transparent);
+}
+.sample-axis[data-axis="performance"] .seg.clean {
+  background: color-mix(in srgb, var(--performance) 26%, transparent);
+}
+.seg.na {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--line) 0 1px,
+    transparent 1px 5px
+  );
 }
 .sample-axis-val {
   text-align: right;
   font-family: var(--font-mono);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-variant-numeric: tabular-nums;
 }
-.sample-coverage {
-  display: grid;
-  grid-template-columns: 7rem 1fr auto;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 0.75rem 0;
-  border-top: 1px solid var(--line);
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-}
-.coverage-label {
+.sample-axis-val .of {
   color: var(--muted);
 }
-.coverage-bar {
-  height: 6px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  display: block;
-  overflow: hidden;
+.sample-axis-val .of.dim {
+  opacity: 0.6;
 }
-.coverage-fill {
-  display: block;
-  height: 100%;
+
+/* count vs slop-points */
+.unit-toggle {
+  display: flex;
+  gap: 0;
+  margin: 0 0 1rem;
+}
+.unit-toggle button {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.unit-toggle button + button {
+  border-left: 0;
+}
+.unit-toggle button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+.sample-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin: 0 0 1.25rem;
+}
+.sample-legend .key {
+  width: 0.6rem;
+  height: 0.6rem;
+  display: inline-block;
+  border: 1px solid var(--line-strong);
+}
+.sample-legend .key.failed {
   background: var(--ink-soft);
-  animation: fill-grow 0.9s ease-out 0.2s both;
 }
-.coverage-val {
-  color: var(--ink-soft);
-  white-space: nowrap;
+.sample-legend .key.clean {
+  background: color-mix(in srgb, var(--ink-soft) 26%, transparent);
 }
+.sample-legend .key.na {
+  background: repeating-linear-gradient(45deg, var(--line) 0 1px, transparent 1px 5px);
+}
+.legend-note {
+  flex-basis: 100%;
+  color: var(--muted);
+}
+
 .sample-findings {
   border-top: 1px solid var(--line);
   padding-top: 0.75rem;
@@ -631,11 +673,38 @@ a {
 .finding-row {
   display: grid;
   grid-template-columns: 0.55rem 1fr auto;
-  align-items: center;
+  align-items: start;
   gap: 0.6rem;
-  padding: 0.5rem 0;
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+.finding-row:last-child {
+  border-bottom: 0;
+}
+.finding-dot {
+  margin-top: 0.35rem;
+}
+.finding-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.finding-desc {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+/* a check that passed: same row, no weight */
+.finding-row.passed .finding-cat {
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+.finding-row.passed .finding-dot {
+  opacity: 0.35;
+}
+.finding-row.passed .finding-pen {
+  color: var(--muted);
 }
 .finding-dot {
   width: 0.55rem;
