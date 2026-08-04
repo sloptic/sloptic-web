@@ -181,13 +181,33 @@ export default function AboutPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">Where it came from</h2>
+        <h2 className="section-head">Who made it</h2>
         <p className="section-intro">
-          Sloptic started as the grader for a hackathon league, built for one stubborn problem: a human
-          judge cannot hold a hundred different stacks in their head and rank them fairly. It is now its
-          own project, open source under Apache 2.0, for that league, for any organizer who wants a
-          consistent measure across every entry, and for anyone who wants to know whether the thing they
-          just shipped holds up.
+          Sloptic was built and calibrated by{" "}
+          <a href="https://www.linkedin.com/in/iansun20" target="_blank" rel="noopener noreferrer">
+            Ian Sun
+          </a>
+          . He finished a computer science degree at Boston University in May 2026 and starts a
+          cybersecurity master&apos;s there this fall. He holds the PNPT, has spoken at SecureWorld,
+          Layer 8 and the NICE Conference, and hosted sessions at RSAC 2026.
+        </p>
+        <p className="section-intro">
+          Sloptic started as the objective scoring axis for a hackathon league, built for one stubborn
+          problem: a human judge cannot hold a hundred different stacks in their head and rank them
+          fairly. It became its own project once the grading problem turned out to be harder than the
+          league needed, and is open source under Apache 2.0.
+        </p>
+        <p className="section-intro">
+          This is a single author project, and one person can fool themselves. So correctness is not
+          checked only against the reference apps in the repo, which the same person wrote. It is also
+          checked against targets whose answers nobody here controls: GapBench, a third-party recall
+          benchmark, and the deliberately broken apps the industry already uses for this, DVWA, Juice
+          Shop, VAmPI and bWAPP.
+        </p>
+        <p className="section-intro">
+          The recall audit across the full catalog, measuring what Sloptic misses rather than what it
+          gets wrong, is still running. Until it finishes, no recall number is claimed. Saying so is
+          less satisfying than a figure, and more honest than one that has not been earned.
         </p>
         <div className="cta-row">
           <a className="button" href="/">
