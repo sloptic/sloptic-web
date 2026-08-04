@@ -256,8 +256,8 @@ export default function Home() {
   }
 
   // Ranking an event is organizer-initiated on purpose: starting one is the consent signal for
-  // grading other people's submissions. So this collects the event and routes to verification
-  // rather than queueing anything.
+  // grading other people's submissions. The landing collects the event, then hands off to the
+  // organizer page, which explains what verifying involves.
   function submitRank(e: React.FormEvent) {
     e.preventDefault();
     const host = eventUrl.trim().replace(/^https?:\/\//, "").split("/")[0].toLowerCase();
@@ -265,9 +265,7 @@ export default function Home() {
       setRankNote("That does not look like a Devpost event. It should look like your-event.devpost.com.");
       return;
     }
-    setRankNote(
-      "Ranking an event is started by the person running it, so we know the entrants agreed to be judged. Verify you organize this event and Sloptic will grade every submission on the same scale."
-    );
+    router.push(`/organizers?event=${encodeURIComponent(eventUrl.trim())}`);
   }
 
   return (
@@ -335,7 +333,7 @@ export default function Home() {
             </form>
             {rankNote && (
               <p className="rank-note" role="status">
-                {rankNote} <a href="/organizers">How event ranking works.</a>
+                {rankNote}
               </p>
             )}
           </>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import EventForm from "./EventForm";
 
 export const metadata: Metadata = {
   title: "Sloptic for organizers",
@@ -6,7 +7,11 @@ export const metadata: Metadata = {
     "Grade the web app entries in your hackathon on one objective scale, and give the cleanest build a prize of its own.",
 };
 
-export default function OrganizersPage() {
+export default function OrganizersPage({
+  searchParams,
+}: {
+  searchParams: { event?: string };
+}) {
   return (
     <>
       <div className="page-head">
@@ -16,6 +21,7 @@ export default function OrganizersPage() {
           part of that off you: it grades the web app entries the same way and puts them on one scale,
           so whether an app holds up becomes a number instead of a hunch.
         </p>
+        <EventForm initialEvent={searchParams.event ?? ""} />
       </div>
 
       <section className="section" id="what-you-get">
