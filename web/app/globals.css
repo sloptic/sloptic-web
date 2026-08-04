@@ -219,30 +219,6 @@ a {
   padding: 2.25rem 0 2.5rem;
 }
 
-/* grade one app, or rank a whole event */
-.mode-switch {
-  display: inline-flex;
-  margin: 0 auto 2rem;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.mode-switch button {
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  padding: 0.45rem 1rem;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-}
-.mode-switch button + button {
-  border-left: 1px solid var(--line-strong);
-}
-.mode-switch button[aria-pressed="true"] {
-  background: var(--ink);
-  color: var(--paper);
-}
 
 /* the same input on the organizers page, where the column is left-aligned */
 .event-form-wrap .grade-form {
@@ -250,8 +226,34 @@ a {
   margin-right: 0;
   margin-top: 1.75rem;
 }
-.event-form-wrap .rank-note {
+.event-form-wrap .hero-alt {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 1.25rem 0 0;
+}
+.hero-alt a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+.rank-note {
   margin-left: 0;
+}
+
+.hero-alt {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 1.25rem 0 0;
+}
+.hero-alt a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
 }
 
 .rank-note {

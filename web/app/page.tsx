@@ -98,9 +98,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [openCh, setOpenCh] = useState<string>("security");
   const [unit, setUnit] = useState<"count" | "slop">("count");
-  const [mode, setMode] = useState<"grade" | "rank">("grade");
-  const [eventUrl, setEventUrl] = useState("");
-  const [rankNote, setRankNote] = useState<string | null>(null);
   const router = useRouter();
 
   async function submit(e: React.FormEvent) {
@@ -126,89 +123,37 @@ export default function Home() {
     }
   }
 
-  // Ranking an event is organizer-initiated on purpose: starting one is the consent signal for
-  // grading other people's submissions. The landing collects the event, then hands off to the
-  // organizer page, which explains what verifying involves.
-  function submitRank(e: React.FormEvent) {
-    e.preventDefault();
-    const host = eventUrl.trim().replace(/^https?:\/\//, "").split("/")[0].toLowerCase();
-    if (!host.endsWith(".devpost.com")) {
-      setRankNote("That does not look like a Devpost event. It should look like your-event.devpost.com.");
-      return;
-    }
-    router.push(`/organizers?event=${encodeURIComponent(eventUrl.trim())}`);
-  }
-
   return (
     <>
       <section className="hero">
-        <div className="mode-switch" role="group" aria-label="What to grade">
-          <button
-            type="button"
-            aria-pressed={mode === "grade"}
-            onClick={() => setMode("grade")}
-          >
-            grade an app
+        <h1 className="lede">Grade a deployed web app.</h1>
+        <p className="deck">
+          Give Sloptic a live URL. It scores how well the app holds up on the things every app should
+          have, no matter what.
+        </p>
+
+        <form onSubmit={submit} className="grade-form">
+          <input
+            type="text"
+            inputMode="url"
+            placeholder="https://your-app.example.com"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            aria-label="Deployed web app URL"
+            autoFocus
+          />
+          <button type="submit" disabled={busy}>
+            {busy ? "sending" : "grade it"}
           </button>
-          <button type="button" aria-pressed={mode === "rank"} onClick={() => setMode("rank")}>
-            rank an event
-          </button>
-        </div>
-
-        {mode === "grade" ? (
-          <>
-            <h1 className="lede">Grade a deployed web app.</h1>
-            <p className="deck">
-              Give Sloptic a live URL. It scores how well the app holds up on the things every app
-              should have, no matter what.
-            </p>
-
-            <form onSubmit={submit} className="grade-form">
-              <input
-                type="text"
-                inputMode="url"
-                placeholder="https://your-app.example.com"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                aria-label="Deployed web app URL"
-                autoFocus
-              />
-              <button type="submit" disabled={busy}>
-                {busy ? "sending" : "grade it"}
-              </button>
-            </form>
-            {error && (
-              <p className="error" role="alert">
-                {error}
-              </p>
-            )}
-          </>
-        ) : (
-          <>
-            <h1 className="lede">Rank a whole hackathon.</h1>
-            <p className="deck">
-              Give Sloptic a Devpost event. It grades every submission the same way and puts them on
-              one scale, so the entries can actually be compared.
-            </p>
-
-            <form onSubmit={submitRank} className="grade-form">
-              <input
-                type="text"
-                inputMode="url"
-                placeholder="https://your-event.devpost.com"
-                value={eventUrl}
-                onChange={(e) => setEventUrl(e.target.value)}
-                aria-label="Devpost event URL"
-              />
-              <button type="submit">rank it</button>
-            </form>
-            {rankNote && (
-              <p className="rank-note" role="status">
-                {rankNote}
-              </p>
-            )}
-          </>
+        </form>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
         )}
+        <p className="hero-alt">
+          Running a hackathon? <a href="/organizers">Rank a whole event.</a>
+        </p>
       </section>
 
       <section className="what" id="what">
