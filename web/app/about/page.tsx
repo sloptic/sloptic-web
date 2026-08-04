@@ -20,16 +20,43 @@ export default function AboutPage() {
       <section className="section">
         <h2 className="section-head">Why it exists</h2>
         <p className="section-intro">
-          Building a web app got almost free, and it shows. Galleries fill with apps that look finished
-          but were never hardened: no security headers, no rate limiting, controls a screen reader
-          cannot touch, a development build left running in production. The work still gets done, the
-          unglamorous floor underneath it does not.
+          Building a web app got almost free, and it shows. Apps ship that look finished but were never
+          hardened: no security headers, controls a screen reader cannot touch, a development build left
+          running in production.
         </p>
         <p className="section-intro">
-          When we graded a large set of real, deployed hackathon apps, the failure was rarely a dramatic
-          break-in. It was that boring floor, missing almost everywhere. The problem turned out to be
-          chronic rather than acute, which is exactly the kind of thing a machine can measure the same
-          way every time.
+          This is not a hackathon problem, it is the state of the web.{" "}
+          <a href="https://webaim.org/projects/million/" target="_blank" rel="noopener noreferrer">
+            95.9% of the top million home pages
+          </a>{" "}
+          have detectable accessibility failures, and that number got worse last year rather than
+          better. The same six mistakes have led that list for seven years running. Only about{" "}
+          <a
+            href="https://almanac.httparchive.org/en/2025/security"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            one site in five
+          </a>{" "}
+          sends a Content Security Policy at all.
+        </p>
+        <p className="section-intro">
+          It is tempting to file all this under minor, since none of it is a break-in. That has it
+          backwards. An exploit is a risk that may never be triggered. A control a screen reader cannot
+          operate, or a page that takes four seconds on a phone, is not a risk at all: it is something
+          that happens to every visitor, every time.{" "}
+          <a
+            href="https://www.thinkwithgoogle.com/marketing-strategies/app-and-mobile/mobile-page-speed-new-industry-benchmarks/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            More than half of mobile visitors
+          </a>{" "}
+          leave before a slow page finishes loading.
+        </p>
+        <p className="section-intro">
+          These failures are known, named, and the same year after year. They go undone at scale because
+          nobody is checking, which is a job worth handing to a machine.
         </p>
       </section>
 
