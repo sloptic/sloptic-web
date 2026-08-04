@@ -387,13 +387,25 @@ export default function Home() {
           </a>
         </div>
         <p className="channels-intro">
-          Sloptic checks the things every web app should get right, no matter what it does. Open an area
-          to see what gets checked.
+          Sloptic checks the things every web app should get right, no matter what it does. Each check
+          is one file in the{" "}
+          <a
+            href="https://github.com/sloptic/sloptic-main/tree/main/catalog"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            open catalog
+          </a>
+          , so the counts below are countable: 57 for security, 22 for accessibility and quality, 12 for
+          performance. Open an area to see what gets checked.
         </p>
         <p className="channels-note">
           Note that in anonymous mode, we only run a set of 37 <em>passive</em> checks, i.e. checks that
           do not alter the site, send attack payloads, or go fishing for secrets. To run the other 54{" "}
-          <em>active</em> checks, log in and <a href="/verify">prove the site is yours</a>.
+          <em>active</em> checks, log in and <a href="/verify">prove the site is yours</a>. The passive
+          share varies by area because that is where attack traffic lives: nearly every performance
+          check is pure observation, while most security checks have to send something to learn
+          anything.
         </p>
         <div className="channel-list">
           {CHANNELS.map((ch) => (
