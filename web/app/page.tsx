@@ -435,35 +435,37 @@ export default function Home() {
           Some checks would send real attack traffic at a site. Pointing those at a site you have not
           shown you own would be wrong, so by default Sloptic never does.
         </p>
-        <div className="rows">
-          <div className="row2">
-            <span className="term">Anyone</span>
-            <p className="desc">
-              37 look-only checks on any URL, no account needed. They read what your app already shows
-              the public, so they are safe to point at anything. This is most of what the score is made
-              of.
+        <ol className="tier-grid">
+          <li className="tier" data-step="1">
+            <h3>Anyone</h3>
+            <p className="tier-req">no account</p>
+            <p className="tier-desc">
+              The look-only checks run on any URL. They read what your app already shows the public, so
+              they are safe to point at anything, and they are most of what the score is made of.
             </p>
-          </div>
-          <div className="row2">
-            <span className="term">Your own site</span>
-            <p className="desc">
+          </li>
+          <li className="tier" data-step="2">
+            <h3>Your own site</h3>
+            <p className="tier-req">verify the domain</p>
+            <p className="tier-desc">
               Sign in, then publish a token we give you at{" "}
-              <code>/.well-known/sloptic-verification.txt</code> on the site. Once we can fetch it back,
-              the other 54 checks run and the result gets ranked.{" "}
+              <code>/.well-known/sloptic-verification.txt</code>. Once we can fetch it back, the rest of
+              the checks run and the result gets ranked.{" "}
               <a href="/verify">What verifying involves.</a>
             </p>
-          </div>
-          <div className="row2">
-            <span className="term">Running an event</span>
-            <p className="desc">
-              Grade and rank every hackathon submission on the same scale.{" "}
-              <a href="/organizers">See how it works for organizers.</a>
+          </li>
+          <li className="tier" data-step="3">
+            <h3>Running an event</h3>
+            <p className="tier-req">verify the event</p>
+            <p className="tier-desc">
+              Grade the web app entries in your hackathon on one scale, so they can be compared.{" "}
+              <a href="/organizers">How it works for organizers.</a>
             </p>
-          </div>
-        </div>
+          </li>
+        </ol>
         <div className="cta-row">
           <a className="button secondary" href="/verify">
-            Why only 37 checks
+            Why only some run
           </a>
           <a className="button secondary" href="/methodology">
             How the grade works
