@@ -25,7 +25,7 @@ export default function AboutPage() {
           running in production.
         </p>
         <p className="section-intro">
-          This is not a hackathon problem, it is the state of the web.{" "}
+          This is not a hackathon problem; it is the state of the web.{" "}
           <a href="https://webaim.org/projects/million/" target="_blank" rel="noopener noreferrer">
             95.9% of the top million home pages
           </a>{" "}
@@ -41,16 +41,16 @@ export default function AboutPage() {
           sends a Content Security Policy at all.
         </p>
         <p className="section-intro">
-          It is tempting to file all this under minor, since none of it is a break-in. That has it
-          backwards. An exploit is a risk that may never be triggered. A control a screen reader cannot
-          operate, or a page that takes four seconds on a phone, is not a risk at all: it is something
-          that happens to every visitor, every time.{" "}
+          It is tempting to file all this under minor, since none of it is a break-in. But that has it
+          backwards. An exploit is a risk that may never be triggered, but a control a screen reader cannot
+          see, or a page that takes five seconds to load on a phone, is not a risk at all. It is something
+          that happens to every visitor, every time, and affects everyone. For example, {" "}
           <a
             href="https://www.thinkwithgoogle.com/marketing-strategies/app-and-mobile/mobile-page-speed-new-industry-benchmarks/"
             target="_blank"
             rel="noopener noreferrer"
           >
-            More than half of mobile visitors
+            more than half of mobile visitors
           </a>{" "}
           leave before a slow page finishes loading.
         </p>
@@ -79,31 +79,49 @@ export default function AboutPage() {
 
       <section className="section">
         <h2 className="section-head">What makes it different</h2>
-        <div className="rows">
-          <div className="row2">
-            <span className="term">It grades what you shipped</span>
-            <p className="desc">
-              Most tools that judge software quality read code: repositories, pull requests, diffs.
-              Sloptic checks the app that is actually running, the thing your users touch, which is
-              where the difference between working and holding up shows up.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">A number, not a bug list</span>
-            <p className="desc">
-              A scanner hunts through one app and hands you findings. Sloptic gives you a score that
-              means the same thing across completely unrelated apps, so a hundred of them can be ranked
-              fairly without anyone knowing what any of them does.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">It works on anything</span>
-            <p className="desc">
-              No spec, no source, no setup, no knowledge of your stack. If it answers over the web,
-              Sloptic can grade it the same way it grades everything else.
-            </p>
-          </div>
+        <p className="section-intro">
+          A scanner exists to find you a list of things to fix. Sloptic exists to produce a number, so
+          that apps with nothing in common can be put on one scale and ranked against each other. Much
+          the same probing, opposite purpose.
+        </p>
+        <div className="table-scroll">
+          <table className="compare-table">
+            <thead>
+              <tr>
+                <th />
+                <th>most scanners</th>
+                <th className="mine">Sloptic</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">what it reads</th>
+                <td>source, repositories, pull requests</td>
+                <td className="mine">the running app, from the outside</td>
+              </tr>
+              <tr>
+                <th scope="row">what it needs</th>
+                <td>access to the code, and setup</td>
+                <td className="mine">a URL</td>
+              </tr>
+              <tr>
+                <th scope="row">what it hands back</th>
+                <td>a list of findings</td>
+                <td className="mine">one score, on a fixed scale</td>
+              </tr>
+              <tr>
+                <th scope="row">what it is for</th>
+                <td>fixing one app</td>
+                <td className="mine">comparing and ranking many</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
+        <p className="section-intro" style={{ marginTop: "1.5rem" }}>
+          That last row is the whole difference. A list of findings tells you about one app and says
+          nothing about how it stands against any other. A number that means the same thing everywhere
+          is what lets a hundred unrelated apps be ordered at all.
+        </p>
       </section>
 
       <section className="section">

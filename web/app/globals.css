@@ -1286,6 +1286,48 @@ code {
   background: var(--performance);
 }
 
+/* Comparison table (what makes it different, on About). Left aligned prose rather
+   than the right-aligned figures of the counts table, with our column carrying the ink. */
+.compare-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 34rem;
+  font-size: 0.95rem;
+}
+.compare-table th,
+.compare-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+  font-weight: 400;
+}
+.compare-table thead th {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line-strong);
+}
+.compare-table tbody th {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--muted);
+  width: 11rem;
+}
+.compare-table td {
+  color: var(--ink-soft);
+}
+/* our column: the one the reader should end on */
+.compare-table .mine {
+  background: var(--surface);
+  border-left: 2px solid var(--accent);
+  color: var(--ink);
+}
+.compare-table thead .mine {
+  color: var(--ink);
+  font-weight: 600;
+}
+
 /* Dictionary block (the name, on About) ---------------------------------- */
 .definition {
   border-left: 2px solid var(--accent);
