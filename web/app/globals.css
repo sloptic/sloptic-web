@@ -1328,6 +1328,70 @@ code {
   font-weight: 600;
 }
 
+/* Can / cannot judge, on About. Two boxes so the boundary is a shape rather than
+   a sentence: what a machine can settle, and what it has no business settling. */
+.judge-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+@media (max-width: 46rem) {
+  .judge-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.judge {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 1.1rem 1.25rem 1.25rem;
+}
+.judge[data-kind="can"] {
+  border-top: 3px solid var(--ink);
+}
+.judge[data-kind="cannot"] {
+  border-top: 3px solid var(--line-strong);
+}
+.judge h3 {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 0.85rem;
+}
+.judge[data-kind="cannot"] h3 {
+  color: var(--muted);
+}
+.judge ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.judge li {
+  position: relative;
+  padding-left: 1.15rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.judge li::before {
+  position: absolute;
+  left: 0;
+  font-family: var(--font-mono);
+}
+.judge[data-kind="can"] li::before {
+  content: "+";
+  color: var(--accent);
+}
+.judge[data-kind="cannot"] li::before {
+  content: "x";
+  color: var(--line-strong);
+}
+.judge[data-kind="cannot"] li {
+  color: var(--muted);
+}
+
 /* Dictionary block (the name, on About) ---------------------------------- */
 .definition {
   border-left: 2px solid var(--accent);

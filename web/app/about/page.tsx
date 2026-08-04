@@ -125,16 +125,40 @@ export default function AboutPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">What it will not tell you</h2>
+        <h2 className="section-head">What it can and cannot judge</h2>
         <p className="section-intro">
           Sloptic only judges things that are wrong no matter what an app is for. Before any check is
           added, it has to survive one question: is there a legitimate app for which this behavior is
           actually correct? If yes, the check does not belong.
         </p>
-        <p className="section-intro">
-          So it will never tell you whether your idea is good, whether a feature is worth building, or
-          whether the design works. People are better at that. Sloptic takes the part a machine can
-          judge without an opinion, and leaves the rest alone.
+        <div className="judge-grid">
+          <div className="judge" data-kind="can">
+            <h3>It can judge</h3>
+            <ul>
+              <li>Whether a screen reader can operate the controls</li>
+              <li>Whether the page loads fast enough on a phone</li>
+              <li>Whether the defenses a browser expects are set</li>
+              <li>Whether a secret is sitting in the code you ship</li>
+              <li>Whether links resolve and pages fail honestly</li>
+              <li>Whether what is live is a finished build</li>
+            </ul>
+          </div>
+          <div className="judge" data-kind="cannot">
+            <h3>It cannot judge</h3>
+            <ul>
+              <li>Whether the idea is any good</li>
+              <li>Whether a feature does what it claims</li>
+              <li>Whether the design works for anyone</li>
+              <li>How hard the thing was to build</li>
+              <li>Whether the code behind it is any good</li>
+              <li>Whether the app is worth using at all</li>
+            </ul>
+          </div>
+        </div>
+        <p className="section-intro" style={{ marginTop: "1.75rem" }}>
+          Everything on the right needs to know what the app was trying to do, and a machine has no way
+          to know that. People are better at the right-hand column anyway. Sloptic takes the part that
+          can be judged without an opinion and leaves the rest alone.
         </p>
       </section>
 
