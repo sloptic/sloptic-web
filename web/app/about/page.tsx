@@ -128,8 +128,9 @@ export default function AboutPage() {
         <h2 className="section-head">What it can and cannot judge</h2>
         <p className="section-intro">
           Sloptic only judges things that are wrong no matter what an app is for. Before any check is
-          added, it has to survive one question: is there a legitimate app for which this behavior is
-          actually correct? If yes, the check does not belong.
+          added, we must ask: is there a legitimate app for which this behavior is actually correct? If
+          yes, the check does not belong. And humans are better for judging that kind of correctness
+          anyway.
         </p>
         <div className="judge-grid">
           <div className="judge" data-kind="can">
@@ -155,11 +156,6 @@ export default function AboutPage() {
             </ul>
           </div>
         </div>
-        <p className="section-intro" style={{ marginTop: "1.75rem" }}>
-          Everything on the right needs to know what the app was trying to do, and a machine has no way
-          to know that. People are better at the right-hand column anyway. Sloptic takes the part that
-          can be judged without an opinion and leaves the rest alone.
-        </p>
       </section>
 
       <section className="section">
