@@ -41,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <span className="masthead-spacer" />
           <nav className="mast-nav">
             <a href="/about">about</a>
+            <a href="/checks">checks</a>
             <a href="/organizers">organizers</a>
             <a href="/methodology">methodology</a>
           </nav>
@@ -71,10 +72,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <a href="/#checks">What it checks</a>
                 </li>
                 <li>
+                  <a href="/checks">Every check</a>
+                </li>
+                <li>
                   <a href="/#sample">What you get back</a>
                 </li>
                 <li>
-                  <a href="/verify">Why only 37 checks</a>
+                  <a href="/verify">Why only some run</a>
                 </li>
               </ul>
             </div>

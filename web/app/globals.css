@@ -1212,6 +1212,58 @@ code {
   margin: 0.35rem 0;
 }
 
+/* Reference table (the counts, on /checks) -------------------------------- */
+.table-scroll {
+  overflow-x: auto;
+}
+.count-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 32rem;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+.count-table th,
+.count-table td {
+  text-align: right;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+.count-table thead th {
+  color: var(--muted);
+  font-size: 0.76rem;
+  border-bottom: 1px solid var(--line-strong);
+}
+.count-table th:first-child,
+.count-table thead th:first-child {
+  text-align: left;
+}
+.count-table tbody th {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--ink);
+}
+.count-table .total-row th,
+.count-table .total-row td {
+  border-bottom: 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* the swatch is reused outside the landing, so colour it by data-axis too */
+.measure-swatch[data-axis="security"] {
+  background: var(--security);
+}
+.measure-swatch[data-axis="qa"] {
+  background: var(--qa);
+}
+.measure-swatch[data-axis="performance"] {
+  background: var(--performance);
+}
+
 /* Dictionary block (the name, on About) ---------------------------------- */
 .definition {
   border-left: 2px solid var(--accent);

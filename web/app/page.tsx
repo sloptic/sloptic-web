@@ -2,136 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-// Real catalog groupings. `open` runs on any URL (look-only); `gated` needs domain verification
-// because those checks send test traffic. Counts match the grader: 37 of 91 are look-only.
-//
-// Each item may carry a link to the authority that defines it (MDN for the web platform, OWASP for
-// security, W3C for accessibility, web.dev for Core Web Vitals). Every URL here was checked. Items with
-// no single canonical source stay unlinked on purpose: a weak citation is worse than none.
-// A check, optionally linked to the authority that defines it.
-type Check = { name: string; href?: string };
-type Channel = {
-  id: string;
-  label: string;
-  passive: number;
-  total: number;
-  blurb: string;
-  open: Check[];
-  gated: Check[];
-};
-
-const CHANNELS: Channel[] = [
-  {
-    id: "security",
-    label: "security",
-    passive: 14,
-    total: 57,
-    blurb:
-      "Getting this wrong costs the people who trusted your app, not you. Sloptic looks for missing defenses and secrets left in the code you ship, following OWASP.",
-    open: [
-      { name: "security headers", href: "https://owasp.org/www-project-secure-headers/" },
-      {
-        name: "secrets in the shipped code",
-        href: "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html",
-      },
-      { name: "exposed data", href: "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/" },
-      {
-        name: "sharing rules (CORS)",
-        href: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS",
-      },
-      {
-        name: "mixed content",
-        href: "https://developer.mozilla.org/en-US/docs/Web/Security/Mixed_content",
-      },
-      {
-        name: "known-vulnerable dependencies",
-        href: "https://owasp.org/Top10/A06_2021-Vulnerable_and_Outdated_Components/",
-      },
-    ],
-    gated: [
-      {
-        name: "sql injection",
-        href: "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
-      },
-      { name: "cross-site scripting", href: "https://owasp.org/www-community/attacks/xss/" },
-      {
-        name: "login rate limiting",
-        href: "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html",
-      },
-      { name: "access control", href: "https://owasp.org/Top10/A01_2021-Broken_Access_Control/" },
-      {
-        name: "session handling",
-        href: "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html",
-      },
-      {
-        name: "file uploads",
-        href: "https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html",
-      },
-      { name: "path traversal", href: "https://owasp.org/www-community/attacks/Path_Traversal" },
-      {
-        name: "open redirects",
-        href: "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html",
-      },
-    ],
-  },
-  {
-    id: "qa",
-    label: "accessibility & quality",
-    passive: 12,
-    total: 22,
-    blurb:
-      "An app a screen reader cannot operate is closed to the people who rely on one. Sloptic checks whether controls work and whether pages fail honestly, using axe-core against WCAG.",
-    open: [
-      { name: "accessibility", href: "https://www.w3.org/WAI/standards-guidelines/wcag/" },
-      { name: "broken links" },
-      {
-        name: "pages that fail quietly",
-        href: "https://developers.google.com/search/docs/crawling-indexing/http-network-errors",
-      },
-      { name: "console errors" },
-      {
-        name: "content types",
-        href: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types",
-      },
-      { name: "development build left online" },
-      { name: "honest navigation" },
-    ],
-    gated: [
-      { name: "crash resistance" },
-      {
-        name: "bad input handling",
-        href: "https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html",
-      },
-      { name: "data integrity" },
-      { name: "dead controls" },
-    ],
-  },
-  {
-    id: "performance",
-    label: "performance",
-    passive: 11,
-    total: 12,
-    blurb:
-      "Most people will not wait for a slow app, so Sloptic measures real load speed and page weight as Google's Core Web Vitals.",
-    open: [
-      { name: "core web vitals", href: "https://web.dev/articles/vitals" },
-      { name: "load time", href: "https://web.dev/articles/optimize-lcp" },
-      { name: "time to first byte", href: "https://web.dev/articles/ttfb" },
-      {
-        name: "page weight",
-        href: "https://developer.chrome.com/docs/lighthouse/performance/total-byte-weight",
-      },
-      { name: "request count" },
-      {
-        name: "compression",
-        href: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Compression",
-      },
-      { name: "caching", href: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching" },
-    ],
-    gated: [{ name: "behavior under load" }],
-  },
-];
+import { CHANNELS } from "@/lib/checks";
 
 // Sample grade, passive mode. Each axis splits three ways: what failed, what applied, what the mode
 // could have run. Read in checks or in slop points, since a handful of failed checks can cost more than
@@ -382,30 +253,18 @@ export default function Home() {
       <section className="channels" id="checks">
         <div className="channels-head">
           <h2>What it checks</h2>
-          <a className="channels-stat" href="/verify">
-            37 of 91 run on any URL
+          <a className="channels-stat" href="/checks">
+            every check
           </a>
         </div>
         <p className="channels-intro">
-          Sloptic checks the things every web app should get right, no matter what it does. Each check
-          is one file in the{" "}
-          <a
-            href="https://github.com/sloptic/sloptic-main/tree/main/catalog"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            open catalog
-          </a>
-          , so the counts below are countable: 57 for security, 22 for accessibility and quality, 12 for
-          performance. Open an area to see what gets checked.
+          Sloptic checks the things every web app should get right, no matter what it does. Open an
+          area to see what gets checked.
         </p>
         <p className="channels-note">
-          Note that in anonymous mode, we only run a set of 37 <em>passive</em> checks, i.e. checks that
-          do not alter the site, send attack payloads, or go fishing for secrets. To run the other 54{" "}
-          <em>active</em> checks, log in and <a href="/verify">prove the site is yours</a>. The passive
-          share varies by area because that is where attack traffic lives: nearly every performance
-          check is pure observation, while most security checks have to send something to learn
-          anything.
+          Note that in anonymous mode, we only run the <em>passive</em> checks, i.e. checks that do not
+          alter the site, send attack payloads, or go fishing for secrets. To run the <em>active</em>{" "}
+          ones, log in and <a href="/verify">prove the site is yours</a>.
         </p>
         <div className="channel-list">
           {CHANNELS.map((ch) => (
@@ -421,15 +280,6 @@ export default function Home() {
               >
                 <span className="channel-dot" aria-hidden />
                 <span className="channel-label">{ch.label}</span>
-                <span className="channel-count">
-                  {ch.passive} of {ch.total} run on any URL
-                </span>
-                <span className="channel-meter" aria-hidden>
-                  <span
-                    className="channel-meter-fill"
-                    style={{ width: `${(ch.passive / ch.total) * 100}%` }}
-                  />
-                </span>
                 <span className="channel-toggle" aria-hidden>
                   {openCh === ch.id ? "-" : "+"}
                 </span>
