@@ -91,10 +91,8 @@ export default function OrganizersPage({
           </div>
         </div>
         <p className="section-intro" style={{ marginTop: "1.75rem" }}>
-          So use it for the part it can measure. Sloptic works best as one line in your rubric, the
-          quality and durability portion, next to human judges scoring originality, usefulness, and how
-          well the team executed what they set out to build. A leaderboard sorted by slop score alone
-          would crown whoever built the least.
+          So use it for the part it can measure: one line in your rubric, not the verdict. A board
+          sorted on slop alone would crown whoever built the least.
         </p>
       </section>
 

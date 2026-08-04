@@ -46,9 +46,8 @@ export default function VerifyPage() {
           </div>
         </div>
         <p className="section-intro" style={{ marginTop: "1.75rem" }}>
-          This is not a paywall or a trial limit. Pointing attack traffic at a site you do not own is
-          unauthorized testing, and no amount of good intent makes that someone else&apos;s problem to
-          absorb.
+          This is not a paywall. Pointing attack traffic at a site you do not own is unauthorized
+          testing, whatever your intent.
         </p>
       </section>
 

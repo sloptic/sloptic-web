@@ -80,9 +80,8 @@ export default function ChecksPage() {
           </table>
         </div>
         <p className="section-intro" style={{ marginTop: "1.5rem" }}>
-          The share that runs on any URL swings a lot between areas, and that is not arbitrary.
-          Performance is almost entirely observation, so nearly all of it is safe anywhere. Security is
-          where the attack traffic lives, so most of it waits until you verify.
+          The share swings by area because that is where the attack traffic lives. Performance is
+          almost all observation; security mostly is not.
         </p>
       </section>
 

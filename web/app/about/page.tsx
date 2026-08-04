@@ -117,11 +117,6 @@ export default function AboutPage() {
             </tbody>
           </table>
         </div>
-        <p className="section-intro" style={{ marginTop: "1.5rem" }}>
-          That last row is the whole difference. A list of findings tells you about one app and says
-          nothing about how it stands against any other. A number that means the same thing everywhere
-          is what lets a hundred unrelated apps be ordered at all.
-        </p>
       </section>
 
       <section className="section">
