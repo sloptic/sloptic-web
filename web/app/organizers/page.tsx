@@ -26,24 +26,24 @@ export default function OrganizersPage({
 
       <section className="section" id="what-you-get">
         <h2 className="section-head">What you get</h2>
-        <div className="rows">
-          <div className="row2">
-            <span className="term">One fair scale</span>
-            <p className="desc">
+        <div className="card-grid">
+          <div className="card">
+            <h3>One fair scale</h3>
+            <p>
               Every web app entry graded the same way, whatever it was built with, so you can compare
               them on something other than which demo went smoothest.
             </p>
           </div>
-          <div className="row2">
-            <span className="term">A ranked board</span>
-            <p className="desc">
+          <div className="card">
+            <h3>A ranked board</h3>
+            <p>
               The gradeable entries sorted by score, with a breakdown by area and a short report for
               each team.
             </p>
           </div>
-          <div className="row2">
-            <span className="term">Honest results</span>
-            <p className="desc">
+          <div className="card">
+            <h3>Honest results</h3>
+            <p>
               Each grade shows how much of the app could be tested, so a clean score means clean, not
               skipped.
             </p>
@@ -52,45 +52,30 @@ export default function OrganizersPage({
       </section>
 
       <section className="section" id="limits">
-        <h2 className="section-head">What it cannot judge, and why you still need judges</h2>
+        <h2 className="section-head">What it cannot judge</h2>
         <p className="section-intro">
           Sloptic grades the floor: the things that are wrong in any app, whatever it was built to do.
-          Everything that depends on what a team was trying to build sits outside it on purpose, because
-          a machine has no way to know what the right answer was supposed to be.
+          Everything that depends on what a team was trying to build sits outside it, because a machine
+          has no way to know what the right answer was supposed to be.
         </p>
-        <div className="rows">
-          <div className="row2">
-            <span className="term">Whether the idea is any good</span>
-            <p className="desc">
-              Originality, ambition, usefulness, taste. Sloptic cannot tell a genuinely new idea from a
-              template with the colors changed, and it never tries.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">Whether it does what it claims</span>
-            <p className="desc">
-              Correct behavior depends on the spec, and Sloptic has none. A feature that works and a
-              feature that quietly does the wrong thing look identical from the outside.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">How hard it was to build</span>
-            <p className="desc">
-              A weekend of real engineering and an afternoon of gluing APIs together are the same to it.
-              Effort and difficulty are yours to weigh.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">Simpler apps have less to get wrong</span>
-            <p className="desc">
-              This one matters most for ranking. A static page barely exposes anything, so it can score
-              better than an ambitious app that actually shipped features. The ranking does break ties in
-              favor of the app that had more to defend and defended it, but a simpler project with a
-              genuinely lower score still finishes ahead.
-            </p>
-          </div>
+        <div className="judge" data-kind="cannot">
+          <h3>Still yours to judge</h3>
+          <ul>
+            <li>Whether the idea is original, useful, or any good</li>
+            <li>Whether a feature does what the team says it does</li>
+            <li>How hard the thing was to build</li>
+          </ul>
         </div>
-        <p className="section-intro" style={{ marginTop: "1.75rem" }}>
+        <div className="callout" data-tone="warn">
+          <p className="callout-label">the one that bites when ranking</p>
+          <p>
+            Simpler apps have less to get wrong. A static page barely exposes anything, so it can score
+            better than an ambitious app that actually shipped features. The ranking breaks ties in
+            favor of the app that had more to defend and defended it, but a simpler project with a
+            genuinely lower score still finishes ahead.
+          </p>
+        </div>
+        <p className="section-intro">
           So use it for the part it can measure: one line in your rubric, not the verdict. A board
           sorted on slop alone would crown whoever built the least.
         </p>
@@ -104,82 +89,58 @@ export default function OrganizersPage({
           whole field and you can rank it outright. If it accepts anything else, which most do, Sloptic
           fits better as a category prize than as the overall ranking.
         </p>
-        <div className="rows">
-          <div className="row2">
-            <span className="term">Slopless Builder</span>
-            <p className="desc">
-              Award it to the web app entry with the lowest slop score. The criterion is published in
-              advance, applies identically to everyone competing for it, and needs no judge in the room
-              at midnight.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">Why this category earns one</span>
-            <p className="desc">
-              A web app is the cheapest thing at a hackathon to generate and the easiest to make look
-              finished. That is exactly why the one that also holds up is worth singling out: it is the
-              part of the work no model volunteers to do.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">It stays in its lane</span>
-            <p className="desc">
-              A category prize claims only what Sloptic actually measures. Nobody has to accept that the
-              cleanest build was the best project, and your main prizes stay where they belong, with
-              human judges.
-            </p>
-          </div>
+        <div className="callout" data-tone="award">
+          <p className="callout-label">suggested category</p>
+          <p className="award-name">Slopless Builder</p>
+          <p>
+            To the web app entry with the lowest slop score. The criterion is published in advance,
+            applies identically to everyone competing for it, and needs no judge in the room at
+            midnight.
+          </p>
         </div>
+        <p className="section-intro">
+          A web app is the cheapest thing at a hackathon to generate and the easiest to make look
+          finished, which is what makes the one that also holds up worth naming. A category prize also
+          claims only what Sloptic measures, so nobody has to accept that the cleanest build was the
+          best project, and your main prizes stay with human judges.
+        </p>
       </section>
 
       <section className="section" id="how">
         <h2 className="section-head">How it works</h2>
-        <p className="section-intro">
-          Setup is quick, and Sloptic only grades apps that are actually in your event.
-        </p>
-        <div className="rows">
-          <div className="row2">
-            <span className="term">Register your event</span>
-            <p className="desc">
-              Point Sloptic at your public Devpost event and prove you run it. That ties the event to
-              your account, so no one else can grade it.
+        <ol className="flowchart">
+          <li className="flow-box">
+            <span className="n">01</span>
+            <p>
+              Point Sloptic at your public Devpost event and prove you run it, which ties the event to
+              your account so nobody else can grade it.
             </p>
-          </div>
-          <div className="row2">
-            <span className="term">Pick how deep to go</span>
-            <p className="desc">
-              A light grade needs nothing from teams and runs on every app it can reach. A full grade
-              adds the deeper checks and asks each team to add a small verification file when they
-              submit.
+          </li>
+          <li className="flow-conn" aria-hidden />
+          <li className="flow-box">
+            <span className="n">02</span>
+            <p>
+              Pick how deep to go. A light grade needs nothing from teams. A full grade adds the deeper
+              checks and asks each team to add a small verification file when they submit.
             </p>
-          </div>
-          <div className="row2">
-            <span className="term">Grade the web apps</span>
-            <p className="desc">
-              Sloptic confirms each submitted app belongs to your event, skips the entries with nothing
-              deployed to look at, and grades the rest.
+          </li>
+          <li className="flow-conn" aria-hidden />
+          <li className="flow-box">
+            <span className="n">03</span>
+            <p>
+              Sloptic confirms each app belongs to your event, skips the entries with nothing deployed
+              to look at, and grades the rest.
             </p>
-          </div>
-        </div>
+          </li>
+        </ol>
       </section>
 
       <section className="section" id="fair">
         <h2 className="section-head">Fair by construction</h2>
-        <div className="rows">
-          <div className="row2">
-            <span className="term">Everyone measured the same</span>
-            <p className="desc">
-              An event runs at one setting, so no entry is judged more gently than another.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">Only with permission</span>
-            <p className="desc">
-              The deeper checks only ever run on apps whose team has verified them, and any team can opt
-              out.
-            </p>
-          </div>
-        </div>
+        <p className="section-intro">
+          An event runs at one setting, so no entry is judged more gently than another. The deeper
+          checks only ever run on apps whose team has verified them, and any team can opt out.
+        </p>
         <div className="cta-row">
           <a className="button" href="mailto:hello@sloptic.org?subject=Organizer%20access">
             Request organizer access

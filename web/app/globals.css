@@ -1392,6 +1392,74 @@ code {
   color: var(--muted);
 }
 
+/* Plain benefit cards, three up ------------------------------------------ */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+@media (max-width: 46rem) {
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--line-strong);
+  padding: 1.1rem 1.2rem 1.25rem;
+}
+.card h3 {
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+.card p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+/* Callout: a single point that should not read as another list item -------- */
+.callout {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  padding: 1.1rem 1.25rem;
+  margin: 1.5rem 0;
+  max-width: 62ch;
+}
+.callout[data-tone="warn"] {
+  border-left-color: var(--security);
+}
+.callout p {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.callout-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  margin-bottom: 0.5rem !important;
+}
+.award-name {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--ink) !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* a lone judge box, outside the two-up grid */
+.section > .judge {
+  max-width: 62ch;
+}
+
 /* Dictionary block (the name, on About) ---------------------------------- */
 .definition {
   border-left: 2px solid var(--accent);

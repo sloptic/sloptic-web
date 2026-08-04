@@ -36,9 +36,8 @@ export default function ChecksPage() {
         <p className="page-lead">
           The catalog is {TOTALS.total} checks. Each one is a single file in the{" "}
           <a href={CATALOG_URL} target="_blank" rel="noopener noreferrer">
-            open grader
+            open grader.
           </a>
-          , so none of the numbers here are ours to assert: you can go count them.
         </p>
       </div>
 
