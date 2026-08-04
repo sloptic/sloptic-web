@@ -1491,6 +1491,9 @@ code {
   color: var(--ink);
   font-weight: 600;
 }
+.method[data-tone="limits"] {
+  border-left-color: var(--security);
+}
 .method a {
   color: var(--ink);
   text-decoration: underline;
