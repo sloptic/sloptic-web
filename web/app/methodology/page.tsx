@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "How Sloptic grades",
   description:
-    "How the grade works in plain terms: what it looks at, the two kinds of checks, what it tells you, and what it will not catch.",
+    "The method in full: what counts as a finding, how the score is built, what happens when a check cannot run, how the ruler is validated, and what is not claimed yet.",
 };
 
 export default function MethodologyPage() {
@@ -12,77 +12,202 @@ export default function MethodologyPage() {
       <div className="page-head">
         <h1>How the grade works</h1>
         <p className="page-lead">
-          In plain terms: what Sloptic looks at, how the score is built, and what it does and does not
-          promise.
+          What Sloptic looks at, what it counts as a finding, how those become a number, and what it
+          does not claim. The grader is open, so anything here can be checked against the code.
         </p>
       </div>
 
-      <section className="section">
-        <h2 className="section-head">It only looks from the outside</h2>
-        <p className="section-intro">
-          Sloptic never sees your code. It checks your app the way a visitor would, over the web, and
-          only flags things that are wrong no matter what the app is for. It will not tell you whether
-          your idea is good, only whether the app holds up.
+      <div className="method">
+        <h2>It only looks from the outside</h2>
+        <p>
+          Sloptic never sees your code. It checks the app the way a visitor would, over the web, with no
+          source and no description of what the app is meant to do. That constraint is the point: the
+          same method works on any app, whatever it was built with, which is what makes two unrelated
+          apps comparable at all.
         </p>
-      </section>
+      </div>
 
-      <section className="section">
-        <h2 className="section-head">Two kinds of checks</h2>
-        <div className="rows">
-          <div className="row2">
-            <span className="term">
-              Look-only
-              <span className="sub">37 checks</span>
+      <div className="method">
+        <h2>What counts as a finding</h2>
+        <p>
+          Two rules decide whether something can be a check at all.
+        </p>
+        <p>
+          <b>It has to be wrong in every app.</b> Before a check is added it must survive one question:
+          is there a legitimate app for which this behavior is actually correct? An empty search result
+          is fine on some sites and a bug on others, so it is out. A page a screen reader cannot operate
+          is wrong everywhere, so it is in.
+        </p>
+        <p>
+          <b>It has to be proven, not guessed.</b> A finding rests on something only that fault could
+          produce. The path traversal check does not match the path it asked for, it matches the
+          contents of the file it should never have received. The scripting check requires the payload
+          to actually execute in the page, not merely appear in it. Anything that could be explained by
+          a chatty framework or a reflected input is not evidence.
+        </p>
+      </div>
+
+      <div className="method">
+        <h2>How the score is built</h2>
+        <ul className="stat-list">
+          <li>
+            <span className="k">deduction only</span>
+            <span className="v">
+              Nothing is earned for passing. This mirrors how failure actually works: defending seven of
+              eight injectable inputs is still a breach, so the seven add nothing and the eighth adds
+              its full penalty.
             </span>
-            <p className="desc">
-              These read only what your app already shows everyone: its settings, the page, how fast it
-              loads. They are safe to run on any URL, which is why the public grade uses only these.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">
-              Hands-on
-              <span className="sub">54 checks</span>
+          </li>
+          <li>
+            <span className="k">risk priced</span>
+            <span className="v">
+              A penalty is expected harm, how often it hurts someone multiplied by how badly, rather
+              than raw severity. Nothing exceeds the ceiling reserved for a single catastrophic security
+              fault.
             </span>
-            <p className="desc">
-              These actively probe for holes by sending test traffic. Doing that to a site you do not
-              own would be wrong, so they run only once the owner has been verified.
-            </p>
-          </div>
-        </div>
-      </section>
+          </li>
+          <li>
+            <span className="k">damped</span>
+            <span className="v">
+              One root cause counts once. Variants of the same flaw collapse to a single finding, and
+              repeats within a category decay sharply, so ten pages missing one header are not ten
+              findings.
+            </span>
+          </li>
+          <li>
+            <span className="k">per area, not out of 100</span>
+            <span className="v">
+              Security, quality and performance each report their own subtotal and the three sum to the
+              score. Scaling to 100 was tried and reverted: a denominator makes apps with different
+              amounts of surface incomparable, which defeats the purpose.
+            </span>
+          </li>
+        </ul>
+      </div>
 
-      <section className="section">
-        <h2 className="section-head">It tells you what it tested</h2>
-        <p className="section-intro">
-          Every grade says how much of the app it could reach. A clean score on a page it could not load
-          is not the same as a clean score on one it fully checked, and it never hides the difference. A
-          low score only means something next to what was actually testable.
+      <div className="method">
+        <h2>Two kinds of checks</h2>
+        <p>
+          <b>Look-only</b> checks read what your app already shows every visitor: its settings, the page
+          it serves, how fast it loads, whether a screen reader can use it. Running them on a
+          stranger&apos;s site is no different from visiting it, so they run on any URL.
         </p>
-      </section>
-
-      <section className="section">
-        <h2 className="section-head">Scores you can compare</h2>
-        <p className="section-intro">
-          Your number is ranked against a fixed set of real apps, so the same app earns the same place
-          over time instead of drifting. A light grade and a full grade are different measurements, so
-          Sloptic never mixes them on the same ranking.
+        <p>
+          <b>Hands-on</b> checks go looking for holes by sending real attack traffic. Doing that to a
+          site you do not own is unauthorized testing, so they run only once ownership is proven.{" "}
+          <a href="/verify">What that involves.</a>
         </p>
-      </section>
+      </div>
 
-      <section className="section">
-        <h2 className="section-head">What it will not catch</h2>
-        <p className="section-intro">
-          Sloptic checks the public, logged-out version of your app. Problems that only show up behind a
-          login it cannot get past will be missed, and it says so rather than pretending it saw
-          everything. It is a check on the floor every app should have, not a full security audit.
+      <div className="method">
+        <h2>What happens when a check cannot run</h2>
+        <p>
+          Every check returns one of three answers, and the third is the one that matters. It found the
+          fault, it tested and did not find it, or it could not establish the conditions to test at all.
+          A check with no login form in front of it cannot report that the login is safe.
+        </p>
+        <p>
+          That third answer is never quietly folded into a pass, because a clean result that was never
+          actually tested is a missed fault wearing a pass. Each one records why it could not run, and
+          every grade ships the tally: on the population we measured, the median app had 62% of the
+          battery apply to it.
+        </p>
+      </div>
+
+      <div className="method">
+        <h2>How the checks are validated</h2>
+        <p>
+          Checks are calibrated against apps with known answers, in layers, because no single target
+          proves much on its own.
+        </p>
+        <ul className="stat-list">
+          <li>
+            <span className="k">a matched pair</span>
+            <span className="v">
+              One reference app deliberately broken, one deliberately clean. A check that cannot tell
+              them apart does not ship.
+            </span>
+          </li>
+          <li>
+            <span className="k">known-broken apps</span>
+            <span className="v">
+              DVWA, Juice Shop, VAmPI and bWAPP: the deliberately vulnerable apps the industry already
+              uses, whose faults are documented by people with no stake here.
+            </span>
+          </li>
+          <li>
+            <span className="k">a third-party benchmark</span>
+            <span className="v">
+              GapBench, an outside recall benchmark with its own ground truth, run politely and without
+              any attempt to defeat its protections.
+            </span>
+          </li>
+          <li>
+            <span className="k">a population</span>
+            <span className="v">
+              Around fifteen hundred real deployed apps, which shows how often a fault occurs but never
+              whether a given call was right, because a corpus has no answer key.
+            </span>
+          </li>
+        </ul>
+      </div>
+
+      <div className="method">
+        <h2>Whether the ruler holds still</h2>
+        <p>
+          A ranking is worth nothing if the same app scores differently next week. Two independent runs
+          over the full population:
+        </p>
+        <ul className="stat-list numeric">
+          <li>
+            <span className="k">rank correlation</span>
+            <span className="v">0.974</span>
+          </li>
+          <li>
+            <span className="k">apps scoring identically</span>
+            <span className="v">92%</span>
+          </li>
+          <li>
+            <span className="k">same decile</span>
+            <span className="v">92.6%, and 96% within one</span>
+          </li>
+          <li>
+            <span className="k">drift</span>
+            <span className="v">none, mean difference +0.15</span>
+          </li>
+        </ul>
+        <p>
+          What movement remains sits in the checks where a browser is genuinely nondeterministic: timing
+          measurements and stateful page behavior. The deterministic surface repeats exactly. The
+          reference population is frozen and versioned for the same reason, since a ranking that drifts
+          each month is not a credential.
+        </p>
+      </div>
+
+      <div className="method">
+        <h2>What it does not claim</h2>
+        <p>
+          <b>It never says you are safe.</b> A 0 means nothing was found, not that nothing is there. The
+          score cannot tell a defended thing from an absent one, and calling that clean would be a false
+          assurance.
+        </p>
+        <p>
+          <b>It sees the logged-out surface.</b> Faults behind a login it cannot get past are missed,
+          and the coverage report says so rather than implying it saw everything.
+        </p>
+        <p>
+          <b>The miss rate is not measured yet.</b> The audit of what Sloptic fails to catch, across the
+          whole catalog, is still running. Until it finishes, no recall figure is claimed.
         </p>
         <div className="cta-row">
+          <a className="button" href="/">
+            Grade an app
+          </a>
           <a className="button secondary" href="https://github.com/sloptic/sloptic-main">
             The grader, in full
           </a>
         </div>
-      </section>
+      </div>
     </>
   );
 }

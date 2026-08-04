@@ -1462,6 +1462,78 @@ code {
   max-width: 62ch;
 }
 
+/* Methodology: each part of the method as its own panel, so a reader can stop
+   after any one of them. ------------------------------------------------- */
+.method {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  padding: 1.4rem 1.6rem 1.5rem;
+  margin-top: 1.25rem;
+}
+.method h2 {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+.method p {
+  margin: 0 0 0.8rem;
+  font-size: 0.98rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  max-width: 66ch;
+}
+.method p:last-of-type {
+  margin-bottom: 0;
+}
+.method b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.method a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+/* label and explanation, for the parts of the method that enumerate */
+.stat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.stat-list li {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: 1.1rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--line);
+}
+@media (max-width: 42rem) {
+  .stat-list li {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+}
+.stat-list .k {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.stat-list .v {
+  font-size: 0.96rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.stat-list.numeric .v {
+  font-family: var(--font-mono);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Dictionary block (the name, on About) ---------------------------------- */
 .definition {
   border-left: 2px solid var(--accent);
