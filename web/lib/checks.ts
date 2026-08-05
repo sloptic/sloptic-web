@@ -1,10 +1,18 @@
 // Joins the generated facts to the hand-written labels. Pages import from here, never from either
 // half directly, so the counts always come from the grader and the wording always comes from us.
 
-import { CATEGORY_FACTS, TOTALS, type Area, type Access, type CategoryFact } from "./checks.generated";
+import {
+  CATEGORY_FACTS,
+  PASSIVE_PROBE_INDEX,
+  TOTALS,
+  type Area,
+  type Access,
+  type CategoryFact,
+} from "./checks.generated";
 import { AREA_LABELS, LABELS } from "./check-labels";
 
 export { TOTALS };
+export { AREA_LABELS };
 export type { Area, Access, CategoryFact };
 
 export const CATALOG_URL = "https://github.com/sloptic/sloptic-main/tree/main/catalog";
@@ -50,3 +58,18 @@ export const AREA_BLURBS: Record<Area, string> = {
 export function sampleFor(area: Area, n = 6): Category[] {
   return categoriesFor(area).slice(0, n);
 }
+
+/** What a probe id was, for naming a check that passed. The grade record only names the ones that
+ *  fired, so a passing check would otherwise be an opaque id. */
+export function describeProbe(id: string): { area: Area; name: string } | null {
+  const hit = PASSIVE_PROBE_INDEX[id];
+  if (!hit) return null;
+  const [area, slug] = hit;
+  return { area, name: LABELS[slug]?.name ?? slug };
+}
+
+/** Passive checks per area, the denominator for "of everything this mode could run". */
+export const PASSIVE_BY_AREA: Record<Area, number> = AREAS.reduce(
+  (acc, a) => ({ ...acc, [a.id]: a.passive }),
+  {} as Record<Area, number>,
+);

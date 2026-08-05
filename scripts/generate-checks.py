@@ -61,6 +61,14 @@ def main() -> int:
         access = "open" if npass == n else "gated" if npass == 0 else "mixed"
         rows.append({"slug": slug, "area": area, "probes": n, "passive": npass, "access": access})
 
+    # probe id -> its area and kind. The grade record names the area only for probes that FIRED,
+    # so without this the report cannot say which axis a passing check belonged to.
+    index = ",\n".join(
+        f'  "{p.id}": ["{p.bundle}", "{p.category}"]'
+        for p in sorted(probes, key=lambda x: x.id)
+        if safety.is_passive(p.id)
+    )
+
     passive = len(safety.PASSIVE_PROBES)
     body = ",\n".join(
         f'  {{ slug: "{r["slug"]}", area: "{r["area"]}", probes: {r["probes"]}, '
@@ -89,6 +97,12 @@ export const CATEGORY_FACTS: CategoryFact[] = [
 ];
 
 export const TOTALS = {{ total: {len(probes)}, passive: {passive}, active: {len(probes) - passive} }};
+
+/** Passive probe id -> [area, kind]. Lets a report name the checks that passed, which the grade
+ *  record lists by id only. Passive-only: the active ones never run on a graded target here. */
+export const PASSIVE_PROBE_INDEX: Record<string, [Area, string]> = {{
+{index},
+}};
 ''')
 
     print(f"wrote {OUT.relative_to(HERE.parent)}")

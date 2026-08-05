@@ -20,6 +20,13 @@ export interface Coverage {
   pct_applicable?: number;
   ran_kinds?: string[];
   na_kinds?: string[];
+  /** Probe ids that applied, whether they fired or came back clean. What PASSED is this minus the
+   *  findings, which is the only way to name a check that did not fail. */
+  applied?: string[];
+  /** Why a whole kind could not run, keyed by kind. */
+  na_reasons?: Record<string, string>;
+  na_reasons_by_probe?: Record<string, string>;
+  by_kind?: Record<string, unknown>;
 }
 
 export interface GradeResult {
@@ -27,7 +34,9 @@ export interface GradeResult {
   catalog_version: string;
   passive_probe_count?: number;
   slop_score: number;
-  axis_slop: { security: number; qa: number; performance: number };
+  /** Only the axes that scored. A clean axis is absent, not zero: the first real grade
+   *  returned { qa, security } with no performance key. */
+  axis_slop: Partial<Record<"security" | "qa" | "performance", number>>;
   coverage: Coverage;
   platform?: Record<string, unknown> | null;
   surface?: Record<string, unknown> | null;

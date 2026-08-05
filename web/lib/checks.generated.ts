@@ -69,3 +69,45 @@ export const CATEGORY_FACTS: CategoryFact[] = [
 ];
 
 export const TOTALS = { total: 91, passive: 37, active: 54 };
+
+/** Passive probe id -> [area, kind]. Lets a report name the checks that passed, which the grade
+ *  record lists by id only. Passive-only: the active ones never run on a graded target here. */
+export const PASSIVE_PROBE_INDEX: Record<string, [Area, string]> = {
+  "perf-cache-001": ["performance", "caching"],
+  "perf-compress-001": ["performance", "compression"],
+  "perf-cwv-001": ["performance", "web-vitals"],
+  "perf-cwv-002": ["performance", "web-vitals"],
+  "perf-loadtime-001": ["performance", "load-time"],
+  "perf-requests-001": ["performance", "request-count"],
+  "perf-ttfb-001": ["performance", "speed"],
+  "perf-ttfb-002": ["performance", "speed"],
+  "perf-ttfb-003": ["performance", "speed"],
+  "perf-weight-001": ["performance", "page-weight"],
+  "perf-weight-002": ["performance", "page-weight"],
+  "qa-a11y-001": ["qa", "accessibility"],
+  "qa-a11y-002": ["qa", "accessibility"],
+  "qa-backnav-001": ["qa", "ui-honesty"],
+  "qa-chunk-001": ["qa", "ui-honesty"],
+  "qa-console-001": ["qa", "console-errors"],
+  "qa-ctype-001": ["qa", "content-type"],
+  "qa-deeplink-001": ["qa", "ui-honesty"],
+  "qa-devbuild-001": ["qa", "deployment-hygiene"],
+  "qa-http-001": ["qa", "http-correctness"],
+  "qa-http-002": ["qa", "http-conformance"],
+  "qa-links-001": ["qa", "broken-links"],
+  "qa-seo-001": ["qa", "seo"],
+  "sec-cors-001": ["security", "cors"],
+  "sec-csp-001": ["security", "security-headers"],
+  "sec-deps-001": ["security", "dependency"],
+  "sec-exposure-005": ["security", "data-exposure"],
+  "sec-exposure-006": ["security", "exposure"],
+  "sec-headers-001": ["security", "security-headers"],
+  "sec-headers-002": ["security", "security-headers"],
+  "sec-headers-003": ["security", "security-headers"],
+  "sec-headers-004": ["security", "security-headers"],
+  "sec-headers-005": ["security", "security-headers"],
+  "sec-headers-006": ["security", "security-headers"],
+  "sec-mixed-001": ["security", "mixed-content"],
+  "sec-secrets-001": ["security", "secrets-exposure"],
+  "sec-secrets-002": ["security", "secrets-exposure"],
+};
