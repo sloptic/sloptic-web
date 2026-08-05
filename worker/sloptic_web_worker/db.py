@@ -55,13 +55,17 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
         conn.execute(
             """
             INSERT INTO results (grade_id, mode, catalog_version, passive_probe_count, slop_score,
-                                 axis_slop, coverage, platform, surface, findings)
+                                 axis_slop, coverage, platform, surface, findings,
+                                 card, outcomes, axis_potential)
             VALUES (%(grade_id)s, %(mode)s, %(catalog_version)s, %(passive_probe_count)s, %(slop_score)s,
-                    %(axis_slop)s, %(coverage)s, %(platform)s, %(surface)s, %(findings)s)
+                    %(axis_slop)s, %(coverage)s, %(platform)s, %(surface)s, %(findings)s,
+                    %(card)s, %(outcomes)s, %(axis_potential)s)
             ON CONFLICT (grade_id) DO UPDATE SET
                 slop_score = EXCLUDED.slop_score, axis_slop = EXCLUDED.axis_slop,
                 coverage = EXCLUDED.coverage, platform = EXCLUDED.platform,
-                surface = EXCLUDED.surface, findings = EXCLUDED.findings;
+                surface = EXCLUDED.surface, findings = EXCLUDED.findings,
+                card = EXCLUDED.card, outcomes = EXCLUDED.outcomes,
+                axis_potential = EXCLUDED.axis_potential;
             """,
             {
                 "grade_id": job_id,
@@ -74,6 +78,9 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
                 "platform": json.dumps(result.get("platform") or {}),
                 "surface": json.dumps(result.get("surface") or {}),
                 "findings": json.dumps(result.get("findings") or []),
+                "card": json.dumps(result.get("card") or {}),
+                "outcomes": json.dumps(result.get("outcomes") or []),
+                "axis_potential": json.dumps(result.get("axis_potential") or {}),
             },
         )
         conn.execute(

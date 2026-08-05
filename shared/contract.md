@@ -77,6 +77,16 @@ carries no full-curve percentile (see the passive-percentile decision).
 }
 ```
 
-`axis_slop` sums exactly to `slop_score`. `findings` are the `slop_detected` outcomes only. The three
+Three fields carry what the lean benchmark record drops, all from the grader's public API:
+
+- `card` is `reportcard.build_card()`: findings grouped by axis with expected / actual / indicates /
+  remediation, the categories that passed, and a hidden-pool count.
+- `outcomes` is every `Outcome`, clean and not-applicable included, with evidence. It fans out per
+  target, so expect more entries than there are checks.
+- `axis_potential` is the damped worst case per axis over the checks that APPLIED. Penalties come
+  from the catalog, never from the run: a check that passed records penalty 0, so reusing the run's
+  numbers would collapse potential to equal the score.
+
+`axis_slop` sums exactly to `slop_score`, and omits any axis that scored nothing. `findings` are the `slop_detected` outcomes only. The three
 axes and coverage come straight off the `Report`; `platform` is off-score and labelled as such in the
 UI.

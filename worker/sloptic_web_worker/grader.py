@@ -5,11 +5,15 @@ never reimplemented here.
 
 from importlib.metadata import PackageNotFoundError, version
 
-from sloptic import browser, safety
+from dataclasses import asdict
+
+from sloptic import browser, reportcard, safety
+from sloptic.aggregate import compute_slop_score
 from sloptic.catalog import load_catalog
 from sloptic.cli import _grade_record
 from sloptic.deploy import RemoteDeployer
 from sloptic.pipeline import run
+from sloptic.schema import Outcome
 
 from . import config
 
@@ -38,6 +42,40 @@ class Unreachable(Exception):
     """The target did not present a gradeable surface."""
 
 
+def _build_card(record: dict, origin: str) -> dict:
+    """The grader's own report card: per finding, what was expected, what was seen, what it means, and
+    the remediation. Passing `catalog_root` keeps the public/hidden pool split honest."""
+    try:
+        return reportcard.build_card({**record, "url": origin}, config.CATALOG_DIR)
+    except Exception as e:  # noqa: BLE001 - a card is a nicety; never lose a grade over one
+        return {"error": f"card unavailable: {e}"}
+
+
+def _axis_potential(report) -> dict:
+    """Per axis, the damped score this app would carry if every check that APPLIED had fired.
+
+    The penalties must come from the CATALOG, not from the run: a check that passed records penalty 0,
+    so flipping its verdict would score nothing and the potential would collapse to equal the real
+    score. This mirrors what scripts/benchmark.py does when it reconstructs the worst case, and it uses
+    the grader's aggregator so the dampers (a variant group fires once, repeats within a category
+    decay) match the real score exactly. Always >= axis_slop.
+    """
+    catalog = {p.id: p for p in load_catalog(config.CATALOG_DIR)}
+    applied = (report.coverage or {}).get("applied") or []
+
+    by_bundle: dict[str, list] = {}
+    for pid in applied:
+        probe = catalog.get(pid)
+        if probe is None:                    # in the record but not this catalog: skip, do not guess
+            continue
+        by_bundle.setdefault(probe.bundle, []).append(
+            Outcome(probe_id=pid, bundle=probe.bundle, category=probe.category,
+                    outcome="slop_detected", penalty=probe.penalty,
+                    variant_group_id=probe.variant_group_id)
+        )
+    return {bundle: compute_slop_score(outs) for bundle, outs in by_bundle.items()}
+
+
 def run_passive_grade(origin: str) -> dict:
     """Grade `origin` with the passive battery. Raises Unreachable if the target cannot be reached.
 
@@ -52,7 +90,18 @@ def run_passive_grade(origin: str) -> dict:
     # _grade_record gives the benchmark-rankable shape (repo, slop_score, axis_slop, coverage,
     # observed_surface, platform, findings). Re-key to the web contract and tag it as a passive subset.
     record = _grade_record(report, origin)
+
+    # The record above is the benchmark-rankable shape: it keeps only the checks that FIRED, because
+    # ranking does not care what passed. A report does. Everything below comes from the grader's own
+    # public API, so none of the scoring or wording is re-derived here.
+    card = _build_card(record, origin)
+    outcomes = [asdict(o) for o in report.outcomes]
+    axis_potential = _axis_potential(report)
+
     return {
+        "card": card,
+        "outcomes": outcomes,
+        "axis_potential": axis_potential,
         "mode": "passive",
         "catalog_version": _catalog_version(),
         "passive_probe_count": len(catalog),
