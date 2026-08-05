@@ -153,38 +153,6 @@ export default function MethodologyPage() {
         </ul>
       </section>
 
-      <div className="method">
-        <h2>Whether the ruler holds still</h2>
-        <p>
-          A ranking is worth nothing if the same app scores differently next week. Two independent runs
-          over the full population:
-        </p>
-        <ul className="stat-list numeric">
-          <li>
-            <span className="k">rank correlation</span>
-            <span className="v">0.974</span>
-          </li>
-          <li>
-            <span className="k">apps scoring identically</span>
-            <span className="v">92%</span>
-          </li>
-          <li>
-            <span className="k">same decile</span>
-            <span className="v">92.6%, and 96% within one</span>
-          </li>
-          <li>
-            <span className="k">drift</span>
-            <span className="v">none, mean difference +0.15</span>
-          </li>
-        </ul>
-        <p>
-          What movement remains sits in the checks where a browser is genuinely nondeterministic: timing
-          measurements and stateful page behavior. The deterministic surface repeats exactly. The
-          reference population is frozen and versioned for the same reason, since a ranking that drifts
-          each month is not a credential.
-        </p>
-      </div>
-
       <div className="method" data-tone="limits">
         <h2>What it does not claim</h2>
         <p>

@@ -2,9 +2,9 @@
 // the passive/active status come from the grader (checks.generated.ts), and these turn slugs into
 // something a reader can use.
 //
-// `href` points at the authority that defines the thing, where one canonical source exists. Every URL
-// here was checked. Categories with no single canonical source stay unlinked on purpose, since a weak
-// citation is worse than none.
+// `href` points at the authority that defines the thing. Every category carries one, because the
+// failure this page exists to prevent is a reader looking at a row and wondering what the check even
+// is. Every URL here was checked.
 //
 // A category with no entry here still renders, falling back to its slug, so a new one arriving from
 // the grader shows up as something to name rather than disappearing.
@@ -13,6 +13,7 @@ export type Label = { name: string; href?: string };
 
 const OWASP = "https://cheatsheetseries.owasp.org/cheatsheets";
 const MDN = "https://developer.mozilla.org/en-US/docs";
+const CWE = "https://cwe.mitre.org/data/definitions";
 
 export const LABELS: Record<string, Label> = {
   // security
@@ -51,8 +52,11 @@ export const LABELS: Record<string, Label> = {
     name: "known-vulnerable dependencies",
     href: "https://owasp.org/Top10/A06_2021-Vulnerable_and_Outdated_Components/",
   },
-  "dos-resistance": { name: "oversized request handling" },
-  "filter-injection": { name: "filter injection" },
+  "dos-resistance": {
+    name: "oversized request handling",
+    href: `${CWE}/409.html`,
+  },
+  "filter-injection": { name: "filter injection", href: `${CWE}/943.html` },
   "host-header": { name: "host header handling", href: `${MDN}/Web/HTTP/Reference/Headers/Host` },
   "mixed-content": { name: "mixed content", href: `${MDN}/Web/Security/Mixed_content` },
   "open-redirect": {
@@ -69,28 +73,43 @@ export const LABELS: Record<string, Label> = {
     name: "server-side request forgery",
     href: `${OWASP}/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html`,
   },
-  "template-injection": { name: "template injection" },
+  "template-injection": {
+    name: "template injection",
+    href: "https://portswigger.net/web-security/server-side-template-injection",
+  },
   xxe: { name: "xml external entities", href: `${OWASP}/XML_External_Entity_Prevention_Cheat_Sheet.html` },
 
   // quality
-  "ui-honesty": { name: "honest navigation" },
+  "ui-honesty": { name: "honest navigation", href: `${MDN}/Web/API/History_API` },
   accessibility: { name: "accessibility", href: "https://www.w3.org/WAI/standards-guidelines/wcag/" },
-  "data-integrity": { name: "data integrity" },
-  "race-condition": { name: "race conditions" },
-  "broken-links": { name: "broken links" },
-  "console-errors": { name: "console errors" },
+  "data-integrity": {
+    name: "data integrity",
+    href: "https://en.wikipedia.org/wiki/Durability_(database_systems)",
+  },
+  "race-condition": { name: "race conditions", href: `${CWE}/362.html` },
+  "broken-links": { name: "broken links", href: `${MDN}/Web/HTTP/Reference/Status/404` },
+  "console-errors": { name: "console errors", href: `${MDN}/Web/API/console/error_static` },
   "content-type": { name: "content types", href: `${MDN}/Web/HTTP/Guides/MIME_types` },
-  "crash-resistance": { name: "crash resistance" },
-  "dead-controls": { name: "dead controls" },
-  "deployment-hygiene": { name: "development build left online" },
-  "error-hygiene": { name: "error handling" },
+  "crash-resistance": { name: "crash resistance", href: `${MDN}/Web/HTTP/Reference/Status/500` },
+  "dead-controls": {
+    name: "dead controls",
+    href: "https://www.w3.org/WAI/ARIA/apg/patterns/button/",
+  },
+  "deployment-hygiene": {
+    name: "development build left online",
+    href: "https://react.dev/learn/react-developer-tools",
+  },
+  "error-hygiene": { name: "error handling", href: `${OWASP}/Error_Handling_Cheat_Sheet.html` },
   "http-conformance": { name: "http conformance", href: `${MDN}/Web/HTTP/Reference/Status` },
   "http-correctness": {
     name: "pages that fail quietly",
     href: "https://developers.google.com/search/docs/crawling-indexing/http-network-errors",
   },
   "input-validation": { name: "input validation", href: `${OWASP}/Input_Validation_Cheat_Sheet.html` },
-  seo: { name: "crawlability" },
+  seo: {
+    name: "crawlability",
+    href: "https://developers.google.com/search/docs/fundamentals/seo-starter-guide",
+  },
 
   // performance
   speed: { name: "server response speed", href: "https://web.dev/articles/ttfb" },
@@ -101,9 +120,12 @@ export const LABELS: Record<string, Label> = {
   },
   caching: { name: "caching", href: `${MDN}/Web/HTTP/Guides/Caching` },
   compression: { name: "compression", href: `${MDN}/Web/HTTP/Guides/Compression` },
-  "load-resilience": { name: "behavior under load" },
+  "load-resilience": { name: "behavior under load", href: `${CWE}/400.html` },
   "load-time": { name: "load time", href: "https://web.dev/articles/optimize-lcp" },
-  "request-count": { name: "request count" },
+  "request-count": {
+    name: "request count",
+    href: "https://developer.chrome.com/docs/lighthouse/performance/resource-summary",
+  },
 };
 
 export const AREA_LABELS: Record<string, string> = {
