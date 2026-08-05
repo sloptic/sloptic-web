@@ -70,7 +70,7 @@ export default function ChecksPage() {
         </div>
         <p className="section-intro" style={{ marginTop: "1.5rem" }}>
           The share swings by area because that is where the attack traffic lives. Performance is
-          almost all observation; security mostly is not.
+          almost all observation, while security mostly isn't.
         </p>
       </section>
 
@@ -80,7 +80,7 @@ export default function ChecksPage() {
             <span className="measure-swatch" data-axis={area.id} aria-hidden /> {area.label}
           </h2>
           <p className="section-intro">
-            {area.categories} kinds of fault, {area.probes} checks between them.
+            {area.categories} kinds of fault, {area.probes} checks between them. Click on a link to learn more about it.
           </p>
           <div className="table-scroll">
             <table className="cat-table">
@@ -120,7 +120,7 @@ export default function ChecksPage() {
       <section className="section">
         <h2 className="section-head">Why a kind holds several checks</h2>
         <p className="section-intro">
-          One fault is often several checks, because a single technique proving nothing is not the same
+          A kind of fault is often represented by several checks because a single technique proving nothing is not the same
           as the fault being absent. Injection gets tried several ways before Sloptic will say it found
           nothing. Those still collapse to one finding when they fire, so a kind with five checks cannot
           cost you five times.

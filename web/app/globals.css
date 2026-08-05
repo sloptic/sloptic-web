@@ -1,4 +1,9 @@
-/* Sloptic: scientific-instrument look. Warm bench paper with a faint graph-paper grid, IBM Plex Sans
+/* Palette note: --muted and --accent are text colours, so they are held at WCAG AA contrast
+   (>= 4.5:1) against both --paper and --surface in both themes. Sloptic grades contrast with
+   axe-core against WCAG AA, so this site failing its own check would be self-parody. Re-run the
+   contrast check before changing any of these.
+
+   Sloptic: scientific-instrument look. Warm bench paper with a faint graph-paper grid, IBM Plex Sans
    for text and Plex Mono for the readouts, signal-trace axis colors, ruler ticks on the meters.
    Light-first, with a deliberate scope-dark for dark mode (system default, plus a manual toggle). */
 
@@ -7,11 +12,11 @@
   --surface: #faf8f0;
   --ink: #1e211b;
   --ink-soft: #474b40;
-  --muted: #7c8072;
+  --muted: #6b6f61;
   --line: #d8d3c1;
   --line-strong: #bdb8a3;
   --grid: color-mix(in srgb, var(--ink) 6%, transparent);
-  --accent: #a85a10;
+  --accent: #9e530d;
   --on-accent: #fdfaf2;
 
   --security: #a83f2c;
@@ -32,7 +37,7 @@
   --surface: #171a15;
   --ink: #d9ddce;
   --ink-soft: #a8ae9d;
-  --muted: #767b6b;
+  --muted: #7e8373;
   --line: #2a2e25;
   --line-strong: #3b4034;
   --grid: color-mix(in srgb, var(--ink) 8%, transparent);
@@ -50,7 +55,7 @@
     --surface: #171a15;
     --ink: #d9ddce;
     --ink-soft: #a8ae9d;
-    --muted: #767b6b;
+    --muted: #7e8373;
     --line: #2a2e25;
     --line-strong: #3b4034;
     --grid: color-mix(in srgb, var(--ink) 8%, transparent);
