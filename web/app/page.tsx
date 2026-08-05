@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CHANNELS } from "@/lib/checks";
+import { AREAS, AREA_BLURBS, categoriesFor } from "@/lib/checks";
 
 // Sample grade, passive mode. Each axis splits three ways: what failed, what applied, what the mode
 // could have run. Read in checks or in slop points, since a handful of failed checks can cost more than
@@ -73,24 +73,6 @@ const SAMPLE_PASSED = [
     desc: "A screen reader can describe every image on the page.",
   },
 ];
-
-// One check. Links out to the authority that defines it when there is a canonical one.
-function ProbeItem({ name, href }: { name: string; href?: string }) {
-  return (
-    <li className="probe-item">
-      <span className="probe-id" aria-hidden>
-        +
-      </span>
-      {href ? (
-        <a href={href} target="_blank" rel="noopener noreferrer" className="probe-link">
-          {name}
-        </a>
-      ) : (
-        name
-      )}
-    </li>
-  );
-}
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -212,38 +194,52 @@ export default function Home() {
           ones, log in and <a href="/verify">prove the site is yours</a>.
         </p>
         <div className="channel-list">
-          {CHANNELS.map((ch) => (
+          {AREAS.map((area) => (
             <div
-              key={ch.id}
-              className={"channel" + (openCh === ch.id ? " open" : "")}
-              data-axis={ch.id}
+              key={area.id}
+              className={"channel" + (openCh === area.id ? " open" : "")}
+              data-axis={area.id}
             >
               <button
                 className="channel-head"
-                onClick={() => setOpenCh(openCh === ch.id ? "" : ch.id)}
-                aria-expanded={openCh === ch.id}
+                onClick={() => setOpenCh(openCh === area.id ? "" : area.id)}
+                aria-expanded={openCh === area.id}
               >
                 <span className="channel-dot" aria-hidden />
-                <span className="channel-label">{ch.label}</span>
+                <span className="channel-label">{area.label}</span>
                 <span className="channel-toggle" aria-hidden>
-                  {openCh === ch.id ? "-" : "+"}
+                  {openCh === area.id ? "-" : "+"}
                 </span>
               </button>
-              {openCh === ch.id && (
+              {openCh === area.id && (
                 <div className="channel-body">
-                  <p className="channel-blurb">{ch.blurb}</p>
-                  <p className="probe-group-label">Runs on any URL</p>
+                  <p className="channel-blurb">{AREA_BLURBS[area.id]}</p>
                   <ul className="probe-list">
-                    {ch.open.map((p) => (
-                      <ProbeItem key={p.name} name={p.name} href={p.href} />
-                    ))}
+                    {categoriesFor(area.id)
+                      .slice(0, 8)
+                      .map((c) => (
+                        <li key={c.slug} className="probe-item">
+                          <span className="probe-id" aria-hidden>
+                            +
+                          </span>
+                          {c.href ? (
+                            <a
+                              href={c.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="probe-link"
+                            >
+                              {c.name}
+                            </a>
+                          ) : (
+                            c.name
+                          )}
+                        </li>
+                      ))}
                   </ul>
-                  <p className="probe-group-label">Needs you to verify the site is yours</p>
-                  <ul className="probe-list gated">
-                    {ch.gated.map((p) => (
-                      <ProbeItem key={p.name} name={p.name} href={p.href} />
-                    ))}
-                  </ul>
+                  <p className="channel-more">
+                    <a href={`/checks#${area.id}`}>See all {area.categories} in this area.</a>
+                  </p>
                 </div>
               )}
             </div>

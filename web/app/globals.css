@@ -1537,6 +1537,59 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
+/* Category table on /checks: the full catalog, one row per kind of fault ---- */
+.cat-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 30rem;
+  font-size: 0.94rem;
+}
+.cat-table th,
+.cat-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  font-weight: 400;
+  text-align: right;
+}
+.cat-table th:first-child,
+.cat-table thead th:first-child {
+  text-align: left;
+}
+.cat-table thead th {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line-strong);
+}
+.cat-table tbody th {
+  color: var(--ink);
+}
+.cat-table td {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.cat-table .access {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+/* a kind that needs verification reads quieter than one anyone can run */
+.cat-table tr[data-access="gated"] th,
+.cat-table tr[data-access="gated"] td {
+  color: var(--muted);
+}
+.channel-more {
+  margin: 1rem 0 0;
+  font-size: 0.9rem;
+}
+.channel-more a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+}
+
 /* Dictionary block (the name, on About) ---------------------------------- */
 .definition {
   border-left: 2px solid var(--accent);
