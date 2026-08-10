@@ -3,12 +3,20 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { normalizeTarget, UrlRejected } from "@/lib/origin";
 import { egressPrecheck } from "@/lib/egress";
 import { allow, clientIp, hashIp } from "@/lib/ratelimit";
+import { gradingOpen, GRADING_CLOSED_MESSAGE } from "@/lib/flags";
 
 export const runtime = "nodejs"; // needs node:dns / node:crypto; not edge
 export const dynamic = "force-dynamic";
 
 // POST /api/grade  ->  enqueue a passive grade. Returns { id, status: "queued" }.
 export async function POST(req: NextRequest) {
+  // Refuse before doing anything else. Without a worker a queued grade never finishes, and a 202
+  // followed by a pending page that spins forever is worse than saying so plainly. This is the
+  // authority; the form only mirrors it.
+  if (!gradingOpen()) {
+    return NextResponse.json({ error: GRADING_CLOSED_MESSAGE }, { status: 503 });
+  }
+
   let body: { url?: string };
   try {
     body = await req.json();

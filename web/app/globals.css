@@ -231,20 +231,7 @@ a {
   margin-right: 0;
   margin-top: 1.75rem;
 }
-.event-form-wrap .hero-alt {
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  color: var(--muted);
-  margin: 1.25rem 0 0;
-}
-.hero-alt a {
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-color: var(--accent);
-  text-underline-offset: 3px;
-}
-
-.rank-note {
+.event-form-wrap .rank-note {
   margin-left: 0;
 }
 
@@ -254,14 +241,18 @@ a {
   color: var(--muted);
   margin: 1.25rem 0 0;
 }
-.hero-alt a {
+.hero-alt a,
+.rank-note a,
+.closed-note a {
   color: var(--ink);
   text-decoration: underline;
   text-decoration-color: var(--accent);
   text-underline-offset: 3px;
 }
 
-.rank-note {
+/* a note set beside the form: the rank hand-off, and the honest state when grading is shut */
+.rank-note,
+.closed-note {
   font-size: 0.95rem;
   line-height: 1.55;
   color: var(--ink-soft);
@@ -271,12 +262,7 @@ a {
   border-left: 2px solid var(--accent);
   text-align: left;
 }
-.rank-note a {
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-color: var(--accent);
-  text-underline-offset: 3px;
-}
+
 .lede {
   font-family: var(--font-display);
   font-weight: 600;

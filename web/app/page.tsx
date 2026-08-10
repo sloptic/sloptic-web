@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AREAS, AREA_BLURBS, categoriesFor } from "@/lib/checks";
 
@@ -78,9 +78,22 @@ export default function Home() {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // null while unknown, so the form is never wrongly shown as closed on first paint
+  const [open, setOpen] = useState<boolean | null>(null);
   const [openCh, setOpenCh] = useState<string>("security");
   const [unit, setUnit] = useState<"count" | "slop">("count");
   const router = useRouter();
+
+  useEffect(() => {
+    let live = true;
+    fetch("/api/status", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => live && setOpen(Boolean(d.grading_open)))
+      .catch(() => live && setOpen(null));
+    return () => {
+      live = false;
+    };
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -124,10 +137,16 @@ export default function Home() {
             aria-label="Deployed web app URL"
             autoFocus
           />
-          <button type="submit" disabled={busy}>
+          <button type="submit" disabled={busy || open === false}>
             {busy ? "sending" : "grade it"}
           </button>
         </form>
+        {open === false && (
+          <p className="closed-note" role="status">
+            Grading is not open yet. The checks below are real and the grader is finished; it is just
+            not accepting submissions until a worker is running to answer them.
+          </p>
+        )}
         {error && (
           <p className="error" role="alert">
             {error}
