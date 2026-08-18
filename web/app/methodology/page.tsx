@@ -31,7 +31,7 @@ export default function MethodologyPage() {
         <h2 className="section-head">What counts as a finding</h2>
         <p className="section-intro">
           <b>It has to be wrong in every app.</b> Before a check is added it must survive one question:
-          is there a legitimate app for which this behavior is actually correct? A table any visitor can
+          is there a legitimate app for which this behavior is correct? A table any visitor can
           read is exactly right for a product catalogue, so the check cannot fire on an open table. It
           fires on what is in the columns. Whether <em>this</em> user should see <em>that</em> record is
           intent, and stays human. Whether a stranger can read a table containing{" "}
@@ -41,7 +41,7 @@ export default function MethodologyPage() {
           <b>It has to be proven, not guessed.</b> A finding rests on something only that fault could
           produce, and echoing back our own payload never counts. The file-access check does not match
           the path it asked for, it matches a line out of the password file it should never have
-          received. The scripting check requires the payload to actually execute in the page, not merely
+          received. The scripting check requires the payload to execute in the page, not merely
           appear in it. One filter check keys on a fragment of the app&apos;s own query template
           surfacing in an error, which nothing we sent could have produced.
         </p>
@@ -53,7 +53,7 @@ export default function MethodologyPage() {
           <li>
             <span className="k">deduction only</span>
             <span className="v">
-              Nothing is earned for passing. This mirrors how failure actually works: defending seven of
+              Nothing is earned for passing. This mirrors how failure works: defending seven of
               eight injectable inputs is still a breach, so the seven add nothing and the eighth adds
               its full penalty.
             </span>
@@ -106,8 +106,7 @@ export default function MethodologyPage() {
           A check with no login in front of it cannot report that the login is safe.
         </p>
         <p className="section-intro">
-          That third answer is never quietly folded into a pass, because a clean result that was never
-          actually tested is a missed fault wearing a pass. Each one records why it could not run. The
+          That third answer is never quietly folded into a pass, because a clean result that was never tested is a missed fault wearing a pass. Each one records why it could not run. The
           same rule applies when a target is too noisy to read: an app that answers every request with
           error grammar carries no signal, so the benign case is checked first and the result is marked
           untestable rather than guessed. Every grade ships the tally, and on the population we

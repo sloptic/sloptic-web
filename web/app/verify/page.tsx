@@ -39,8 +39,8 @@ export default function VerifyPage() {
             </span>
             <p className="desc">
               These go looking for holes by sending real attack traffic: injection payloads, malformed
-              input, file uploads, repeated logins. That is genuinely useful on your own app and
-              genuinely not okay on someone else&apos;s, which is why they stay locked until we know who
+              input, file uploads, repeated logins. That is useful on your own app and
+              not okay on someone else&apos;s, so they stay locked until we know who
               is asking and that they own the target.
             </p>
           </div>
@@ -125,7 +125,7 @@ export default function VerifyPage() {
           token is enough on its own.
         </p>
         <p className="section-intro">
-          One more case worth knowing: if your app serves the same page for every path, as many
+          One more case: if your app serves the same page for every path, as many
           single-page apps do, the token file can get swallowed by that catch-all. Then a{" "}
           <code>&lt;meta name=&quot;sloptic-site-verification&quot;&gt;</code> tag in the page head does
           the same job.

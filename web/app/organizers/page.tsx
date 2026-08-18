@@ -70,9 +70,9 @@ export default function OrganizersPage({
           <p className="callout-label">the one that bites when ranking</p>
           <p>
             Simpler apps have less to get wrong. A static page barely exposes anything, so it can score
-            better than an ambitious app that actually shipped features. The ranking breaks ties in
+            better than an ambitious app that shipped features. The ranking breaks ties in
             favor of the app that had more to defend and defended it, but a simpler project with a
-            genuinely lower score still finishes ahead.
+            lower score still wins.
           </p>
         </div>
         <p className="section-intro">

@@ -44,7 +44,7 @@ export default function AboutPage() {
           It is tempting to file all this under minor, since none of it is a break-in. But that has it
           backwards. An exploit is a risk that may never be triggered, but a control a screen reader cannot
           see, or a page that takes five seconds to load on a phone, is not a risk at all. It is something
-          that happens to every visitor, every time, and affects everyone. For example, {" "}
+          that happens to every visitor, every time. {" "}
           <a
             href="https://www.thinkwithgoogle.com/marketing-strategies/app-and-mobile/mobile-page-speed-new-industry-benchmarks/"
             target="_blank"
@@ -123,7 +123,7 @@ export default function AboutPage() {
         <h2 className="section-head">What it can and cannot judge</h2>
         <p className="section-intro">
           Sloptic only judges things that are wrong no matter what an app is for. Before any check is
-          added, we must ask: is there a legitimate app for which this behavior is actually correct? If
+          added, we must ask: is there a legitimate app for which this behavior is correct? If
           yes, the check does not belong. And humans are better for judging that kind of correctness
           anyway.
         </p>
@@ -167,7 +167,7 @@ export default function AboutPage() {
             <span className="term">It admits what it could not test</span>
             <p className="desc">
               When a check cannot run, it says so and says why, rather than quietly passing. A clean
-              result that was never actually tested is a missed problem wearing a pass, and that is the
+              result that was never tested is a missed problem wearing a pass, and that is the
               failure worth caring about most.
             </p>
           </div>
