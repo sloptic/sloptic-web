@@ -255,12 +255,9 @@ a {
 .closed-note {
   font-size: 0.95rem;
   line-height: 1.55;
-  color: var(--ink-soft);
+  color: var(--muted);
   max-width: 52ch;
   margin: 1rem auto 0;
-  padding-left: 1rem;
-  border-left: 2px solid var(--accent);
-  text-align: left;
 }
 
 .lede {
@@ -366,8 +363,6 @@ a {
   color: var(--ink-soft);
   max-width: 62ch;
   margin: 0 0 1.75rem;
-  padding-left: 1.1rem;
-  border-left: 2px solid var(--line-strong);
 }
 .channels-note em {
   font-style: normal;
@@ -1313,12 +1308,12 @@ code {
 /* our column: the one the reader should end on */
 .compare-table .mine {
   background: var(--surface);
-  border-left: 2px solid var(--accent);
   color: var(--ink);
 }
 .compare-table thead .mine {
   color: var(--ink);
   font-weight: 600;
+  border-bottom: 2px solid var(--accent);
 }
 
 /* Can / cannot judge, on About. Two boxes so the boundary is a shape rather than
@@ -1417,15 +1412,11 @@ code {
 
 /* Callout: a single point that should not read as another list item -------- */
 .callout {
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--accent);
+  border: 1px solid var(--line-strong);
   background: var(--surface);
-  padding: 1.1rem 1.25rem;
+  padding: 1.2rem 1.35rem;
   margin: 1.5rem 0;
   max-width: 62ch;
-}
-.callout[data-tone="warn"] {
-  border-left-color: var(--security);
 }
 .callout p {
   margin: 0;
@@ -1435,17 +1426,33 @@ code {
 }
 .callout-label {
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   letter-spacing: 0.03em;
   color: var(--muted);
-  margin-bottom: 0.5rem !important;
+  margin: 0 0 0.5rem;
 }
 .award-name {
   font-family: var(--font-mono);
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 600;
-  color: var(--ink) !important;
-  margin-bottom: 0.5rem !important;
+  color: var(--ink);
+  margin: 0 0 0.55rem;
+}
+
+/* the prize reads like a prize: a solid block, not another bordered note */
+.callout[data-tone="award"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.callout[data-tone="award"] .callout-label,
+.callout[data-tone="award"] .award-name,
+.callout[data-tone="award"] p {
+  color: var(--on-accent);
+}
+
+/* the caution carries the security colour in its label, not a coloured edge */
+.callout[data-tone="warn"] .callout-label {
+  color: var(--security);
 }
 
 /* a lone judge box, outside the two-up grid */
@@ -1457,8 +1464,7 @@ code {
    after any one of them. ------------------------------------------------- */
 .method {
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--line-strong);
+  border: 1px solid var(--line-strong);
   padding: 1.4rem 1.6rem 1.5rem;
   margin-top: 1.25rem;
 }
@@ -1482,8 +1488,8 @@ code {
   color: var(--ink);
   font-weight: 600;
 }
-.method[data-tone="limits"] {
-  border-left-color: var(--security);
+.method[data-tone="limits"] h2 {
+  color: var(--security);
 }
 .method a {
   color: var(--ink);
@@ -1583,14 +1589,16 @@ code {
 
 /* Dictionary block (the name, on About) ---------------------------------- */
 .definition {
-  border-left: 2px solid var(--accent);
-  padding: 0.35rem 0 0.35rem 1.4rem;
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+  padding: 1.1rem 0;
   max-width: 62ch;
 }
 .definition-word {
-  font-family: var(--font-mono);
-  font-size: 1.05rem;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
   margin: 0 0 0.5rem;
 }
 .definition-pron {
