@@ -31,22 +31,45 @@
 #
 # PERSIST: copy the ruleset into /etc and reference the copy. Do NOT include this file straight
 # from the git clone: the system manager loads the boot config before (and independent of) your
-# session, and a ruleset under /home is exactly the kind of thing that parses interactively and
+# session, and a ruleset under /home is exactly the kind of thing that parses interactively but
 # fails at boot. The copy in /etc is the loaded one; the repo file stays the source of truth.
 #   sudo mkdir -p /etc/nftables
 #   sudo install -m 644 worker/deploy/egress.nft /etc/nftables/sloptic-egress.nft
 #   echo 'include "/etc/nftables/sloptic-egress.nft"' | sudo tee -a /etc/nftables.conf
+#   sudo sed -i '/^flush ruleset$/d' /etc/nftables.conf    # CRITICAL, see the note above the table:
+#                                                  the ruleset reloads itself via add+delete, so the
+#                                                  conf no longer needs (and must not keep) a global flush.
 #   sudo nft -c -f /etc/nftables.conf
 #   sudo systemctl enable --now nftables
-#   sudo systemctl restart nftables          # the boot rehearsal: flush + reload from the conf
-#   sudo nft list table inet sloptic_egress  # must survive the restart
+# And order docker AFTER nftables at boot, so a fresh nftables load can never wipe rules a running
+# docker daemon has already programmed (belt for the suspenders above):
+#   sudo mkdir -p /etc/systemd/system/docker.service.d
+#   printf '[Unit]\nAfter=nftables.service\nWants=nftables.service\n' | \
+#     sudo tee /etc/systemd/system/docker.service.d/after-nftables.conf
+#   sudo systemctl daemon-reload
+# Rehearse the boot ordering end to end, then verify both sides survive it:
+#   sudo systemctl restart nftables && sudo systemctl restart docker
+#   sudo nft list table inet sloptic_egress                        # our rules still loaded
+#   docker run --rm python:3.12-slim python -c \
+#     "import urllib.request;print(urllib.request.urlopen('https://example.com',timeout=8).status)"
+#                                                                  # container egress still works
 #
-# FAILURE MODE, seen once: the stock /etc/nftables.conf begins with `flush ruleset`, so a failed
-# include leaves NO rules at all (service failed, table gone). If that happens: re-apply by hand
-# (sudo nft -f /etc/nftables.conf), then journalctl -u nftables.service -e for the include error.
+# FAILURE MODE, seen once (the reason for the sed and the drop-in): the stock conf began with
+# `flush ruleset`, so enabling nftables.service wiped docker's runtime NAT/MASQUERADE rules ->
+# every container lost internet egress ('BLOCKED') and custom networks failed to attach.
+# Recovery, if it ever recurs: sudo systemctl restart docker (docker re-programs its rules).
 #
 # After changing the ruleset in the repo, re-run the install line to refresh the /etc copy.
 # (If ufw is enabled it coexists: tables are namespaced, both are evaluated, drops anywhere win.)
+
+# Self-contained reload: make the table vanish if present, then (re)create it. This is what lets
+# /etc/nftables.conf drop its stock `flush ruleset` line, which MUST go: `flush ruleset` deletes
+# EVERY table in every family, including the NAT/MASQUERADE rules a running docker daemon has
+# programmed, so `systemctl restart nftables` (or a boot where nftables runs after docker) silently
+# breaks all container egress. Seen once on the grader machine: every docker test failed with
+# 'BLOCKED' / 'failed to set up container networking' right after enabling nftables.service.
+add table inet sloptic_egress
+delete table inet sloptic_egress
 
 table inet sloptic_egress {
 
