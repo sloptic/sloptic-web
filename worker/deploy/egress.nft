@@ -1,0 +1,72 @@
+# sloptic egress deny, tier 3 of the egress sandbox (docs/egress-plan.md, Phase 0).
+#
+# WHAT THIS DOES: for the worker's user account only, drops all outbound traffic to private,
+# loopback, link-local, CGNAT, multicast, and reserved IPv4 ranges, plus IPv6 loopback,
+# link-local, and ULA. Every other user on this desktop, your SSH session, and all inbound
+# traffic are untouched: this table only matches packets the worker itself sends.
+#
+# BEFORE APPLYING: the rules match the worker by uid name, so the user must exist first.
+#   sudo useradd -r -s /usr/sbin/nologin sloptic
+# and run the worker under that user (systemd User=sloptic, or the container maps to it).
+#
+# INSTALL, from a live SSH session, in this order:
+#   sudo nft -c -f worker/deploy/egress.nft        # syntax check, changes nothing
+#   sudo nft -f worker/deploy/egress.nft           # applies atomically
+#   ( sleep 180 && sudo nft delete table inet sloptic_egress ) &   # rollback fuse:
+#                                                   # if you are still connected in 3 minutes,
+#                                                   # kill this PID and the rules stay
+# VERIFY:
+#   sudo -u sloptic curl -m 3 http://10.0.0.1/     # must fail (dropped)
+#   curl -m 3 http://10.0.0.1/                     # as yourself: must still connect
+#   sudo nft list table inet sloptic_egress        # the drop counter increments on attempts
+#
+# PERSIST: add  include "/path/to/this/file"  to /etc/nftables.conf, then
+#   sudo systemctl enable --now nftables
+# (If ufw is enabled it coexists: tables are namespaced, both are evaluated, drops anywhere win.
+# This file stays the source of truth for the egress deny regardless.)
+
+table inet sloptic_egress {
+
+    # Every non-public v4 destination the worker must never dial.
+    # 10/8 is this LAN, 172.16/12 and 192.168/16 are the other RFC1918 blocks,
+    # 169.254/16 is link-local (cloud metadata, 169.254.169.254, lives here),
+    # 100.64/10 is carrier-grade NAT, 127/8 loopback, 0/8 this-network,
+    # 224/4 multicast, 240/4 reserved.
+    set internal_v4 {
+        type ipv4_addr
+        flags interval
+        elements = { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16,
+                     169.254.0.0/16, 100.64.0.0/10, 127.0.0.0/8,
+                     0.0.0.0/8, 224.0.0.0/4, 240.0.0.0/4 }
+    }
+
+    chain output {
+        type filter hook output priority 0; policy accept;
+
+        # The one carve-out: DNS to the router resolver, which the resolve-and-check step itself
+        # needs. These MUST come before the drop rule: first verdict wins.
+        meta skuid sloptic ip daddr 10.0.0.1 udp dport 53 accept
+        meta skuid sloptic ip daddr 10.0.0.1 tcp dport 53 accept
+
+        # Everything else internal, for the worker only.
+        meta skuid sloptic ip daddr @internal_v4 counter drop
+        meta skuid sloptic ip6 daddr { ::1, fe80::/10, fc00::/7 } counter drop
+
+        # IPv4-mapped IPv6 (::ffff:10.0.0.1) needs no rule here: a dual-stack kernel sends those
+        # as plain IPv4, so the rules above already catch them, and the app-level predicate in
+        # worker/egress.py normalizes the same way.
+    }
+
+    # CONTAINER VARIANT: if the worker runs in Docker instead of under the sloptic user, uid
+    # matching does not apply (forwarded container traffic leaves under the bridge, not the
+    # process's uid). Replace the chain above with this, matching the compose network's bridge
+    # (docker network inspect <net> to get it):
+    #
+    # chain forward {
+    #     type filter hook forward priority 0; policy accept;
+    #     iifname "br-sloptic" ip daddr 10.0.0.1 udp dport 53 accept
+    #     iifname "br-sloptic" ip daddr 10.0.0.1 tcp dport 53 accept
+    #     iifname "br-sloptic" ip daddr @internal_v4 counter drop
+    #     iifname "br-sloptic" ip6 daddr { ::1, fe80::/10, fc00::/7 } counter drop
+    # }
+}
