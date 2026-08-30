@@ -110,7 +110,7 @@ export default function MethodologyPage() {
           same rule applies when a target is too noisy to read: an app that answers every request with
           error grammar carries no signal, so the benign case is checked first and the result is marked
           untestable rather than guessed. Every grade ships the tally, and on the population we
-          measured, the median app had 62% of the battery apply to it.
+          measured, the median app ran 57% of the battery.
         </p>
       </section>
 
@@ -145,7 +145,7 @@ export default function MethodologyPage() {
           <li>
             <span className="k">a population</span>
             <span className="v">
-              Around fifteen hundred real deployed apps, which shows how often a fault occurs but never
+              More than 1,600 real deployed apps, which shows how often a fault occurs but never
               whether a given call was right, because a corpus has no answer key.
             </span>
           </li>

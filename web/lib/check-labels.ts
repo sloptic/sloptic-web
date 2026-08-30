@@ -79,6 +79,15 @@ export const LABELS: Record<string, Label> = {
   },
   xxe: { name: "xml external entities", href: `${OWASP}/XML_External_Entity_Prevention_Cheat_Sheet.html` },
 
+  "supply-chain": {
+    name: "subresource integrity",
+    href: `${MDN}/Web/Security/Subresource_Integrity`,
+  },
+  "transport-security": {
+    name: "transport security",
+    href: `${MDN}/Web/HTTP/Reference/Headers/Strict-Transport-Security`,
+  },
+
   // quality
   "ui-honesty": { name: "honest navigation", href: `${MDN}/Web/API/History_API` },
   accessibility: { name: "accessibility", href: "https://www.w3.org/WAI/standards-guidelines/wcag/" },
@@ -111,6 +120,16 @@ export const LABELS: Record<string, Label> = {
     href: "https://developers.google.com/search/docs/fundamentals/seo-starter-guide",
   },
 
+  availability: { name: "availability", href: `${MDN}/Web/HTTP/Reference/Status/503` },
+  "email-verification": {
+    name: "email verification",
+    href: `${OWASP}/Authentication_Cheat_Sheet.html`,
+  },
+  "password-reset": {
+    name: "password reset",
+    href: `${OWASP}/Forgot_Password_Cheat_Sheet.html`,
+  },
+
   // performance
   speed: { name: "server response speed", href: "https://web.dev/articles/ttfb" },
   "web-vitals": { name: "core web vitals", href: "https://web.dev/articles/vitals" },
@@ -125,6 +144,17 @@ export const LABELS: Record<string, Label> = {
   "request-count": {
     name: "request count",
     href: "https://developer.chrome.com/docs/lighthouse/performance/resource-summary",
+  },
+  "dom-size": {
+    name: "DOM size",
+    href: "https://developer.chrome.com/docs/lighthouse/performance/dom-size",
+  },
+  "font-loading": { name: "font loading", href: "https://web.dev/articles/font-best-practices" },
+  "lcp-strategy": { name: "largest contentful paint", href: "https://web.dev/articles/lcp" },
+  minification: { name: "minification", href: `${MDN}/Glossary/Minification` },
+  overall: {
+    name: "overall Lighthouse score",
+    href: "https://developer.chrome.com/docs/lighthouse/performance/performance-scoring",
   },
 };
 

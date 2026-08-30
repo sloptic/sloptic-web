@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <a className="wordmark" href="/">
             sloptic
           </a>
-          <span className="masthead-note">grades any live web app</span>
+          <span className="masthead-note">grades deployed web apps</span>
           <span className="masthead-spacer" />
           <nav className="mast-nav">
             <a href="/about">about</a>

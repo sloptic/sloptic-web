@@ -1,19 +1,21 @@
 import type { Metadata } from "next";
+import { TOTALS } from "@/lib/checks";
 
 export const metadata: Metadata = {
   title: "Verifying your site",
   description:
-    "Why Sloptic runs 37 of its 91 checks by default, and what proving you own a site unlocks.",
+    `Why Sloptic runs ${TOTALS.passive} of its ${TOTALS.total} checks by default, and what proving you own a site unlocks.`,
 };
 
 export default function VerifyPage() {
   return (
     <>
       <div className="page-head">
-        <h1>Why only 37 checks</h1>
+        <h1>Why only some checks run</h1>
         <p className="page-lead">
-          Sloptic has 91 checks. On a URL nobody has proven they own, it runs 37 of them. Here is why,
-          and what changes when you prove the site is yours.
+          Sloptic has {TOTALS.total} checks. On a URL nobody has proven they own, it runs the{" "}
+          {TOTALS.passive} that only read what a visitor can already see. Here is why, and what changes
+          when you prove the site is yours.
         </p>
       </div>
 
@@ -23,7 +25,7 @@ export default function VerifyPage() {
           <div className="row2">
             <span className="term">
               Look-only
-              <span className="sub">37 checks</span>
+              <span className="sub">{TOTALS.passive} checks</span>
             </span>
             <p className="desc">
               These read what your app already shows every visitor: its settings, the page it serves,
@@ -35,7 +37,7 @@ export default function VerifyPage() {
           <div className="row2">
             <span className="term">
               Hands-on
-              <span className="sub">54 checks</span>
+              <span className="sub">{TOTALS.active} checks</span>
             </span>
             <p className="desc">
               These go looking for holes by sending real attack traffic: injection payloads, malformed
@@ -96,7 +98,7 @@ export default function VerifyPage() {
             <span className="term">It is yours, not the site&apos;s</span>
             <p className="desc">
               Verifying does not mark a site as open season. It records that your account may run the
-              hands-on checks on that site. Someone else pasting the same URL still gets the 37.
+              hands-on checks on that site. Someone else pasting the same URL still gets the look-only set.
             </p>
           </div>
           <div className="row2">

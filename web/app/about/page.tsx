@@ -210,7 +210,7 @@ export default function AboutPage() {
           Sloptic started as the objective scoring axis for a hackathon league, built for one stubborn
           problem: a human judge cannot hold a hundred different stacks in their head and rank them
           fairly. It became its own project once the grading problem turned out to be harder than the
-          league needed, and is open source under Apache 2.0.
+          league needed, and is open source under Apache 2.0, installable with pip install sloptic.
         </p>
         <p className="section-intro">
           This is a single author project, and one person can fool themselves. So correctness is not
