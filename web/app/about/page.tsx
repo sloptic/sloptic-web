@@ -83,7 +83,7 @@ export default function AboutPage() {
             <span className="definition-pos">noun</span>
           </p>
           <p className="definition-body">
-            From <b>slop</b>, Merriam-Webster&apos;s word of the year for 2025, the low-quality digital
+            From <b>slop</b>, Merriam-Webster&apos;s word of the year for 2025, the shoddy digital
             content that AI now produces in bulk, and <b>optic</b>, an instrument for bringing
             something into focus.
             The instrument that resolves software slop, the app that ships working but unhardened, into
@@ -138,8 +138,8 @@ export default function AboutPage() {
         <h2 className="section-head">What it can and cannot judge</h2>
         <p className="section-intro">
           Sloptic only judges things that are wrong no matter what an app is for. Before any check is
-          added, we must ask: is there a legitimate app for which this behavior is correct? If
-          yes, the check does not belong. And humans are better for judging that kind of correctness
+          added, we ask whether there is a legitimate app for which this behavior is correct. If there
+          is, the check does not belong. And humans are better for judging that kind of correctness
           anyway.
         </p>
         <div className="judge-grid">
@@ -223,14 +223,14 @@ export default function AboutPage() {
         </p>
         <p className="section-intro">
           Sloptic started as the objective scoring axis for a hackathon league, built for one stubborn
-          problem: a human judge cannot hold a hundred different stacks in their head and rank them
+          problem, that a human judge cannot hold a hundred different stacks in their head and rank them
           fairly. It became its own project once the grading problem turned out to be harder than the
           league needed, and is open source under Apache 2.0, installable with pip install sloptic.
         </p>
         <p className="section-intro">
           This is a single author project, and one person can fool themselves. So correctness is not
           checked only against the reference apps in the repo, which the same person wrote. It is also
-          checked against targets whose answers nobody here controls: GapBench, a third-party recall
+          checked against targets whose answers nobody here controls: GapBench, an outside recall
           benchmark, and the deliberately broken apps the industry already uses for this, DVWA, Juice
           Shop, VAmPI and bWAPP.
         </p>

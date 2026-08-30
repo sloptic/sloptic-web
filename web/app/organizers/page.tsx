@@ -18,7 +18,7 @@ export default function OrganizersPage({
         <h1>Sloptic for hackathon organizers</h1>
         <p className="page-lead">
           Judging by hand means holding a hundred different projects in your head. Sloptic takes one
-          part of that off you: it grades the web app entries the same way and puts them on one scale,
+          part of that off you. It grades the web app entries the same way and puts them on one scale,
           so whether an app holds up becomes a number instead of a hunch.
         </p>
         <EventForm initialEvent={searchParams.event ?? ""} />
@@ -54,7 +54,7 @@ export default function OrganizersPage({
       <section className="section" id="limits">
         <h2 className="section-head">What it cannot judge</h2>
         <p className="section-intro">
-          Sloptic grades the floor: the things that are wrong in any app, whatever it was built to do.
+          Sloptic grades the floor, the things that are wrong in any app, whatever it was built to do.
           Everything that depends on what a team was trying to build sits outside it, because a machine
           has no way to know what the right answer was supposed to be.
         </p>
@@ -76,7 +76,7 @@ export default function OrganizersPage({
           </p>
         </div>
         <p className="section-intro">
-          So use it for the part it can measure: one line in your rubric, not the verdict. A board
+          So use it for the part it can measure, one line in your rubric, not the verdict. A board
           sorted on slop alone would crown whoever built the least.
         </p>
       </section>

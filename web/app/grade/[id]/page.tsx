@@ -51,7 +51,7 @@ export default function GradePage({ params }: { params: { id: string } }) {
           {view.status === "queued" ? "queued" : "reading the app and running the checks"}
         </p>
         <p className="note">
-          A grade takes a few minutes: it maps the surface, then loads the app in a real browser to
+          A grade takes a few minutes. It maps the surface, then loads the app in a real browser to
           measure it. This page updates on its own.
         </p>
       </section>
@@ -164,7 +164,7 @@ function Report({ view }: { view: GradeView }) {
       </p>
 
       <p className="passive-note">
-        This is the passive check: the {r.passive_probe_count ?? totalPossible} checks observable
+        This is the passive check, the {r.passive_probe_count ?? totalPossible} checks observable
         without verifying the domain. It is a different measurement from a full grade, so there is no
         population percentile here. <a href="/verify">Verify the domain</a> to run the rest.
       </p>

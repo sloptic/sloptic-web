@@ -4,7 +4,7 @@ import { AREAS, CATALOG_URL, TOTALS, categoriesFor } from "@/lib/checks";
 export const metadata: Metadata = {
   title: "Every check Sloptic runs",
   description:
-    "The full catalog by category: how many checks each covers, and which run on any URL versus which need you to verify the site is yours.",
+    "The full catalog by category, with how many checks each covers and which run on any URL versus which need you to verify the site is yours.",
 };
 
 const ACCESS_TEXT: Record<string, string> = {

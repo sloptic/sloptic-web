@@ -21,7 +21,7 @@ const mono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Sloptic",
   description:
-    "Give Sloptic a live URL and get one number for how well the app holds up: the security, accessibility, and performance floor every app should have. Passive by default.",
+    "Give Sloptic a live URL and get one number for how well the app holds up, the security, accessibility, and performance floor every app should have. Passive by default.",
 };
 
 // Apply a stored theme choice before paint so there is no light/dark flash. No stored choice = follow

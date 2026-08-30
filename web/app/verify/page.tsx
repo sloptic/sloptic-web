@@ -56,8 +56,8 @@ export default function VerifyPage() {
       <section className="section">
         <h2 className="section-head">What proving ownership takes</h2>
         <p className="section-intro">
-          Two things, because they answer two different questions: who is asking, and do they control
-          the site.
+          Two things, because they answer two different questions, who is asking and whether they
+          control the site.
         </p>
         <div className="rows">
           <div className="row2">
@@ -122,15 +122,15 @@ export default function VerifyPage() {
         <h2 className="section-head">If your app is on a platform subdomain</h2>
         <p className="section-intro">
           On an address like <code>your-app.vercel.app</code>, the DNS record is not something you can
-          add, since the domain belongs to the platform. Two ways forward: attach a custom domain, which
-          you control fully, or enter an event, where the organizer vouches for the entries and the file
-          token is enough on its own.
+          add, since the domain belongs to the platform. There are two ways forward. Attach a custom
+          domain, which you control fully, or enter an event, where the organizer vouches for the
+          entries and the file token is enough on its own.
         </p>
         <p className="section-intro">
-          One more case: if your app serves the same page for every path, as many
-          single-page apps do, the token file can get swallowed by that catch-all. Then a{" "}
-          <code>&lt;meta name=&quot;sloptic-site-verification&quot;&gt;</code> tag in the page head does
-          the same job.
+          There is one more case. If your app serves the same page for every path, as many apps built
+          around a single page do, the token file can be swallowed by that fallback. A{" "}
+          <code>&lt;meta name=&quot;sloptic-site-verification&quot;&gt;</code> tag in the page head then
+          does the same job.
         </p>
         <div className="cta-row">
           <a className="button" href="/">

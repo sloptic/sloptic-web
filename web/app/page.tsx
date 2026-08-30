@@ -361,7 +361,7 @@ export default function Home() {
           <div className="row2">
             <span className="term">Lower is better</span>
             <p className="desc">
-              Like golf. A 0 means nothing was found. There is no maximum: a messier app just scores
+              Like golf. A 0 means nothing was found. There is no maximum. A messier app just scores
               higher.
             </p>
           </div>
@@ -441,7 +441,7 @@ export default function Home() {
           </p>
           <p className="definition-body">
             A coinage from <b>slop</b>, Merriam-Webster&apos;s word of the year for 2025 for the
-            low-effort output that generative AI now produces in bulk, and <b>optic</b>, an instrument
+            throwaway output that generative AI now produces in bulk, and <b>optic</b>, an instrument
             for bringing something into focus. The apparatus by which slop of the software kind, the
             app that ships functional but unhardened, is resolved into a single comparable number,
             serenely indifferent to whatever it was meant to be.

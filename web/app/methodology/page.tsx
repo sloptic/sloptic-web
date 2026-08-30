@@ -21,7 +21,7 @@ export default function MethodologyPage() {
         <h2 className="section-head">It only looks from the outside</h2>
         <p className="section-intro">
           Sloptic never sees your code. It checks the app the way a visitor would, over the web, with no
-          source and no description of what the app is meant to do. That constraint is the point: the
+          source and no description of what the app is meant to do. That constraint is the point. The
           same method works on any app, whatever it was built with, which is what makes two unrelated
           apps comparable at all.
         </p>
@@ -30,8 +30,8 @@ export default function MethodologyPage() {
       <section className="section">
         <h2 className="section-head">What counts as a finding</h2>
         <p className="section-intro">
-          <b>It has to be wrong in every app.</b> Before a check is added it must survive one question:
-          is there a legitimate app for which this behavior is correct? A table any visitor can
+          <b>It has to be wrong in every app.</b> Before a check is added it must survive one question.
+          Is there a legitimate app for which this behavior is correct? A table any visitor can
           read is exactly right for a product catalogue, so the check cannot fire on an open table. It
           fires on what is in the columns. Whether <em>this</em> user should see <em>that</em> record is
           intent, and stays human. Whether a stranger can read a table containing{" "}
@@ -39,8 +39,8 @@ export default function MethodologyPage() {
         </p>
         <p className="section-intro">
           <b>It has to be proven, not guessed.</b> A finding rests on something only that fault could
-          produce, and echoing back our own payload never counts. The file-access check does not match
-          the path it asked for, it matches a line out of the password file it should never have
+          produce, and echoing back our own payload never counts. The check for exposed files does not
+          match the path it asked for, it matches a line out of the password file it should never have
           received. The scripting check requires the payload to execute in the page, not merely
           appear in it. One filter check keys on a fragment of the app&apos;s own query template
           surfacing in an error, which nothing we sent could have produced.
@@ -53,7 +53,7 @@ export default function MethodologyPage() {
           <li>
             <span className="k">deduction only</span>
             <span className="v">
-              Nothing is earned for passing. This mirrors how failure works: defending seven of
+              Nothing is earned for passing. This mirrors how failure works. Defending seven of
               eight injectable inputs is still a breach, so the seven add nothing and the eighth adds
               its full penalty.
             </span>
@@ -77,11 +77,122 @@ export default function MethodologyPage() {
             <span className="k">per area, not out of 100</span>
             <span className="v">
               Security, quality and performance each report their own subtotal and the three sum to the
-              score. Scaling to 100 was tried and reverted: a denominator makes apps with different
-              amounts of surface incomparable, which defeats the purpose.
+              score. Scaling to 100 was tried and reverted, because a denominator makes apps with
+              different amounts of surface incomparable, which defeats the purpose.
             </span>
           </li>
         </ul>
+      </section>
+
+      <section className="section">
+        <h2 className="section-head">Where the numbers come from</h2>
+        <p className="section-intro">
+          A penalty is never a matter of taste. Every number traces to a published authority, and where
+          a finding lands inside that authority&apos;s range is set by what the probe actually saw. The
+          full ledger, every class and every number, is{" "}
+          <a
+            href="https://github.com/sloptic/sloptic-main/blob/main/docs/PENALTY_RATIONALE.md"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            in the open grader
+          </a>
+          .
+        </p>
+        <p className="section-intro">
+          The scale has one anchor. A 100 is a single total catastrophe, an attacker with no account
+          running their own code on the server and nothing left to protect. Every other penalty is a
+          fraction of that, so a finding priced at 40 is 40% of a catastrophe and a missing referrer
+          policy at 2 is 2% of one. Nothing caps the total, because an app carrying three catastrophes
+          is worse than one carrying a single catastrophe.
+        </p>
+        <p className="section-intro">
+          Different failures answer to different authorities, and only the severity layer sets the
+          number.
+        </p>
+        <ul className="stat-list">
+          <li>
+            <span className="k">security holes</span>
+            <span className="v">
+              <a href="https://www.first.org/cvss/" target="_blank" rel="noopener noreferrer">
+                CVSS
+              </a>
+              , the industry scale for how bad a vulnerability is, reconciled against the{" "}
+              <a
+                href="https://github.com/bugcrowd/vulnerability-rating-taxonomy"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Bugcrowd rating taxonomy
+              </a>
+              .
+            </span>
+          </li>
+          <li>
+            <span className="k">quality failures</span>
+            <span className="v">
+              <a
+                href="https://iso25000.com/index.php/en/iso-25000-standards/iso-25010"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                ISO/IEC 25010
+              </a>
+              , the software quality standard, crossed with{" "}
+              <a
+                href="https://www.nngroup.com/articles/how-to-rate-the-severity-of-usability-problems/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Nielsen&apos;s severity scale
+              </a>{" "}
+              for how much a fault hurts a user.
+            </span>
+          </li>
+          <li>
+            <span className="k">performance</span>
+            <span className="v">
+              <a
+                href="https://developer.chrome.com/docs/lighthouse/performance/performance-scoring"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Google Lighthouse
+              </a>
+              , charging only the distance an app falls below Lighthouse&apos;s own line for good.
+            </span>
+          </li>
+          <li>
+            <span className="k">accessibility</span>
+            <span className="v">
+              <a href="https://github.com/dequelabs/axe-core" target="_blank" rel="noopener noreferrer">
+                axe-core
+              </a>
+              , priced by the impact rating it assigns each barrier against{" "}
+              <a href="https://www.w3.org/TR/WCAG21/" target="_blank" rel="noopener noreferrer">
+                WCAG
+              </a>
+              .
+            </span>
+          </li>
+        </ul>
+        <p className="section-intro">
+          Within a class a check charges the lowest price by default and raises it only when it proves
+          worse harm. An access control flaw that leaks one record is priced well below one that hands
+          over a whole table, and the gap is set by what each probe actually pulled back, not by how the
+          finding sounds.
+        </p>
+        <p className="section-intro">
+          The hygiene floor is cheap on purpose. A missing security header is one line of config and
+          none of them bites on its own, so the whole header group is priced low, and it was trimmed
+          further after a corpus audit found it firing on nine apps in ten and swamping everything else.
+          Performance is held below the lowest security catastrophe as well, so a slow app, however
+          slow, never outweighs a breach.
+        </p>
+        <p className="section-intro">
+          All of this is enforced rather than promised. A build gate rejects any penalty that carries no
+          authority behind it, so a number with no source cannot ship.
+        </p>
       </section>
 
       <section className="section">
@@ -107,7 +218,7 @@ export default function MethodologyPage() {
         </p>
         <p className="section-intro">
           That third answer is never quietly folded into a pass, because a clean result that was never tested is a missed fault wearing a pass. Each one records why it could not run. The
-          same rule applies when a target is too noisy to read: an app that answers every request with
+          same rule applies when a target is too noisy to read. An app that answers every request with
           error grammar carries no signal, so the benign case is checked first and the result is marked
           untestable rather than guessed. Every grade ships the tally, and on the population we
           measured, the median app ran 57% of the battery.
@@ -129,14 +240,14 @@ export default function MethodologyPage() {
             </span>
           </li>
           <li>
-            <span className="k">known-broken apps</span>
+            <span className="k">apps broken on purpose</span>
             <span className="v">
-              DVWA, Juice Shop, VAmPI and bWAPP: the deliberately vulnerable apps the industry already
+              DVWA, Juice Shop, VAmPI and bWAPP, the deliberately vulnerable apps the industry already
               uses, whose faults are documented by people with no stake here.
             </span>
           </li>
           <li>
-            <span className="k">a third-party benchmark</span>
+            <span className="k">an outside benchmark</span>
             <span className="v">
               GapBench, an outside recall benchmark with its own ground truth, run politely and without
               any attempt to defeat its protections.
@@ -160,8 +271,9 @@ export default function MethodologyPage() {
           assurance.
         </p>
         <p>
-          <b>It sees the logged-out surface.</b> Faults behind a login it cannot get past are missed, and
-          the coverage report says so rather than implying it saw everything.
+          <b>It only sees what a visitor can reach without logging in.</b> Faults behind a login it
+          cannot get past are missed, and the coverage report says so rather than implying it saw
+          everything.
         </p>
         <p>
           <b>Some findings belong to the platform, not the app.</b> An app on a hosting subdomain may be
