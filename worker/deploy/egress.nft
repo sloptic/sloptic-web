@@ -29,10 +29,24 @@
 #                                                  # stub still works and public egress is open
 #   sudo nft list table inet sloptic_egress        # the drop counter increments on attempts
 #
-# PERSIST: add  include "/path/to/this/file"  to /etc/nftables.conf, then
+# PERSIST: copy the ruleset into /etc and reference the copy. Do NOT include this file straight
+# from the git clone: the system manager loads the boot config before (and independent of) your
+# session, and a ruleset under /home is exactly the kind of thing that parses interactively and
+# fails at boot. The copy in /etc is the loaded one; the repo file stays the source of truth.
+#   sudo mkdir -p /etc/nftables
+#   sudo install -m 644 worker/deploy/egress.nft /etc/nftables/sloptic-egress.nft
+#   echo 'include "/etc/nftables/sloptic-egress.nft"' | sudo tee -a /etc/nftables.conf
+#   sudo nft -c -f /etc/nftables.conf
 #   sudo systemctl enable --now nftables
-# (If ufw is enabled it coexists: tables are namespaced, both are evaluated, drops anywhere win.
-# This file stays the source of truth for the egress deny regardless.)
+#   sudo systemctl restart nftables          # the boot rehearsal: flush + reload from the conf
+#   sudo nft list table inet sloptic_egress  # must survive the restart
+#
+# FAILURE MODE, seen once: the stock /etc/nftables.conf begins with `flush ruleset`, so a failed
+# include leaves NO rules at all (service failed, table gone). If that happens: re-apply by hand
+# (sudo nft -f /etc/nftables.conf), then journalctl -u nftables.service -e for the include error.
+#
+# After changing the ruleset in the repo, re-run the install line to refresh the /etc copy.
+# (If ufw is enabled it coexists: tables are namespaced, both are evaluated, drops anywhere win.)
 
 table inet sloptic_egress {
 
