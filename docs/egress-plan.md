@@ -94,6 +94,24 @@ passes. `GRADING_OPEN` stays off until the daily budget and the challenge circui
 `retry_blocked.py` lesson, global not per-app) also exist, because those protect the IP reputation
 the deployment depends on, and they are separate controls from this one.
 
+## Known-broken, parked: the Docker reference lane
+
+As of 2026-08-30, 5 tests fail in the grader repo (`test_docker_deploy.py`,
+`test_docker_hardened.py`) with `container exited during startup (DNF)`. This is NOT the egress
+work and not container networking: the firewall regression that broke this lane is fixed (the two
+network tests, `test_internal_network_blocks_egress` and `test_default_network_reaches_internet`,
+pass, and the error moved from `docker run failed` to a startup exit), so what remains is the
+reference-app images failing to boot inside the container. Parked deliberately: this is the CLI's
+untrusted-submission path, which the web worker never touches (it grades remote URLs through
+`RemoteDeployer`), so it blocks nothing in v1. Revisit only if repo/submission grading is
+reactivated.
+
+For the record, the firewall fix took two independent overrides, because nftables flushes from two
+places: `flush ruleset` at the top of `/etc/nftables.conf` (the boot path) AND
+`ExecStop=/usr/sbin/nft flush ruleset` in the shipped `nftables.service` (the restart path, which
+systemd runs before ExecStart). Either one wipes every table in every family, docker's iptables-nft
+chains included. Both fixes plus the regression test are documented in `worker/deploy/egress.nft`.
+
 ## Self-test, the definition of done
 
 `EGRESS_SANDBOX_READY=1` only after all of these pass on the machine:
