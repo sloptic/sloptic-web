@@ -81,11 +81,24 @@ a non-public target reads as "did not respond"). Tests: `tests/test_egress.py`, 
 covering all four attack shapes. The audit list below is retained as history; the resolver design
 makes the baas/auth/probes migrations unnecessary for safety.
 
-**Phase 2: browser route filter in the grader.** `context.route("**/*")` at context creation in
-`browser.py`: resolve each requested hostname, `check_ip()` every address, abort or continue. Honest
-limit, stated so nobody trusts it for more than it does: Chromium resolves DNS itself after the
-check, so a TTL-0 rebinding host has a narrow window there. The Phase 0 nftables drop is what closes
-that window; that is the layering working as designed.
+**Phase 2: browser route filter. DONE 2026-08-30 (sloptic-main `a0c8b61`).** `_launch()` now returns
+a proxy that installs a `context.route("**/*")` filter on every page and context it creates, so each
+request Chromium initiates passes `egress.host_allowed()` before it leaves. Wrapping the browser
+rather than editing the ~15 `new_page()`/`new_context()` sites is the same chokepoint reasoning as
+tier 1. `host_allowed` deliberately does NOT apply origin scoping (a normal page loads fonts and
+scripts cross-origin; aborting those would move every measurement) and never raises; it caches per
+host+port+mode. Verified with a real-Chromium test: a loopback-served page naming an image on
+10.0.0.1 has that request aborted while the page still renders, and all 104 browser probe tests pass.
+
+Two limits, documented at the filter rather than papered over, both closed by the OS tier:
+1. Our check precedes Chromium's own resolve, so a TTL-0 rebinding host has a narrow window here.
+2. It covers the Playwright browser only. The performance axis is outsourced to Lighthouse, which
+   `lighthouse.run_local` shells out via `npx` with `--chrome-path`: its own Chrome, its own
+   process, never seen by this filter, and not covered by the resolver guard either. Only nftables
+   constrains it, and the worker must therefore run as the uid the rules target. Note this Chrome is
+   deliberately allowed to reach localhost/private deploys (that is why local Lighthouse exists at
+   all, per its docstring), so a blanket Chrome-level private-host block would break the
+   reference-app lane; the uid-scoped OS rules are the right control, not a launch flag.
 
 **Phase 3: worker glue, then the flags.** Deploy the worker to the grader machine properly (clone
 this repo, root `.env`, container, nftables scoping from Phase 0). `guard_target()` already fails
