@@ -167,6 +167,23 @@ Deployment details confirmed working by the live process tree: npx resolved Ligh
 than the dev machine used to: the Aug 5 grades finished in ~90s because the performance axis had no
 Chrome to run against.
 
+## The loopback bug, and why it is the instructive one
+
+The first sandboxed grade returned slop 22 with axes `{qa, security}` and looked entirely healthy.
+It was not: all twelve performance probes had read `not_applicable` (`na_reason: requires unmet:
+lighthouse`), because the OS tier dropped 127/8 for the worker uid and Lighthouse drives Chrome over
+a loopback DevTools port. Chrome launched, Lighthouse could not dial it, the axis vanished, and the
+grade still reported success. Playwright was unaffected: it uses a stdio pipe, not a port.
+
+After permitting loopback (CARVE-OUT 1 in `worker/deploy/egress.nft`), the regrade returns
+`perf-lighthouse-001: clean`, performance 99, tier good, 3 runs, with real metrics recorded.
+
+The score barely moved, and that is the lesson. Absent-because-clean and absent-because-never-ran
+are indistinguishable in the headline number. A sandbox can silently delete a third of the battery
+while every surface signal says the grade succeeded. Two defenses now exist: the self-test asserts
+loopback reaches the stack (a REFUSED connect, not a dropped one), and any future "did the score
+change?" check must read per-probe outcomes, never just the total.
+
 ## Self-test result, 2026-08-30: 8/8 on the grader machine
 
 Run as the service user on ian-sloptic, with the unit's environment:
