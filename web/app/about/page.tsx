@@ -55,6 +55,21 @@ export default function AboutPage() {
           leave before a slow page finishes loading.
         </p>
         <p className="section-intro">
+          We did not take this on faith, we measured it. Sloptic has graded more than 1,600 live
+          hackathon apps, built fast with AI, which is where you would most expect corners cut. A
+          quarter of them (26%) have an acute fault, something that crashes, leaks, or is unusable.
+          Nearly six in ten (59%) carry at least one problem past the cosmetic, and the median
+          app&apos;s single worst problem already sits in that band. Every one of them is missing part
+          of the floor every app should have.
+        </p>
+        <p className="section-intro">
+          Almost none of it is a break-in. About 3% are actually exploitable. The rest is the part of
+          the app nobody went back to: a dead control, a broken link, a page that takes five seconds on
+          a phone. For a team with a day or more and an AI writing the code, most of it is a couple of
+          prompts to fix, and it ships only because the demo never exercised it, clicking the three
+          buttons that work and not the dead fourth.
+        </p>
+        <p className="section-intro">
           These failures are known, named, and the same year after year. They go undone at scale because
           nobody is checking, which is a job worth handing to a machine.
         </p>
