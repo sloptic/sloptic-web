@@ -1,0 +1,100 @@
+# Egress sandbox: scope and implementation plan
+
+Status: scoped, not started. This is the P0 between here and flipping `GRADING_OPEN`.
+
+## The problem in three lines
+
+The worker dials whatever URL a stranger submits, from inside the home LAN (10.0.0.0/24, grader
+machine at 10.0.0.16). Unchecked, the public form is an open proxy into that LAN, and the worker's
+residential IP becomes the attribution for whatever paths a submitter aims at third parties. The
+sandbox narrows "any destination a stranger names" to "public destinations only," at every layer
+that opens a socket.
+
+## Where the control lives
+
+The control must live where sockets are opened. That is the grader machine, never Vercel. The web
+API's resolve precheck (in `POST /api/grade`) is an early, polite denial for UX only; a determined
+client cannot be trusted to have passed it, and Vercel opens none of the sockets anyway.
+
+Three tiers, each covering a different way traffic leaves the machine. No single tier is trusted.
+
+| tier | what it covers | lives in |
+|---|---|---|
+| resolve + pin + hop scoping | every httpx request the grader makes, including redirects | `sloptic-main` (`net.py`, `deploy.py`, `baas.py`) |
+| browser route filter | every request Chromium makes (subresources, XHR, page-initiated fetches) | `sloptic-main` (`browser.py`) |
+| OS egress deny | everything above failing, in code or in Chromium's own DNS | the machine (nftables), configured at deploy time |
+| worker gate + self-test | refusing to run at all unless 1 to 3 are proven | `sloptic-web` (`worker/sloptic_web_worker/egress.py`) |
+
+The grader-side tiers belong in `sloptic-main`, not in this repo. CLAUDE.md forbids forking grader
+logic here, the worker's own `egress.py` docstring says the same, and corpus runs from the machine
+inherit the protection for free. The worker keeps only the fail-closed gate, the readiness flag, and
+the self-test.
+
+## Current call-site audit (found by reading, 2026-08-30)
+
+All of these must pass through the safe path before the sandbox can be declared real.
+
+- `net.make_client`: the shared client most probes use. The safe transport lands here first, one
+  change every probe inherits.
+- `deploy.py:257`: `RemoteDeployer` liveness check calls plain `httpx.get(..., follow_redirects=True)`.
+  Bypasses `make_client` entirely. Must route through it, and redirect-following must become a scoped
+  loop.
+- `baas.py`: roughly ten raw `httpx.Client` / `httpx.post` / `httpx.get` call sites (the Supabase and
+  Firebase backend-exposure battery). Bypasses `make_client`. The highest-value probe class is also
+  the least guarded; this is the audit's main finding.
+- `deploy.py:35`: a raw `socket` call (port probe). Needs the same resolve-and-check.
+- `oob.py`: binds a local UDP listener for out-of-band callbacks. Inbound-local, not an egress path,
+  noted so the audit is visibly complete.
+- `browser.py` `_launch` (line 134) and its context creation: where the route filter and launch args go.
+
+## Phases
+
+**Phase 0: OS egress deny, now.** Pure config on the grader machine, protects today's corpus runs
+immediately, costs nothing. nftables rules scoped to the worker's uid or container (the machine is a
+shared desktop), dropping egress to RFC1918, loopback, link-local, CGNAT, and 169.254.169.254, with
+one carve-out: DNS (UDP and TCP 53) to the router resolver at 10.0.0.1, which the resolve-and-pin
+step itself needs. No inbound anywhere; the worker only ever polls Supabase outbound.
+
+**Phase 1: safe transport in the grader.** A custom httpx transport: resolve the hostname, run every
+address through `check_ip()` (already written, `worker/egress.py:26`), dial the checked address
+directly, hostname carried only as SNI and Host. Wire it into `make_client`, move `RemoteDeployer`
+onto it, and route every `baas.py` call site through it. Replace blind `follow_redirects` with a
+scoped loop: every hop re-enters the gate, and a hop that leaves the submitted origin (scheme, host,
+port) ends the grade as off-origin rather than being followed.
+
+**Phase 2: browser route filter in the grader.** `context.route("**/*")` at context creation in
+`browser.py`: resolve each requested hostname, `check_ip()` every address, abort or continue. Honest
+limit, stated so nobody trusts it for more than it does: Chromium resolves DNS itself after the
+check, so a TTL-0 rebinding host has a narrow window there. The Phase 0 nftables drop is what closes
+that window; that is the layering working as designed.
+
+**Phase 3: worker glue, then the flags.** Deploy the worker to the grader machine properly (clone
+this repo, root `.env`, container, nftables scoping from Phase 0). `guard_target()` already fails
+closed; extend `egress.py` to run the self-test below, and set `EGRESS_SANDBOX_READY=1` only when it
+passes. `GRADING_OPEN` stays off until the daily budget and the challenge circuit breaker (the
+`retry_blocked.py` lesson, global not per-app) also exist, because those protect the IP reputation
+the deployment depends on, and they are separate controls from this one.
+
+## Self-test, the definition of done
+
+`EGRESS_SANDBOX_READY=1` only after all of these pass on the machine:
+
+1. `curl http://10.0.0.1/` from the worker's uid or container dies; from a normal user it works
+   (proves the OS tier is scoped, not broken).
+2. A grade of `http://10.0.0.1/` is refused at the gate, nothing fetched.
+3. A public URL that 302s to `http://10.0.0.1/` is refused at the hop, grade marked off-origin.
+4. A hostname that resolves public at check time and private at connect time is refused at connect
+   (local dnsmasq override as the harness).
+5. A page embedding `<img src="http://10.0.0.1/x">` has that request aborted by the route filter.
+6. A real public target still grades end to end with a score identical to a pre-sandbox run of the
+   same target (no functional regression).
+7. Raw-httpx audit re-run: `grep` finds no `httpx.` call site outside the safe path.
+
+## Out of scope, on purpose
+
+- Authorization (who may grade what) is the verification tier, v2. The sandbox is unconditional and
+  knows nothing about accounts.
+- Rate limiting and quotas, including the daily grade budget and challenge circuit breaker, are
+  adjacent controls shipped alongside Phase 3, not part of the sandbox.
+- Versioning: grader-side changes ship as a `sloptic` release (2.1.0 or later), and the worker pins
+  it, which also closes the long-pending task of moving the worker off the editable clone.
