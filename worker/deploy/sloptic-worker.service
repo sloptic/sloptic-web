@@ -1,0 +1,76 @@
+# sloptic-web worker, Phase 3 of the egress sandbox (docs/egress-plan.md).
+#
+# THE LOAD-BEARING LINE IS `User=sloptic`. The OS egress tier (worker/deploy/egress.nft) matches
+# `meta skuid sloptic`, so running this service as any other user means the firewall protects
+# NOTHING -- and it is the only tier that covers Lighthouse's own Chrome, which neither the resolver
+# guard nor the browser route filter can see. Change the user here and you silently un-sandbox the
+# grader.
+#
+# INSTALL (on the grader machine, both repos already cloned):
+#   # 1. the service user needs a real home: npx and playwright both write caches, and the
+#   #    `useradd -r -s /usr/sbin/nologin sloptic` from Phase 0 gave it none.
+#   sudo mkdir -p /var/lib/sloptic
+#   sudo chown sloptic:sloptic /var/lib/sloptic
+#
+#   # 2. browsers in a SHARED path the service user can read (not a per-user ~/.cache)
+#   sudo mkdir -p /opt/ms-playwright
+#   sudo PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright ~/sloptic-web/worker/.venv/bin/playwright install chromium
+#   sudo chmod -R a+rX /opt/ms-playwright
+#
+#   # 3. the venv + worker package (sloptic itself comes from the sibling clone, editable)
+#   cd ~/sloptic-web/worker
+#   python3 -m venv .venv
+#   ./.venv/bin/pip install -e . -e ~/sloptic-main playwright
+#   sudo chmod -R a+rX ~/sloptic-web ~/sloptic-main     # the service user must be able to read both
+#
+#   # 4. the unit
+#   sudo cp worker/deploy/sloptic-worker.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   # DO NOT start it yet: run the self-test first (worker/deploy/selftest.py), and leave
+#   # EGRESS_SANDBOX_READY unset in .env until that passes.
+#
+# The worker makes no inbound connections and needs no ports: it polls Supabase outbound.
+
+[Unit]
+Description=sloptic-web grade worker
+After=network-online.target nftables.service
+Wants=network-online.target
+# The firewall must be loaded before the process it constrains ever runs.
+Requires=nftables.service
+
+[Service]
+Type=simple
+User=sloptic
+Group=sloptic
+WorkingDirectory=/home/ian/sloptic-web/worker
+ExecStart=/home/ian/sloptic-web/worker/.venv/bin/python -m sloptic_web_worker
+
+# A nologin system user has no HOME, but npx (Lighthouse) and playwright both need writable caches.
+Environment=HOME=/var/lib/sloptic
+Environment=XDG_CACHE_HOME=/var/lib/sloptic/.cache
+Environment=npm_config_cache=/var/lib/sloptic/.npm
+Environment=PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
+# Deliberately NOT set: SLOPTIC_EGRESS. Unset means strict mode, which is what a worker taking URLs
+# from strangers must run. Setting it to `local` or `off` here would defeat the resolver guard.
+
+# Config comes from the repo root .env (shared with the web package), same as in dev.
+EnvironmentFile=/home/ian/sloptic-web/.env
+
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Ordinary hardening. NOT a substitute for the nftables tier: these limit what the process can touch
+# on the box, not where it can send packets.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/sloptic
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
