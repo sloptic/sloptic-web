@@ -7,7 +7,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from dataclasses import asdict
 
-from sloptic import browser, reportcard, safety
+from sloptic import browser, egress, reportcard, safety
 from sloptic.aggregate import compute_slop_score
 from sloptic.catalog import load_catalog
 from sloptic.cli import _grade_record
@@ -83,7 +83,12 @@ def run_passive_grade(origin: str) -> dict:
     """
     catalog = passive_catalog()
     try:
-        report = run(RemoteDeployer(origin), catalog, render=browser.render_routes)
+        # origin_scope pins every resolution in this grade to the submitted scheme+host+port, so a
+        # redirect cannot carry the grade off the origin the submitter named -- not even to another
+        # public host. The corpus lane deliberately runs UNSCOPED (its behavior must stay identical
+        # to the frozen curve); a public grade for a stranger is exactly where scoping belongs.
+        with egress.origin_scope(origin):
+            report = run(RemoteDeployer(origin), catalog, render=browser.render_routes)
     except DEPLOY_FAILURES as e:
         raise Unreachable(str(e)[:500]) from e
 

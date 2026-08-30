@@ -1,73 +1,67 @@
-"""EGRESS SANDBOX + REDIRECT-SCOPING — the P0 security control (see CLAUDE.md, the handoff).
+"""Worker-side egress gate.
 
-STATUS: NOT IMPLEMENTED. This module is the single chokepoint where it drops in. Until it is done, the
-worker MUST NOT fetch untrusted URLs, so `guard_target()` fails closed unless EGRESS_SANDBOX_READY is set.
+THE SANDBOX ITSELF IS NOT HERE. It lives in three places, none of them this file:
 
-The grader fires HTTP at a user-supplied URL. Without this control the service is an SSRF/DoS relay:
-`sloptic.net.make_client` defaults verify=False with no IP blocklist, and `RemoteDeployer` follows
-redirects with no origin scoping, so even a passive grade can be walked to 169.254.169.254 or an RFC1918
-address. What has to land here (or, better, in the grader's net.py so every consumer inherits it):
+  1. the grader's resolver guard, `sloptic.egress` (shipped in sloptic 2.1.0): every outbound
+     resolution in-process, httpx and raw sockets alike, redirect hops included, refuses any
+     destination that is not public;
+  2. the grader's browser route filter, `sloptic.browser`: every request Chromium initiates;
+  3. the OS, `worker/deploy/egress.nft`: a uid-scoped nftables deny on the grader machine, which is
+     the only tier that covers Lighthouse's own Chrome and closes Chromium's rebinding window.
 
-  1. A resolve-and-block DNS+connect guard on EVERY outbound socket: block loopback / RFC1918 /
-     link-local / 169.254.169.254 / CGNAT / IPv6 ULA + mapped equivalents. Re-check at CONNECT time,
-     not just once (DNS rebinding), e.g. a custom httpx transport / socket connect hook.
-  2. Redirect-scoping: a 3xx must not carry the grade off the submitted origin (scheme+host+port).
-  3. Host-level defense in depth: a network egress deny for internal ranges on the worker host, so a
-     code bug cannot reach internal infra even if (1) is bypassed.
+This module is only the worker's gate ON TOP of those: install the guard for this process, refuse to
+grade at all until the sandbox is declared ready on this host, and reject a target that resolves
+somewhere it should not before any grading work starts.
 
-`check_ip()` below is the address predicate the guard will use; it is ready. The socket/transport
-wiring and redirect-scoping are the missing pieces.
+Nothing here re-implements the predicate. `check_ip` and `host_allowed` ARE the grader's, imported,
+so a fix or an added range there (NAT64 64:ff9b::/96 and IPv4-compatible ::/96 are on the grader's
+backlog) covers the worker for free. CLAUDE.md: the grader is a dependency, never forked.
 """
 
-import ipaddress
-import socket
+from urllib.parse import urlparse
+
+from sloptic import egress as _grader
+
+# The grader's predicate and scoping, re-exported so worker code has one obvious import.
+check_ip = _grader.check_ip
+host_allowed = _grader.host_allowed
+origin_scope = _grader.origin_scope
 
 
-def check_ip(ip: str) -> bool:
-    """True if this resolved address is SAFE to connect to (a public unicast address)."""
-    try:
-        addr = ipaddress.ip_address(ip)
-    except ValueError:
-        return False
-    if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
-        addr = addr.ipv4_mapped
-    return not (
-        addr.is_private
-        or addr.is_loopback
-        or addr.is_link_local
-        or addr.is_multicast
-        or addr.is_reserved
-        or addr.is_unspecified
-        or (isinstance(addr, ipaddress.IPv4Address) and addr in ipaddress.ip_network("100.64.0.0/10"))
-    )
+def install() -> None:
+    """Install the grader's resolver guard in THIS process. Idempotent.
 
-
-def resolve_ok(host: str) -> bool:
-    """Resolve a host and return True only if EVERY resolved address is safe. (First gate; a full guard
-    must also re-check at connect time to defeat DNS rebinding.)"""
-    try:
-        infos = socket.getaddrinfo(host, None)
-    except socket.gaierror:
-        return False
-    ips = {info[4][0] for info in infos}
-    return bool(ips) and all(check_ip(ip) for ip in ips)
+    The guard is opt-in as of sloptic 2.1.0 (it no longer patches `socket.getaddrinfo` at import, for
+    library hygiene). `pipeline.run()` installs it itself, so every grade is guarded either way; the
+    worker also installs it once at startup so anything it does OUTSIDE a grade -- a health check, a
+    future verification fetch, origin_scope setup -- is guarded too.
+    """
+    _grader.install()
 
 
 class EgressNotReady(RuntimeError):
-    """Raised to fail closed while the egress sandbox is unimplemented."""
+    """Raised to fail closed when the sandbox is not declared ready on this host."""
 
 
 def guard_target(origin: str, host: str) -> None:
-    """Called before any grade. FAILS CLOSED until the sandbox is implemented and enabled.
+    """Pre-flight a job before any grading work. Fails closed.
 
-    Raises EgressNotReady if the sandbox is not marked ready, or ValueError if the host is internal.
+    Raises EgressNotReady when the host has not been vouched for (EGRESS_SANDBOX_READY), or
+    ValueError when the target resolves to a non-public address. The grader would refuse the
+    connection anyway; doing it here turns that into a clear, early, logged refusal instead of a
+    grade that dies partway through.
     """
     from . import config
 
     if not config.EGRESS_SANDBOX_READY:
         raise EgressNotReady(
-            "egress sandbox not implemented (P0): refusing to grade a real target. "
-            "See egress.py; set EGRESS_SANDBOX_READY=1 only once the chokepoint is done."
+            "egress sandbox not declared ready on this host: refusing to grade a real target. "
+            "The code tiers ship with the grader; set EGRESS_SANDBOX_READY=1 only once the OS tier "
+            "(worker/deploy/egress.nft) is loaded AND the self-test in docs/egress-plan.md passes."
         )
-    if not resolve_ok(host):
-        raise ValueError(f"target resolves to a non-public or unresolvable address: {host}")
+    install()
+    # host_allowed permits a host that does not resolve at all (there is nothing to protect against,
+    # and the grade then fails as plainly unreachable, which is the clearer error). So this rejects
+    # exactly one thing: a target that resolves somewhere internal.
+    if not host or not host_allowed(host, urlparse(origin).port or 443):
+        raise ValueError(f"target resolves to a non-public address: {host}")

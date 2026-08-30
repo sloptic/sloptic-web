@@ -1,6 +1,7 @@
 # Egress sandbox: scope and implementation plan
 
-Status: scoped, not started. This is the P0 between here and flipping `GRADING_OPEN`.
+Status: tiers 1-3 DONE (grader 2.1.0 + the OS ruleset). Phase 3, deploying the worker under the
+firewalled uid and running the self-test, is what remains before `GRADING_OPEN` can flip.
 
 ## The problem in three lines
 
@@ -101,11 +102,31 @@ Two limits, documented at the filter rather than papered over, both closed by th
    reference-app lane; the uid-scoped OS rules are the right control, not a launch flag.
 
 **Phase 3: worker glue, then the flags.** Deploy the worker to the grader machine properly (clone
-this repo, root `.env`, container, nftables scoping from Phase 0). `guard_target()` already fails
-closed; extend `egress.py` to run the self-test below, and set `EGRESS_SANDBOX_READY=1` only when it
+this repo, root `.env`, nftables scoping from Phase 0). The load-bearing detail: the OS rules match
+`meta skuid sloptic`, so the worker MUST run as that user (systemd `User=sloptic`) or the OS tier
+protects nothing, and Lighthouse's own Chrome, which no code tier covers, is left unconstrained.
+
+Worker wiring is DONE (2026-08-30): `worker/sloptic_web_worker/egress.py` no longer forks the
+grader's predicate, it imports `check_ip`/`host_allowed`/`origin_scope` from `sloptic.egress`;
+`__main__.main()` calls `install()` at startup (the guard became opt-in in 2.1.0, and `pipeline.run()`
+installs it too, so this only covers work done outside a grade); and `run_passive_grade` wraps each
+grade in `origin_scope(origin)` so a redirect cannot carry it off the submitted origin. The worker
+never sets `SLOPTIC_EGRESS`, so it runs strict.
+
+`guard_target()` still fails closed; set `EGRESS_SANDBOX_READY=1` only when the self-test below
 passes. `GRADING_OPEN` stays off until the daily budget and the challenge circuit breaker (the
 `retry_blocked.py` lesson, global not per-app) also exist, because those protect the IP reputation
 the deployment depends on, and they are separate controls from this one.
+
+## Backlog
+
+- **`check_ip` misses two IPv6 translation ranges**: NAT64 `64:ff9b::/96` and IPv4-compatible
+  `::/96`. Both would let a v6 literal express an internal v4 destination. Flagged by the
+  sloptic-main owner on review; two lines in the grader's `sloptic/egress.py` next time it is
+  touched. Closed today by the nftables tier, which filters on the resolved address.
+- **Worker off the editable clone**: sloptic 2.1.0 is released with all three code tiers, so
+  `worker/pyproject.toml` can move to a pinned `sloptic[browser]==2.1.0` (drops the sibling-clone
+  requirement and the `CATALOG_DIR` env). Do this as part of Phase 3.
 
 ## Known-broken, parked: the Docker reference lane
 

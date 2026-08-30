@@ -8,7 +8,7 @@ import time
 from urllib.parse import urlparse
 
 from . import config, db
-from .egress import EgressNotReady, guard_target
+from .egress import EgressNotReady, guard_target, install as install_egress
 from .grader import Unreachable, run_passive_grade
 
 
@@ -47,6 +47,10 @@ def process_one(conn) -> bool:
 
 
 def main() -> None:
+    # The grader's resolver guard is opt-in as of sloptic 2.1.0. pipeline.run() installs it, so every
+    # grade is covered regardless; installing here too covers anything this process does OUTSIDE a
+    # grade. Idempotent, and it must happen before the first outbound connection of any kind.
+    install_egress()
     print(f"sloptic-web worker starting (poll={config.POLL_INTERVAL_SECONDS}s, "
           f"egress_ready={config.EGRESS_SANDBOX_READY})", flush=True)
     conn = db.connect()
