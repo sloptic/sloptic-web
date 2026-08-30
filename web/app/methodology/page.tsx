@@ -88,7 +88,7 @@ export default function MethodologyPage() {
         <h2 className="section-head">Where the numbers come from</h2>
         <p className="section-intro">
           A penalty is never a matter of taste. Every number traces to a published authority, and where
-          a finding lands inside that authority&apos;s range is set by what the probe actually saw. The
+          a finding lands inside that authority&apos;s range is set by what the probe saw. The
           full ledger, every class and every number, is{" "}
           <a
             href="https://github.com/sloptic/sloptic-main/blob/main/docs/PENALTY_RATIONALE.md"
@@ -179,7 +179,7 @@ export default function MethodologyPage() {
         <p className="section-intro">
           Within a class a check charges the lowest price by default and raises it only when it proves
           worse harm. An access control flaw that leaks one record is priced well below one that hands
-          over a whole table, and the gap is set by what each probe actually pulled back, not by how the
+          over a whole table, and the gap is set by what each probe pulled back, not by how the
           finding sounds.
         </p>
         <p className="section-intro">

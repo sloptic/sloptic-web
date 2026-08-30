@@ -382,8 +382,8 @@ export default function Home() {
           <div className="row2">
             <span className="term">Compared to real apps</span>
             <p className="desc">
-              Your score is ranked against a large set of real apps, so you see not just a number but
-              where you stand.
+              Your score is ranked against a large set of real apps, so the number comes with where you
+              stand among them.
             </p>
           </div>
         </div>

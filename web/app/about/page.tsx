@@ -63,7 +63,7 @@ export default function AboutPage() {
           of the floor every app should have.
         </p>
         <p className="section-intro">
-          Almost none of it is a break-in. About 3% are actually exploitable. The rest is the part of
+          Almost none of it is a break-in. About 3% are exploitable. The rest is the part of
           the app nobody went back to: a dead control, a broken link, a page that takes five seconds on
           a phone. For a team with a day or more and an AI writing the code, most of it is a couple of
           prompts to fix, and it ships only because the demo never exercised it, clicking the three
@@ -223,7 +223,7 @@ export default function AboutPage() {
         </p>
         <p className="section-intro">
           Sloptic started as the objective scoring axis for a hackathon league, built for one stubborn
-          problem, that a human judge cannot hold a hundred different stacks in their head and rank them
+          problem. A human judge cannot hold a hundred different stacks in their head and rank them
           fairly. It became its own project once the grading problem turned out to be harder than the
           league needed, and is open source under Apache 2.0, installable with pip install sloptic.
         </p>
