@@ -41,10 +41,12 @@ EGRESS_SANDBOX_READY = os.environ.get("EGRESS_SANDBOX_READY", "").strip() in ("1
 # an abusive submitter), not a ration for normal use.
 DAILY_GRADE_BUDGET = int(os.environ.get("DAILY_GRADE_BUDGET", "300"))
 
-# How many DISTINCT origins must entry-challenge in a row before the breaker trips. An IP-level
-# flag is defined by re-challenging EVERY app at entry, so one app doing it proves nothing except
-# that that app has an aggressive WAF. Any grade that completes normally clears the streak.
-CHALLENGE_TRIP_STREAK = int(os.environ.get("CHALLENGE_TRIP_STREAK", "3"))
+# Consecutive entry-challenged grades before the breaker trips. 25 is not a guess: it is
+# `_IP_BLOCK_SAMPLE` from the grader's scripts/retry_blocked.py, which was RELAXED UP from 8 after
+# observing that a real flag is INTERMITTENT (three late successes right after a nine-challenge
+# cluster), so "a low bar aborts a run that would still recover". Only a long sustained dead streak
+# is a hard flag. Any grade that reaches its app resets the streak. 0 disables the breaker.
+CHALLENGE_TRIP_STREAK = int(os.environ.get("CHALLENGE_TRIP_STREAK", "25"))
 
 # How long the worker stops claiming once that pattern is confirmed. An IP-level flag fades in
 # roughly a day or two and every retry re-warms it, so the correct response is to stop and let it

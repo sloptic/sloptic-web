@@ -20,40 +20,48 @@ class _Reputation:
     """The two IP-reputation controls, kept together because they answer the same question: may the
     worker grade anything right now?
 
-    The worker grades from a residential IP deliberately, and that IP is a shared, slow-to-recover
-    asset. `scripts/retry_blocked.py` in the grader repo separates two situations that look alike:
+    Two corrections worth carrying, both from reading scripts/retry_blocked.py rather than assuming:
 
-      * a PER-APP challenge, which is ordinary and RECOVERABLE. That tool's whole purpose is to wait
-        out the ~10-minute Vercel reset and re-grade just the blocked probes as a small-traffic
-        subset, converting "incomplete" into "tested clean". One app challenging us says nothing
-        about our IP, only about that app's WAF.
-      * an IP-LEVEL flag, which is defined by re-challenging EVERY app at entry, lasts a day or two,
-        and cannot be dug out: each retry re-warms it and resets its decay.
+    1. A challenge is usually about CLIENT BEHAVIOR, not our IP. That tool proves it: run_batch and
+       the retry share a client and an IP, and curl 200s that same IP throughout; the only
+       difference is that run_batch fires ~40 benign probes before its attack tail while the bare
+       retry is attack-from-probe-#1. Hence its benign padding, at roughly 3:1 benign to attack.
+       This matters here because the web worker runs the PASSIVE battery only, which is benign by
+       construction, so it looks like the padding rather than the tail and should rarely be
+       challenged at all.
+    2. A real IP-level flag is INTERMITTENT, not a clean cliff: that tool relaxed its threshold from
+       8 to 25 consecutive zero-recovery entry challenges after seeing three late successes right
+       after a nine-challenge cluster. A low bar throws away a run that would still recover.
 
-    So the breaker trips on the PATTERN, not on a single event: several DISTINCT origins failing at
-    entry with none succeeding in between. Any grade that completes normally proves the IP is fine
-    and clears the streak.
+    So this breaker exists for one narrow case: a long sustained streak of grades that never reach
+    their app. Anything shorter is somebody's WAF, not our standing, and stopping for it would cost
+    real grades for no benefit. Any grade that reaches its app clears the streak.
     """
 
     def __init__(self) -> None:
         self.paused_until = 0.0
         self.pause_reason = ""
-        self.entry_challenged: list[str] = []   # distinct origins, consecutive, no success between
+        self.entry_streak = 0        # consecutive grades that never reached their app
 
     def observe(self, origin: str, stage: str) -> None:
-        """Record how a finished grade ended, and trip only on the IP-flag pattern."""
-        if stage != "entry":
-            # A grade that reached the app at all proves the IP is not flagged.
-            self.entry_challenged.clear()
+        """Record how a finished grade ended, and trip only on a long sustained dead streak.
+
+        Unreachable targets never get here (they fail before a grade completes), so a run of dead
+        URLs cannot trip this, matching retry_blocked's rule that only WAF verdicts count.
+        """
+        if not config.CHALLENGE_TRIP_STREAK:
             return
-        if origin not in self.entry_challenged:
-            self.entry_challenged.append(origin)
-        n = len(self.entry_challenged)
-        if n >= config.CHALLENGE_TRIP_STREAK:
-            self.trip(f"{n} distinct origins challenged at entry in a row: {', '.join(self.entry_challenged)}")
+        if stage != "entry":
+            if self.entry_streak:
+                print(f"[breaker] reached {origin}; streak reset from {self.entry_streak}", flush=True)
+            self.entry_streak = 0
+            return
+        self.entry_streak += 1
+        if self.entry_streak >= config.CHALLENGE_TRIP_STREAK:
+            self.trip(f"{self.entry_streak} consecutive grades challenged at entry")
         else:
-            print(f"[breaker] entry challenge {n}/{config.CHALLENGE_TRIP_STREAK} ({origin}); "
-                  f"one app's WAF is not an IP flag, continuing", flush=True)
+            print(f"[breaker] entry challenge {self.entry_streak}/{config.CHALLENGE_TRIP_STREAK} "
+                  f"({origin}); one app's WAF is not our standing, continuing", flush=True)
 
     def trip(self, reason: str) -> None:
         self.paused_until = time.time() + config.CHALLENGE_BACKOFF_SECONDS
