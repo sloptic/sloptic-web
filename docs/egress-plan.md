@@ -49,11 +49,14 @@ All of these must pass through the safe path before the sandbox can be declared 
 
 ## Phases
 
-**Phase 0: OS egress deny, now.** Pure config on the grader machine, protects today's corpus runs
+**Phase 0: OS egress deny. DONE 2026-08-30.** Pure config on the grader machine, protects today's corpus runs
 immediately, costs nothing. nftables rules scoped to the worker's uid or container (the machine is a
 shared desktop), dropping egress to RFC1918, loopback, link-local, CGNAT, and 169.254.169.254, with
 one carve-out: DNS (UDP and TCP 53) to the router resolver at 10.0.0.1, which the resolve-and-pin
-step itself needs. No inbound anywhere; the worker only ever polls Supabase outbound.
+step itself needs. No inbound anywhere; the worker only ever polls Supabase outbound. Verified live
+on the machine: worker-uid fetch of the router times out (drop counter ticked), own-user fetch
+unaffected, worker-uid public fetch over the resolved-stub carve-out succeeds. Ruleset:
+`worker/deploy/egress.nft`.
 
 **Phase 1: safe transport in the grader.** A custom httpx transport: resolve the hostname, run every
 address through `check_ip()` (already written, `worker/egress.py:26`), dial the checked address
