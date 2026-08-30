@@ -153,6 +153,20 @@ places: `flush ruleset` at the top of `/etc/nftables.conf` (the boot path) AND
 systemd runs before ExecStart). Either one wipes every table in every family, docker's iptables-nft
 chains included. Both fixes plus the regression test are documented in `worker/deploy/egress.nft`.
 
+## First real grade under the sandbox, 2026-08-30
+
+`hackletleague.com` graded end to end by the deployed worker (systemd, uid 995, all four tiers
+active): **slop 21.6**, axes `{qa: 8.8, security: 12.8}`, ~7 minutes. The same target scored an
+identical **21.6** in an instrumented run on the dev machine with no OS tier and no scoping, which
+is the practical confirmation that the sandbox does not move a public target's score.
+
+Deployment details confirmed working by the live process tree: npx resolved Lighthouse under
+`/var/lib/sloptic/.npm` (the `HOME` the nologin user needed), Lighthouse found system Chrome at
+`/usr/bin/google-chrome` and ran its three throttled generations, `PrivateTmp` gave Chrome a private
+`/tmp`, and `ProtectSystem=strict` blocked nothing it needed. Note the box produces a FULLER grade
+than the dev machine used to: the Aug 5 grades finished in ~90s because the performance axis had no
+Chrome to run against.
+
 ## Self-test result, 2026-08-30: 8/8 on the grader machine
 
 Run as the service user on ian-sloptic, with the unit's environment:
