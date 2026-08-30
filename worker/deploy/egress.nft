@@ -18,6 +18,8 @@
 # VERIFY:
 #   sudo -u sloptic curl -m 3 http://10.0.0.1/     # must fail (dropped)
 #   curl -m 3 http://10.0.0.1/                     # as yourself: must still connect
+#   sudo -u sloptic curl -m 8 https://example.com  # must SUCCEED: proves DNS via the resolved
+#                                                  # stub still works and public egress is open
 #   sudo nft list table inet sloptic_egress        # the drop counter increments on attempts
 #
 # PERSIST: add  include "/path/to/this/file"  to /etc/nftables.conf, then
@@ -43,10 +45,19 @@ table inet sloptic_egress {
     chain output {
         type filter hook output priority 0; policy accept;
 
-        # The one carve-out: DNS to the router resolver, which the resolve-and-check step itself
-        # needs. These MUST come before the drop rule: first verdict wins.
+        # The one carve-out: DNS, which the resolve-and-check step itself needs. These MUST come
+        # before the drop rule: first verdict wins.
+        #
+        # (a) the router resolver, if the worker is ever pointed straight at it;
+        # (b) the systemd-resolved stub, which is where Ubuntu's /etc/resolv.conf actually points
+        #     (127.0.0.53). Without (b), EVERY lookup the worker makes dies on the 127/8 drop below,
+        #     because the stub answers on loopback even though the real upstream forward happens
+        #     under systemd-resolved's own uid, outside this table. Check the box with:
+        #     cat /etc/resolv.conf  (expect: nameserver 127.0.0.53)
         meta skuid sloptic ip daddr 10.0.0.1 udp dport 53 accept
         meta skuid sloptic ip daddr 10.0.0.1 tcp dport 53 accept
+        meta skuid sloptic ip daddr 127.0.0.53 udp dport 53 accept
+        meta skuid sloptic ip daddr 127.0.0.53 tcp dport 53 accept
 
         # Everything else internal, for the worker only.
         meta skuid sloptic ip daddr @internal_v4 counter drop
