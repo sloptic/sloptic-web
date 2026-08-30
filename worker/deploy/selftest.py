@@ -157,16 +157,36 @@ def c_browser_filter():
 
 
 def c_gate_closed_by_default():
-    """guard_target must fail closed while EGRESS_SANDBOX_READY is unset."""
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    """The worker gate must refuse to grade when the sandbox is not declared ready.
+
+    Tests BEHAVIOR, not the environment: it forces the flag off and asserts guard_target raises,
+    then restores it. Reading os.environ here was wrong -- the flag arrives via dotenv from the root
+    .env, not as a real environment variable in a manual run, so the check disagreed with the code
+    it was testing and reported a failure that did not exist.
+    """
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+    from sloptic_web_worker import config
     from sloptic_web_worker.egress import EgressNotReady, guard_target
-    if os.environ.get("EGRESS_SANDBOX_READY", "").strip() in ("1", "true", "yes"):
-        return True, "flag already set (expected once this self-test has passed)"
+
+    original = config.EGRESS_SANDBOX_READY
     try:
-        guard_target("https://example.com", "example.com")
-        return False, "guard_target allowed a target with the flag unset"
-    except EgressNotReady:
-        return True, "fails closed with the flag unset"
+        config.EGRESS_SANDBOX_READY = False
+        try:
+            guard_target("https://example.com", "example.com")
+            return False, "guard_target allowed a target while the sandbox was marked NOT ready"
+        except EgressNotReady:
+            pass
+    finally:
+        config.EGRESS_SANDBOX_READY = original
+
+    # And with the flag at its real value, an internal target must still be rejected.
+    if original:
+        try:
+            guard_target("http://10.0.0.1/", "10.0.0.1")
+            return False, "guard_target allowed an internal target with the flag set"
+        except ValueError:
+            return True, "refuses when not ready, and refuses internal targets when ready"
+    return True, "fails closed while EGRESS_SANDBOX_READY is unset"
 
 
 def c_runtime_env():
