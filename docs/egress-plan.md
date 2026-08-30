@@ -63,12 +63,23 @@ on the machine: worker-uid fetch of the router times out (drop counter ticked), 
 unaffected, worker-uid public fetch over the resolved-stub carve-out succeeds. Ruleset:
 `worker/deploy/egress.nft`.
 
-**Phase 1: safe transport in the grader.** A custom httpx transport: resolve the hostname, run every
-address through `check_ip()` (already written, `worker/egress.py:26`), dial the checked address
-directly, hostname carried only as SNI and Host. Wire it into `make_client`, move `RemoteDeployer`
-onto it, and route every `baas.py` call site through it. Replace blind `follow_redirects` with a
-scoped loop: every hop re-enters the gate, and a hop that leaves the submitted origin (scheme, host,
-port) ends the grade as off-origin rather than being followed.
+**Phase 1: safe transport in the grader. DONE 2026-08-30 (sloptic-main `964c518`).** Landed as a
+RESOLVER-LEVEL chokepoint rather than a per-callsite transport, superseding the migration list
+below. Verified empirically first: httpx 0.28 (httpcore via anyio) resolves every connection
+through `socket.getaddrinfo`, IP literals included, so guarding that one function covers
+`make_client`, all ~30 raw sites in baas/auth/probes/email_verify/deploy, raw
+`socket.create_connection` users, and every redirect hop, with no per-callsite edits (which also
+avoids UA drift on probes whose measured behavior depends on the current client identity). The
+guard (`sloptic/egress.py`) resolves through the real resolver, validates every address
+all-or-nothing, and returns the original addrinfo list, which pins the dial to the validated
+address, closing the rebinding window. `origin_scope()` pins a context to one scheme+host+port
+(the web lane; a hop leaving the submitted origin refuses, public or not). Modes via
+`SLOPTIC_EGRESS`: `on` default, `local` (loopback allowed, set by the CLI for the subprocess/docker
+reference lanes and by the test conftest), `off` (bypass, never in the worker). `RemoteDeployer`'s
+liveness fetch moved onto `make_client` (real-Chrome UA + h2 for the first request a WAF sees, and
+a non-public target reads as "did not respond"). Tests: `tests/test_egress.py`, 28 offline cases
+covering all four attack shapes. The audit list below is retained as history; the resolver design
+makes the baas/auth/probes migrations unnecessary for safety.
 
 **Phase 2: browser route filter in the grader.** `context.route("**/*")` at context creation in
 `browser.py`: resolve each requested hostname, `check_ip()` every address, abort or continue. Honest
