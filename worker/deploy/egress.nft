@@ -42,13 +42,17 @@
 #   sudo nft -c -f /etc/nftables.conf
 #   sudo systemctl enable --now nftables
 # And order docker AFTER nftables at boot, so a fresh nftables load can never wipe rules a running
-# docker daemon has already programmed (belt for the suspenders above):
-#   sudo mkdir -p /etc/systemd/system/docker.service.d
+# docker daemon has already programmed (belt for the suspenders above). FIND THE UNIT NAME FIRST,
+# it is not always `docker.service`: a snap install (`snap list docker`) is
+# `snap.docker.dockerd.service`, and on the grader machine `systemctl restart docker` failed with
+# "Unit docker.service not found" for exactly that reason.
+#   D=$(systemctl list-units --type=service --all | grep -oE '(snap\.docker\.dockerd|docker)\.service' | head -1)
+#   sudo mkdir -p "/etc/systemd/system/$D.d"
 #   printf '[Unit]\nAfter=nftables.service\nWants=nftables.service\n' | \
-#     sudo tee /etc/systemd/system/docker.service.d/after-nftables.conf
+#     sudo tee "/etc/systemd/system/$D.d/after-nftables.conf"
 #   sudo systemctl daemon-reload
 # Rehearse the boot ordering end to end, then verify both sides survive it:
-#   sudo systemctl restart nftables && sudo systemctl restart docker
+#   sudo systemctl restart nftables && sudo systemctl restart "$D"   # snap: sudo snap restart docker
 #   sudo nft list table inet sloptic_egress                        # our rules still loaded
 #   docker run --rm python:3.12-slim python -c \
 #     "import urllib.request;print(urllib.request.urlopen('https://example.com',timeout=8).status)"
@@ -57,7 +61,8 @@
 # FAILURE MODE, seen once (the reason for the sed and the drop-in): the stock conf began with
 # `flush ruleset`, so enabling nftables.service wiped docker's runtime NAT/MASQUERADE rules ->
 # every container lost internet egress ('BLOCKED') and custom networks failed to attach.
-# Recovery, if it ever recurs: sudo systemctl restart docker (docker re-programs its rules).
+# Recovery, if it ever recurs: restart the docker daemon by its REAL unit name (see above), e.g.
+# `sudo snap restart docker` on a snap install, which makes it re-program its rules.
 #
 # After changing the ruleset in the repo, re-run the install line to refresh the /etc copy.
 # (If ufw is enabled it coexists: tables are namespaced, both are evaluated, drops anywhere win.)
