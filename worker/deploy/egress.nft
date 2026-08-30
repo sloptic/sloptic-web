@@ -64,6 +64,21 @@
 # Recovery, if it ever recurs: restart the docker daemon by its REAL unit name (see above), e.g.
 # `sudo snap restart docker` on a snap install, which makes it re-program its rules.
 #
+# SECOND FLUSH VECTOR, the one that survives the conf fix: Debian/Ubuntu's nftables.service ships
+# `ExecStop=/usr/sbin/nft flush ruleset`. systemctl restart runs ExecStop FIRST, so a restart wipes
+# every table in every family (docker's iptables-nft chains included) even when the conf no longer
+# flushes. Confirm with `systemctl cat nftables.service | grep -i execstop`, then override it so a
+# stop removes only OUR table:
+#   sudo mkdir -p /etc/systemd/system/nftables.service.d
+#   printf '[Service]\nExecStop=\nExecStop=-/usr/sbin/nft delete table inet sloptic_egress\n' | \
+#     sudo tee /etc/systemd/system/nftables.service.d/no-global-flush.conf
+#   sudo systemctl daemon-reload
+# (The bare `ExecStop=` clears the inherited command; the `-` prefix keeps a missing table from
+# failing the unit.) Regression test, which must hold from now on:
+#   sudo systemctl restart nftables
+#   sudo iptables -t nat -S | grep -c DOCKER      # MUST stay nonzero
+#   sudo nft list table inet sloptic_egress       # ours still loaded
+#
 # After changing the ruleset in the repo, re-run the install line to refresh the /etc copy.
 # (If ufw is enabled it coexists: tables are namespaced, both are evaluated, drops anywhere win.)
 
