@@ -23,6 +23,16 @@
 #   ./.venv/bin/pip install -e . -e ~/sloptic-main playwright
 #   sudo chmod -R a+rX ~/sloptic-web ~/sloptic-main     # the service user must be able to read both
 #
+#   # 3b. the service user must be able to TRAVERSE to the repos. Ubuntu now defaults /home/<you>
+#   #     to 750, which blocks a nologin service user entirely (sudo reports the venv python as
+#   #     "command not found", which reads like a missing file but is a traversal failure):
+#   sudo chmod 751 /home/ian          # traverse without listing; or relocate the deploy to /opt
+#
+#   # 3c. run the self-test with the SAME env this unit provides, or the browser lane fails for
+#   #     reasons unrelated to egress:
+#   cd ~/sloptic-web && sudo -u sloptic env PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright \
+#       HOME=/var/lib/sloptic ./worker/.venv/bin/python worker/deploy/selftest.py
+#
 #   # 4. the unit
 #   sudo cp worker/deploy/sloptic-worker.service /etc/systemd/system/
 #   sudo systemctl daemon-reload

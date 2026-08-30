@@ -36,13 +36,18 @@ def c_user():
 
 
 def c_nftables():
-    """The ruleset must be loaded and scoped to THIS uid."""
+    """Read the ruleset if we can. Reading it requires CAP_NET_ADMIN, which the service user
+    deliberately does not have, so a permission error here is EXPECTED and not a failure: the
+    authoritative evidence is the behavioral drop check below, which needs no privilege at all."""
     p = subprocess.run(["nft", "list", "table", "inet", "sloptic_egress"],
                        capture_output=True, text=True)
-    if p.returncode != 0:
-        return False, "table inet sloptic_egress is not loaded"
-    return f"skuid {os.getuid()}" in p.stdout, f"table loaded; targets uid {os.getuid()}: " \
-                                               f"{f'skuid {os.getuid()}' in p.stdout}"
+    if p.returncode == 0:
+        scoped = f"skuid {os.getuid()}" in p.stdout
+        return scoped, f"table loaded; scoped to uid {os.getuid()}: {scoped}"
+    err = ((p.stderr or "") + (p.stdout or "")).strip()
+    if "permitted" in err.lower() or "permission" in err.lower():
+        return True, "not readable as an unprivileged user (expected); the drop check below is the proof"
+    return False, f"nft failed: {err[:140]}"
 
 
 def c_os_drop():
@@ -108,6 +113,17 @@ def c_browser_filter():
         def log_message(self, *a):
             pass
 
+    # The systemd unit supplies these; a manual `sudo -u sloptic` run does not inherit them, and
+    # without them playwright looks in a HOME the nologin service user does not have.
+    os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/opt/ms-playwright")
+    os.environ.setdefault("HOME", "/var/lib/sloptic")
+
+    ok, detail = browser.browser_preflight()
+    if not ok:
+        return False, (f"chromium will not launch: {detail}. "
+                       f"PLAYWRIGHT_BROWSERS_PATH={os.environ.get('PLAYWRIGHT_BROWSERS_PATH')} "
+                       f"HOME={os.environ.get('HOME')}")
+
     srv = http.server.HTTPServer(("127.0.0.1", 0), H)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     port = srv.server_address[1]
@@ -119,7 +135,7 @@ def c_browser_filter():
         with sync_playwright() as pw:
             b = browser._launch(pw)
             if b is None:
-                return False, "chromium would not launch"
+                return False, f"chromium would not launch: {browser._LAST_LAUNCH_ERROR}"
             page = b.new_page()
             page.on("requestfailed", lambda r: failed.append(r.url))
             page.goto(f"http://127.0.0.1:{port}/", wait_until="load")
@@ -146,8 +162,23 @@ def c_gate_closed_by_default():
         return True, "fails closed with the flag unset"
 
 
+def c_runtime_env():
+    """The caches a nologin service user cannot otherwise have. The unit sets these; a manual run
+    must too, or the browser and Lighthouse lanes fail for reasons unrelated to egress."""
+    import pathlib
+    bp = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/ms-playwright")
+    home = os.environ.get("HOME", "/var/lib/sloptic")
+    problems = []
+    if not pathlib.Path(bp).is_dir():
+        problems.append(f"browsers path {bp} missing")
+    if not os.access(home, os.W_OK):
+        problems.append(f"HOME {home} not writable (npx/Lighthouse needs it)")
+    return not problems, "; ".join(problems) or f"browsers={bp} home={home}"
+
+
 print("egress sandbox self-test\n")
 check("service user is `sloptic`", c_user)
+check("runtime env matches the unit", c_runtime_env)
 check("nftables table loaded, scoped to this uid", c_nftables)
 check("OS tier drops a raw LAN connect", c_os_drop)
 check("strict egress mode", c_strict_mode)
