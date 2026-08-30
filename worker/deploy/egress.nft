@@ -11,10 +11,17 @@
 #
 # INSTALL, from a live SSH session, in this order:
 #   sudo nft -c -f worker/deploy/egress.nft        # syntax check, changes nothing
+#   sudo -v                                        # cache credentials: the fuse's sudo runs
+#                                                  # later, with no tty to prompt on
+#   ( sleep 180 && sudo -n nft delete table inet sloptic_egress ) &   # rollback fuse (-n = never
+#                                                  # prompt; fails harmlessly if creds expired)
 #   sudo nft -f worker/deploy/egress.nft           # applies atomically
-#   ( sleep 180 && sudo nft delete table inet sloptic_egress ) &   # rollback fuse:
-#                                                   # if you are still connected in 3 minutes,
-#                                                   # kill this PID and the rules stay
+#   sudo nft list table inet sloptic_egress        # MUST print the table. "No such file or
+#                                                  # directory" means nothing is loaded: do not
+#                                                  # run VERIFY until this prints.
+#   Run VERIFY inside the 3-minute window, then keep the rules:
+#   pkill -f "nft delete table inet sloptic_egress"
+#
 # VERIFY:
 #   sudo -u sloptic curl -m 3 http://10.0.0.1/     # must fail (dropped)
 #   curl -m 3 http://10.0.0.1/                     # as yourself: must still connect
