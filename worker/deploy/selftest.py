@@ -92,31 +92,20 @@ def c_public_still_works():
 
 
 def c_browser_filter():
-    """Tier 2: a page naming a LAN subresource has that request aborted, while the page renders."""
-    import http.server
-    import threading
+    """Tier 2: a page naming a LAN subresource must have that request aborted.
+
+    The page is built IN the browser with set_content, not served from a local HTTP server. A
+    loopback fixture cannot work here and should not: the OS tier drops 127.0.0.0/8 for this uid on
+    purpose, because a service bound to localhost is exactly the kind of thing SSRF goes looking
+    for. Building the document in-browser also lets this run in the real strict mode instead of
+    relaxing the guard to make the fixture reachable.
+    """
+    os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/opt/ms-playwright")
+    os.environ.setdefault("HOME", "/var/lib/sloptic")
 
     from playwright.sync_api import sync_playwright
 
     from sloptic import browser
-
-    html = b"<html><body><p id=ok>loaded</p><img src='http://10.0.0.1/x.png'></body></html>"
-
-    class H(http.server.BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html")
-            self.send_header("Content-Length", str(len(html)))
-            self.end_headers()
-            self.wfile.write(html)
-
-        def log_message(self, *a):
-            pass
-
-    # The systemd unit supplies these; a manual `sudo -u sloptic` run does not inherit them, and
-    # without them playwright looks in a HOME the nologin service user does not have.
-    os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/opt/ms-playwright")
-    os.environ.setdefault("HOME", "/var/lib/sloptic")
 
     ok, detail = browser.browser_preflight()
     if not ok:
@@ -124,29 +113,27 @@ def c_browser_filter():
                        f"PLAYWRIGHT_BROWSERS_PATH={os.environ.get('PLAYWRIGHT_BROWSERS_PATH')} "
                        f"HOME={os.environ.get('HOME')}")
 
-    srv = http.server.HTTPServer(("127.0.0.1", 0), H)
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
-    port = srv.server_address[1]
     failed = []
-    try:
-        # The page itself is on loopback, which strict mode refuses -- so serve the check in local
-        # mode, where 10.0.0.1 is STILL refused. That is exactly the distinction being tested.
-        os.environ["SLOPTIC_EGRESS"] = "local"
-        with sync_playwright() as pw:
-            b = browser._launch(pw)
-            if b is None:
-                return False, f"chromium would not launch: {browser._LAST_LAUNCH_ERROR}"
+    with sync_playwright() as pw:
+        b = browser._launch(pw)
+        if b is None:
+            return False, f"chromium would not launch: {browser._LAST_LAUNCH_ERROR}"
+        try:
             page = b.new_page()
             page.on("requestfailed", lambda r: failed.append(r.url))
-            page.goto(f"http://127.0.0.1:{port}/", wait_until="load")
-            page.wait_for_timeout(800)
+            page.set_content(
+                "<p id=ok>loaded</p><img src='http://10.0.0.1/x.png'>",
+                wait_until="domcontentloaded",
+            )
+            page.wait_for_timeout(2500)      # let the subresource be attempted and refused
             rendered = page.text_content("#ok")
+        finally:
             b.close()
-    finally:
-        os.environ.pop("SLOPTIC_EGRESS", None)
-        srv.shutdown()
+
     hit = any("10.0.0.1" in u for u in failed)
-    return hit and rendered == "loaded", f"LAN subresource aborted={hit}, page rendered={rendered!r}"
+    return hit and rendered == "loaded", (
+        f"LAN subresource aborted={hit}, page rendered={rendered!r}"
+        + ("" if hit else f"; requests that failed: {failed or '(none)'}"))
 
 
 def c_gate_closed_by_default():
