@@ -39,10 +39,15 @@ All of these must pass through the safe path before the sandbox can be declared 
 - `deploy.py:257`: `RemoteDeployer` liveness check calls plain `httpx.get(..., follow_redirects=True)`.
   Bypasses `make_client` entirely. Must route through it, and redirect-following must become a scoped
   loop.
-- `baas.py`: roughly ten raw `httpx.Client` / `httpx.post` / `httpx.get` call sites (the Supabase and
-  Firebase backend-exposure battery). Bypasses `make_client`. The highest-value probe class is also
-  the least guarded; this is the audit's main finding.
-- `deploy.py:35`: a raw `socket` call (port probe). Needs the same resolve-and-check.
+- `baas.py`: ten raw `httpx.Client` / `httpx.post` / `httpx.get` call sites (the Supabase and
+  Firebase backend-exposure battery), several with `follow_redirects=True`. Bypasses `make_client`.
+  The highest-value probe class is also the least guarded; this is the audit's main finding.
+- Correction (2026-08-30, on reading the site): `deploy.py:35` is `_free_port()`, a loopback bind
+  allocating a local port for the trusted-reference-app deployer. Inbound-local, never dials a
+  remote; not an egress concern.
+- Design constraint found the same way: the grader's own validation lane grades reference apps on
+  `127.0.0.1`, so the safe transport needs an explicit local opt-out or it breaks the grader's own
+  tests. `make_client(egress_safe=False)` is that opt-out; the default is safe.
 - `oob.py`: binds a local UDP listener for out-of-band callbacks. Inbound-local, not an egress path,
   noted so the audit is visibly complete.
 - `browser.py` `_launch` (line 134) and its context creation: where the route filter and launch args go.
