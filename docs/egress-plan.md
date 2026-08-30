@@ -124,9 +124,14 @@ the deployment depends on, and they are separate controls from this one.
   `::/96`. Both would let a v6 literal express an internal v4 destination. Flagged by the
   sloptic-main owner on review; two lines in the grader's `sloptic/egress.py` next time it is
   touched. Closed today by the nftables tier, which filters on the resolved address.
-- **Worker off the editable clone**: sloptic 2.1.0 is released with all three code tiers, so
-  `worker/pyproject.toml` can move to a pinned `sloptic[browser]==2.1.0` (drops the sibling-clone
-  requirement and the `CATALOG_DIR` env). Do this as part of Phase 3.
+- **Worker off the editable clone** (now also a correctness fix, not just tidiness): sloptic 2.1.0
+  is on PyPI with all three code tiers, so `worker/pyproject.toml` can move to a pinned
+  `sloptic[browser]==2.1.0`, dropping the sibling-clone requirement and the `CATALOG_DIR` env.
+  **Found 2026-08-30:** the worker venv holds an EDITABLE install whose `dist-info` froze at 1.1.1
+  while imports resolve to the 2.x clone, so `grader._catalog_version()` (which reads
+  `importlib.metadata.version("sloptic")`) stamps every grade record `sloptic-1.1.1` while actually
+  running the 2.1.0 catalog. Wrong provenance on stored grades. The pin fixes it; until then, do not
+  trust `catalog_version` on any locally produced record.
 
 ## Known-broken, parked: the Docker reference lane
 
