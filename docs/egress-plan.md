@@ -1,7 +1,9 @@
 # Egress sandbox: scope and implementation plan
 
-Status: tiers 1-3 DONE (grader 2.1.0 + the OS ruleset). Phase 3, deploying the worker under the
-firewalled uid and running the self-test, is what remains before `GRADING_OPEN` can flip.
+Status: **all four tiers DONE and verified on the grader machine 2026-08-30**, self-test 8/8 as
+the service user. `EGRESS_SANDBOX_READY=1` is justified. `GRADING_OPEN` still waits on the daily
+grade budget and the global challenge circuit breaker, which are IP-reputation controls, not
+sandbox ones.
 
 ## The problem in three lines
 
@@ -150,6 +152,26 @@ places: `flush ruleset` at the top of `/etc/nftables.conf` (the boot path) AND
 `ExecStop=/usr/sbin/nft flush ruleset` in the shipped `nftables.service` (the restart path, which
 systemd runs before ExecStart). Either one wipes every table in every family, docker's iptables-nft
 chains included. Both fixes plus the regression test are documented in `worker/deploy/egress.nft`.
+
+## Self-test result, 2026-08-30: 8/8 on the grader machine
+
+Run as the service user on ian-sloptic, with the unit's environment:
+
+    sudo -u sloptic env PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright HOME=/var/lib/sloptic \
+      ./worker/.venv/bin/python worker/deploy/selftest.py
+
+All eight passed: service user is `sloptic` (uid 995), runtime env present, nftables ruleset
+(unreadable unprivileged, as expected), **kernel drops a raw LAN connect for this uid**, strict mode
+with `SLOPTIC_EGRESS` unset, resolver guard refuses a private literal, public targets still
+reachable, browser filter aborts a LAN subresource while the page renders, worker gate fails closed.
+
+Two defects the first runs exposed, both in the self-test rather than the sandbox, and both worth
+keeping in mind for anything similar:
+1. It read a failed `nft list` as "rules absent", when reading the ruleset needs CAP_NET_ADMIN that
+   the service user deliberately lacks. The privilege-free behavioral drop check is the authority.
+2. It served its browser fixture on loopback, which the OS tier drops for this uid ON PURPOSE. A
+   loopback fixture cannot work on a correctly sandboxed box; the document is now built in-browser
+   with `set_content`, which also lets the check run in real strict mode.
 
 ## Self-test, the definition of done
 
