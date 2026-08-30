@@ -26,5 +26,27 @@ DATABASE_URL = _require("DATABASE_URL")
 CATALOG_DIR = os.environ.get("CATALOG_DIR", "../../sloptic-main/catalog")
 POLL_INTERVAL_SECONDS = float(os.environ.get("POLL_INTERVAL_SECONDS", "5"))
 
-# P0 safety gate: the egress sandbox is not implemented, so real grading is refused unless this is set.
+# P0 safety gate: refuses real grading unless the egress sandbox is deployed AND its self-test
+# (worker/deploy/selftest.py) passes on this host.
 EGRESS_SANDBOX_READY = os.environ.get("EGRESS_SANDBOX_READY", "").strip() in ("1", "true", "yes")
+
+# --- IP-reputation controls -------------------------------------------------------------------
+# The worker grades from a residential IP on purpose (a datacenter IP gets challenged by Vercel's
+# WAF, which would make most of the population ungradeable and the measurement incomparable to the
+# frozen curve). That IP is therefore a shared, slow-to-recover asset, and these two knobs protect
+# it. Neither is part of the egress sandbox: they limit HOW MUCH we grade, not WHERE we may connect.
+
+# Grades completed in a rolling 24h before the worker stops claiming. Measured headroom is roughly
+# 8-10k grades before Vercel flags the IP, so this is a circuit against pathology (a runaway batch,
+# an abusive submitter), not a ration for normal use.
+DAILY_GRADE_BUDGET = int(os.environ.get("DAILY_GRADE_BUDGET", "300"))
+
+# How long the worker stops claiming after a CONFIRMED entry challenge. An IP-level flag fades in
+# roughly a day or two and every retry re-warms it, so the correct response is to stop and let it
+# decay, not to dig (scripts/retry_blocked.py's circuit breaker makes the same call).
+CHALLENGE_BACKOFF_SECONDS = float(os.environ.get("CHALLENGE_BACKOFF_SECONDS", str(48 * 3600)))
+
+# A claimed job with no result after this long is presumed dead (the worker was killed mid-grade)
+# and is returned to the queue. Generous: a real grade with three Lighthouse runs takes ~7 minutes.
+STALE_JOB_SECONDS = float(os.environ.get("STALE_JOB_SECONDS", "1800"))
+MAX_ATTEMPTS = int(os.environ.get("MAX_ATTEMPTS", "3"))

@@ -104,6 +104,12 @@ def run_passive_grade(origin: str) -> dict:
     axis_potential = _axis_potential(report)
 
     return {
+        # The WAF/bot-challenge signal, carried up so the worker's circuit breaker can act on it.
+        # `challenge_stage == "entry"` means we were challenged on the FIRST fetch: nothing was
+        # graded, and per scripts/retry_blocked.py an IP-level flag re-challenges every app at entry
+        # and every retry re-warms it. That is a stop signal for the whole worker, not one job.
+        "bot_challenge": bool(record.get("bot_challenge")),
+        "challenge_stage": record.get("challenge_stage") or "",
         "card": card,
         "outcomes": outcomes,
         "axis_potential": axis_potential,
