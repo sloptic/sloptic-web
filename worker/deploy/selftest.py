@@ -66,6 +66,26 @@ def c_os_drop():
         s.close()
 
 
+def c_loopback_reaches_the_stack():
+    """Loopback must NOT be dropped at the OS tier: Lighthouse drives Chrome over the DevTools
+    protocol on 127.0.0.1, and dropping it starves the whole performance axis while the grade still
+    reports success (observed 2026-08-30: slop 22, twelve perf probes N/A). A REFUSED connection
+    proves the packet reached the kernel; a TIMEOUT means nftables is eating it. Loopback stays
+    refused by both code tiers in strict mode, which is what keeps this safe."""
+    s = socket.socket()
+    s.settimeout(3)
+    try:
+        s.connect(("127.0.0.1", 1))
+        return True, "connected on port 1 (open, and permitted)"
+    except ConnectionRefusedError:
+        return True, "refused by the stack, not dropped: Lighthouse can dial Chrome"
+    except (socket.timeout, TimeoutError):
+        return False, ("timed out: the OS tier is DROPPING loopback, so Lighthouse cannot reach the "
+                       "Chrome it launches and the performance axis will silently read N/A")
+    finally:
+        s.close()
+
+
 def c_strict_mode():
     """The worker must never set SLOPTIC_EGRESS: unset means strict."""
     from sloptic import egress
@@ -168,6 +188,7 @@ check("service user is `sloptic`", c_user)
 check("runtime env matches the unit", c_runtime_env)
 check("nftables table loaded, scoped to this uid", c_nftables)
 check("OS tier drops a raw LAN connect", c_os_drop)
+check("OS tier permits loopback (Lighthouse needs it)", c_loopback_reaches_the_stack)
 check("strict egress mode", c_strict_mode)
 check("resolver guard refuses a private literal", c_resolver_guard)
 check("public targets still reachable", c_public_still_works)

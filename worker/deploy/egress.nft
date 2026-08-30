@@ -1,9 +1,11 @@
 # sloptic egress deny, tier 3 of the egress sandbox (docs/egress-plan.md, Phase 0).
 #
 # WHAT THIS DOES: for the worker's user account only, drops all outbound traffic to private,
-# loopback, link-local, CGNAT, multicast, and reserved IPv4 ranges, plus IPv6 loopback,
-# link-local, and ULA. Every other user on this desktop, your SSH session, and all inbound
-# traffic are untouched: this table only matches packets the worker itself sends.
+# link-local, CGNAT, multicast, and reserved IPv4 ranges, plus IPv6 link-local and ULA. Loopback
+# is deliberately PERMITTED (see CARVE-OUT 1 at the rules: Lighthouse drives Chrome over a
+# loopback debug port, and both code tiers refuse loopback destinations in strict mode anyway).
+# Every other user on this desktop, your SSH session, and all inbound traffic are untouched:
+# this table only matches packets the worker itself sends.
 #
 # BEFORE APPLYING: the rules match the worker by uid name, so the user must exist first.
 #   sudo useradd -r -s /usr/sbin/nologin sloptic
@@ -109,7 +111,28 @@ table inet sloptic_egress {
     chain output {
         type filter hook output priority 0; policy accept;
 
-        # The one carve-out: DNS, which the resolve-and-check step itself needs. These MUST come
+        # CARVE-OUT 1: loopback. Lighthouse drives Chrome over the DevTools protocol on
+        # 127.0.0.1:<random port>, so dropping loopback here silently starves the ENTIRE performance
+        # axis: Chrome launches, Lighthouse cannot dial it, every perf probe reads not_applicable and
+        # the axis vanishes from the score while the grade still looks successful. Observed exactly
+        # that on the first real grade (2026-08-30): slop 22 with security+qa only, twelve perf
+        # probes N/A, `na_reason: requires unmet: lighthouse`. Playwright was unaffected because it
+        # talks to Chromium over a stdio pipe rather than a port.
+        #
+        # This is defensible because loopback is still refused by BOTH code tiers in strict mode: a
+        # submitted localhost target dies at the resolver guard, and a localhost subresource dies at
+        # the browser route filter. What stays unguarded is narrow: Lighthouse's own Chrome could be
+        # redirected to a service bound on 127.0.0.1, and only a performance number would come back.
+        # This tier's real job is the LAN (RFC1918, link-local, metadata) and being the backstop for
+        # processes the code tiers cannot see.
+        #
+        # Written as explicit prefixes, NOT `oif "lo" accept`: Linux routes traffic addressed to ANY
+        # local address out the loopback interface, so matching on the interface would also permit
+        # this box's own LAN address (10.0.0.16) and quietly punch through the RFC1918 drop below.
+        meta skuid sloptic ip daddr 127.0.0.0/8 accept
+        meta skuid sloptic ip6 daddr ::1 accept
+
+        # CARVE-OUT 2: DNS, which the resolve-and-check step itself needs. These MUST come
         # before the drop rule: first verdict wins.
         #
         # (a) the router resolver, if the worker is ever pointed straight at it;
