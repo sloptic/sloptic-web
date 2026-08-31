@@ -165,10 +165,24 @@ Two conditions make that chain real, neither costing per-team effort:
    that verification predates the submission deadline, which is checkable: the hackathons API returns
    `submission_period_dates`.
 
-Residual, handled cheaply instead of with a token: a team that submits someone ELSE's URL (a
-placeholder, a lazy link) would aim active traffic at an uninvolved third party. The grader already
-owns the answer, `sloptic/scope.py:off_target`, the authoritative off-target deny-list that
-`devpost_repos.py` already uses. Run every entry through it before active probing.
+**Where the URL comes from matters, and it helps.** Entries are sourced from the submission's own
+`app-links` block, so the TEAM published that address as their live app. That is the team's own
+declaration, not an organizer's list about them, which is exactly the provenance the consent chain
+wants.
+
+But the extraction is a HEURISTIC, and that bites differently once probing is active. `links_for()`
+takes the first link in `app-links` that is not version control, video, docs, design or social, and
+its own docstring concedes "a stray portfolio link is possible noise". Harmless when passive. When
+active, picking a team member's personal site instead of the demo means firing injection payloads at
+a target that was never the submission, and no consent covers it.
+
+Two guards, neither a token:
+
+- `sloptic/scope.py:off_target`, the authoritative off-target deny-list `devpost_repos.py` already
+  uses, run over every entry before active probing.
+- **The organizer's review-the-field step is load-bearing, not a nicety.** It is the human check on a
+  heuristic and the last moment a wrong URL can be caught before payloads fly. Show the resolved
+  live URL per entry and require approval before an active run.
 
 Teams keep a per-team opt-out regardless, and one event still runs at ONE tier: never a silent mix of
 two measurements on one leaderboard.
