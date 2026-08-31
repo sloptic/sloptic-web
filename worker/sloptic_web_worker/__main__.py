@@ -95,6 +95,7 @@ def process_one(conn, rep: "_Reputation") -> bool:
         return False
 
     print(f"[claim] {job.id} {job.origin} (mode={job.mode})", flush=True)
+    db.heartbeat(conn, "polling", in_flight=job.id)
     try:
         # v1 grades passive only; an active job should never reach this worker yet.
         if job.mode != "passive":
@@ -136,12 +137,17 @@ def main() -> None:
     last_halt = ""
     while True:
         try:
-            # Reclaim jobs a killed worker abandoned. Cheap, and only worth doing occasionally.
+            # Reclaim jobs a killed worker abandoned, and fail ones nobody ever started. Cheap, and
+            # only worth doing occasionally.
             if time.time() - last_reap > 60:
                 last_reap = time.time()
                 n = db.reap_stale_jobs(conn)
                 if n:
                     print(f"[reap]  returned or failed {n} stale job(s)", flush=True)
+                n = db.expire_queued_jobs(conn)
+                if n:
+                    print(f"[reap]  failed {n} grade(s) nobody started within the queue window",
+                          flush=True)
 
             # Say WHY we are idle, but only when the reason changes: this loop runs every 5s.
             halted = rep.blocked(conn)
@@ -149,6 +155,10 @@ def main() -> None:
                 if halted:
                     print(f"[hold]  not claiming: {halted}", flush=True)
                 last_halt = halted
+
+            # Heartbeat EVERY poll, idle included: an empty queue updates nothing else, so this is
+            # the only way a reader can tell a healthy idle worker from no worker at all.
+            db.heartbeat(conn, "holding" if halted else "polling", halted)
 
             worked = process_one(conn, rep)
         except Exception as e:  # connection dropped, etc. — reconnect and keep going

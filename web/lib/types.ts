@@ -2,6 +2,17 @@
 
 export type GradeStatus = "queued" | "running" | "done" | "failed";
 
+/** Why a queued grade is waiting. Absent unless it is actually waiting on something.
+ *  `stalled` means no worker has checked in recently, i.e. nothing is running at all. */
+export interface QueueInfo {
+  worker_alive: boolean;
+  stalled: boolean;
+  /** Grades queued ahead of this one. 0 means this is next. */
+  ahead: number;
+  /** Seconds this grade has been queued. */
+  waiting_seconds: number;
+}
+
 export interface Finding {
   probe_id: string;
   bundle: string;
@@ -92,4 +103,6 @@ export interface GradeView {
   submitted_at: string;
   error: string | null;
   result: GradeResult | null;
+  /** Present only while queued, so the UI can explain the wait instead of spinning. */
+  queue?: QueueInfo;
 }

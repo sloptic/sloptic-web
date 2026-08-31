@@ -56,6 +56,11 @@ CHALLENGE_BACKOFF_SECONDS = float(os.environ.get("CHALLENGE_BACKOFF_SECONDS", st
 # A claimed job with no result after this long is presumed dead (the worker was killed mid-grade)
 # and is returned to the queue. Generous: a real grade with three Lighthouse runs takes ~7 minutes.
 STALE_JOB_SECONDS = float(os.environ.get("STALE_JOB_SECONDS", "1800"))
+
+# A queued grade nobody has started within this long is failed rather than left spinning. Generous
+# against a real grade (~7 minutes) so an honest backlog is not mistaken for an outage; the read path
+# uses the worker heartbeat, not this timer, to detect "nothing is running at all".
+QUEUE_TIMEOUT_SECONDS = float(os.environ.get("QUEUE_TIMEOUT_SECONDS", "900"))
 MAX_ATTEMPTS = int(os.environ.get("MAX_ATTEMPTS", "3"))
 
 

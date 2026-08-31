@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import type { GradeView, GradeResult } from "@/lib/types";
+import type { GradeView, GradeResult, QueueInfo } from "@/lib/types";
+
+// A worker writes its heartbeat every poll (5s). Allow generous slack for a slow poll or a clock
+// skew before calling it dead: this only decides whether we EXPLAIN the wait, never whether we grade.
+const HEARTBEAT_STALE_SECONDS = 90;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +34,28 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     result = (r as GradeResult) ?? null;
   }
 
+  // While queued, work out WHY the user is waiting. A queue that is merely busy and a system with
+  // nothing running look identical from the outside, and the second is the one worth admitting to.
+  let queue: QueueInfo | undefined;
+  if (grade.status === "queued") {
+    const [{ data: worker }, { count: ahead }] = await Promise.all([
+      db.from("worker_status").select("last_seen, state").eq("id", "worker").maybeSingle(),
+      db
+        .from("grades")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "queued")
+        .lt("submitted_at", grade.submitted_at),
+    ]);
+    const lastSeen = worker?.last_seen ? Date.parse(worker.last_seen) : 0;
+    const workerAlive = lastSeen > 0 && Date.now() - lastSeen < HEARTBEAT_STALE_SECONDS * 1000;
+    queue = {
+      worker_alive: workerAlive,
+      stalled: !workerAlive,
+      ahead: ahead ?? 0,
+      waiting_seconds: Math.max(0, Math.round((Date.now() - Date.parse(grade.submitted_at)) / 1000)),
+    };
+  }
+
   const view: GradeView = {
     id: grade.id,
     status: grade.status,
@@ -37,6 +63,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     submitted_at: grade.submitted_at,
     error: grade.error,
     result,
+    queue,
   };
   return NextResponse.json(view);
 }

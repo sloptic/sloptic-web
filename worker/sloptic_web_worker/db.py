@@ -25,6 +25,45 @@ def connect() -> psycopg.Connection:
     return psycopg.connect(config.DATABASE_URL, autocommit=True, row_factory=dict_row)
 
 
+def heartbeat(conn: psycopg.Connection, state: str, reason: str = "", in_flight: str | None = None) -> None:
+    """Tell the world this worker is alive, and whether it is claiming.
+
+    Written every poll, including when idle: an empty queue updates nothing else in the schema, so
+    without this there is no way to distinguish a healthy idle worker from no worker at all.
+    """
+    conn.execute(
+        """
+        INSERT INTO worker_status (id, last_seen, state, reason, in_flight)
+        VALUES ('worker', now(), %(state)s, %(reason)s, %(in_flight)s)
+        ON CONFLICT (id) DO UPDATE SET
+            last_seen = now(), state = EXCLUDED.state,
+            reason = EXCLUDED.reason, in_flight = EXCLUDED.in_flight;
+        """,
+        {"state": state, "reason": reason[:500] or None, "in_flight": in_flight},
+    )
+
+
+def expire_queued_jobs(conn: psycopg.Connection) -> int:
+    """Fail grades nobody claimed within the queue timeout, naming the reason.
+
+    Runs in the worker, which covers the cases the worker CAN see (budget spent, breaker tripped, a
+    backlog it is grinding through). It cannot cover a dead worker, since a dead worker runs nothing:
+    the read path treats a stale heartbeat as the answer there.
+    """
+    row = conn.execute(
+        """
+        UPDATE grades
+           SET status = 'failed', finished_at = now(),
+               error = 'not started within the queue window: no worker was available to run it'
+         WHERE status = 'queued'
+           AND submitted_at < now() - make_interval(secs => %(timeout)s)
+     RETURNING 1;
+        """,
+        {"timeout": config.QUEUE_TIMEOUT_SECONDS},
+    ).fetchall()
+    return len(row or [])
+
+
 def reap_stale_jobs(conn: psycopg.Connection) -> int:
     """Return jobs that were claimed but never finished to the queue, or fail them once they have
     burned their attempts. Without this a worker killed mid-grade leaves its row in `running`

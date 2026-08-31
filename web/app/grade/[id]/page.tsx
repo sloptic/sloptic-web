@@ -43,17 +43,36 @@ export default function GradePage({ params }: { params: { id: string } }) {
   if (!view) return <p className="status">loading</p>;
 
   if (view.status === "queued" || view.status === "running") {
+    // A wait that cannot explain itself is just a spinner. Say which of the three situations this
+    // is: being graded, waiting behind other grades, or waiting on nothing at all.
+    const q = view.queue;
+    const stalled = view.status === "queued" && q?.stalled;
     return (
       <section className="pending">
         <h1>{view.url}</h1>
         <p className="status">
-          <span className="tick" aria-hidden />
-          {view.status === "queued" ? "queued" : "reading the app and running the checks"}
+          {!stalled && <span className="tick" aria-hidden />}
+          {view.status === "running"
+            ? "reading the app and running the checks"
+            : stalled
+              ? "waiting, but nothing is running"
+              : q && q.ahead > 0
+                ? `queued, ${q.ahead} ${q.ahead === 1 ? "grade" : "grades"} ahead`
+                : "queued, starting shortly"}
         </p>
-        <p className="note">
-          A grade takes a few minutes. It maps the surface, then loads the app in a real browser to
-          measure it. This page updates on its own.
-        </p>
+        {stalled ? (
+          <p className="note">
+            No grader has checked in recently, so this has not started and will not start until one
+            is back. Nothing is wrong with the app you submitted. The grade gives up after fifteen
+            minutes rather than leaving you here, and you can submit it again later.
+          </p>
+        ) : (
+          <p className="note">
+            A grade takes a few minutes. It maps the surface, then loads the app in a real browser to
+            measure it{q && q.ahead > 0 ? ", and yours starts when the ones ahead finish" : ""}. This
+            page updates on its own.
+          </p>
+        )}
       </section>
     );
   }
