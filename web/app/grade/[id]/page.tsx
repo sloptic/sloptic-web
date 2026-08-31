@@ -227,8 +227,7 @@ function Report({ view }: { view: GradeView }) {
                 direction everyone already expects from a percentile. */}
             <span className="rank-num">{r.ranking.cleaner_than_pct}%</span>
             <span className="score-cap">
-              <b>cleaner than</b>
-              of the passive floor
+              <b>cleaner than others</b>
             </span>
           </span>
         )}
