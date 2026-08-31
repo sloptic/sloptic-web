@@ -127,3 +127,34 @@ rest" is already that prompt.
 
 Order, smallest first, each gating the next: accounts -> organizer verification -> passive event
 ranking -> per-app tokens for the active event tier.
+
+## The settled tier model (decided 2026-08-30)
+
+| tier | who | may do |
+|---|---|---|
+| 1 | anonymous | passively grade ONE web app, any public URL. No sharing surface. |
+| 2 | signed in, app ownership proven (custom domain + file token + DNS TXT) | actively grade THAT app |
+| 3 | signed in, no event proof | may NOT grade an event at all |
+| 4 | signed in, event ownership proven | rank the event and PUBLISH the board |
+
+Verification gates publishing and active probing. There is no private-ranking tier, deliberately:
+
+- A screenshot cannot be prevented, and a single anonymous grade is already screenshot-able today.
+  What verification actually buys is that no AUTHORITATIVE artifact exists. A screenshot is deniable
+  and unlinkable; a live `sloptic.org/e/<event>` board is neither. A private ranking would concede
+  most of the reputational harm while adding all of the queue load.
+- It is also the cheaper option: no unverified user can enqueue hundreds of grades, which matters on
+  one residential worker where a 400-app field is already ~46 hours.
+
+**Tier 4 does NOT mean the organizer can authorize active probing of entries.** Running an event
+proves nothing about owning the apps in it, and a team's app is the team's. So:
+
+- organizer verified -> publish + rank the field PASSIVELY;
+- an individual entry is graded ACTIVELY only if that team serves the per-app token, required by the
+  event rules and collected at submission time, which supplies both the team's consent and evidence
+  they control the deployment;
+- entries without a token stay passive or sit out the board. One event runs at one tier; never a
+  silent mix of two measurements on one leaderboard.
+
+This is the same principle as the owner tier's two factors: whoever authorizes the testing has to be
+whoever controls the thing being tested.
