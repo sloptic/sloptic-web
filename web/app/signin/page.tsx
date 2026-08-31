@@ -41,7 +41,7 @@ export default async function SignInPage({
         </p>
       </div>
 
-      <section className="section">
+      <section className="section attached">
         {config ? (
           <SignInForm url={config.url} anonKey={config.key} providers={providers} next={next} />
         ) : (

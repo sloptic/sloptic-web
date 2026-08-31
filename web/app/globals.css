@@ -1069,6 +1069,13 @@ section.report h2 {
   padding-top: 2.25rem;
   border-top: 1px solid var(--line);
 }
+/* A page with a single section does not want a separator: the rule and the 4.5rem gap exist to
+   divide one section from the next, so on a short page they read as a hole under the heading. */
+.section.attached {
+  margin-top: 1.5rem;
+  padding-top: 0;
+  border-top: 0;
+}
 .section-head {
   font-family: var(--font-display);
   font-size: clamp(1.5rem, 3.5vw, 2rem);
