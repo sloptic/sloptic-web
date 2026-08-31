@@ -4,6 +4,7 @@ Loop: claim the oldest queued grade -> egress-guard the target -> run the passiv
 An empty queue sleeps POLL_INTERVAL_SECONDS. Any grade error fails just that job; the loop never dies.
 """
 
+import threading
 import time
 from urllib.parse import urlparse
 
@@ -14,6 +15,46 @@ from .grader import Unreachable, run_passive_grade
 
 def _host_of(origin: str) -> str:
     return (urlparse(origin).hostname or "").lower()
+
+
+class _Heartbeat:
+    """Write liveness on a timer, from its OWN thread and OWN connection.
+
+    It cannot live in the main loop: `process_one` blocks for the whole grade (~7 minutes with three
+    Lighthouse runs), so a loop-driven heartbeat goes silent for exactly as long as the worker is
+    busiest, and the site then reports that nothing is running while a grade is in flight. Observed
+    live: heartbeat 143s old with a job 165s into grading.
+
+    A separate psycopg connection because connections are not safe to share across threads.
+    """
+
+    INTERVAL = 15.0            # well inside the reader's 90s staleness window
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._state = ("polling", "", None)     # state, reason, in_flight
+        self._stop = threading.Event()
+
+    def set(self, state: str, reason: str = "", in_flight: str | None = None) -> None:
+        with self._lock:
+            self._state = (state, reason, in_flight)
+
+    def _run(self) -> None:
+        conn = None
+        while not self._stop.is_set():
+            try:
+                if conn is None or conn.closed:
+                    conn = db.connect()
+                with self._lock:
+                    state, reason, in_flight = self._state
+                db.heartbeat(conn, state, reason, in_flight)
+            except Exception as e:  # noqa: BLE001 - liveness reporting must never kill the worker
+                print(f"[beat]  heartbeat failed: {type(e).__name__}: {e}", flush=True)
+                conn = None
+            self._stop.wait(self.INTERVAL)
+
+    def start(self) -> None:
+        threading.Thread(target=self._run, daemon=True, name="heartbeat").start()
 
 
 class _Reputation:
@@ -84,7 +125,7 @@ class _Reputation:
         return ""
 
 
-def process_one(conn, rep: "_Reputation") -> bool:
+def process_one(conn, rep: "_Reputation", beat: "_Heartbeat") -> bool:
     """Claim and process a single job. Returns False if nothing was done."""
     halted = rep.blocked(conn)
     if halted:
@@ -95,7 +136,7 @@ def process_one(conn, rep: "_Reputation") -> bool:
         return False
 
     print(f"[claim] {job.id} {job.origin} (mode={job.mode})", flush=True)
-    db.heartbeat(conn, "polling", in_flight=job.id)
+    beat.set("polling", "", job.id)          # the timer thread keeps writing this for the whole grade
     try:
         # v1 grades passive only; an active job should never reach this worker yet.
         if job.mode != "passive":
@@ -120,6 +161,8 @@ def process_one(conn, rep: "_Reputation") -> bool:
     except Exception as e:  # noqa: BLE001 — one bad grade must not kill the worker
         db.mark_failed(conn, job.id, f"worker error: {e}")
         print(f"[error] {job.id}: {e}", flush=True)
+    finally:
+        beat.set("polling", "", None)        # grade over, whatever the outcome
     return True
 
 
@@ -132,6 +175,8 @@ def main() -> None:
           f"egress_ready={config.EGRESS_SANDBOX_READY}, "
           f"budget={config.DAILY_GRADE_BUDGET}/day)", flush=True)
     conn = db.connect()
+    beat = _Heartbeat()
+    beat.start()
     rep = _Reputation()
     last_reap = 0.0
     last_halt = ""
@@ -156,11 +201,11 @@ def main() -> None:
                     print(f"[hold]  not claiming: {halted}", flush=True)
                 last_halt = halted
 
-            # Heartbeat EVERY poll, idle included: an empty queue updates nothing else, so this is
-            # the only way a reader can tell a healthy idle worker from no worker at all.
-            db.heartbeat(conn, "holding" if halted else "polling", halted)
+            # Tell the heartbeat thread what to report. It does the writing on its own timer, so
+            # liveness keeps flowing while process_one blocks for minutes on a grade.
+            beat.set("holding" if halted else "polling", halted)
 
-            worked = process_one(conn, rep)
+            worked = process_one(conn, rep, beat)
         except Exception as e:  # connection dropped, etc. — reconnect and keep going
             print(f"[loop] error: {e}; reconnecting", flush=True)
             time.sleep(config.POLL_INTERVAL_SECONDS)
