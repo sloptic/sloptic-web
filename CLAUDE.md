@@ -2,7 +2,7 @@
 
 The public web product for Sloptic. A user submits a deployed web app URL and gets its **slop score** (lower
 is better), the per-axis breakdown (security / qa / performance), the report card, and its **percentile
-against the frozen 2026.1 population**. The GRADER lives in the separate `sloptic/sloptic-main` repo and is
+against the frozen population curve for its tier**. The GRADER lives in the separate `sloptic/sloptic-main` repo and is
 consumed here as the engine. Never fork probe logic into this repo.
 
 ## What Sloptic is (if you have never seen it)
@@ -12,7 +12,7 @@ app, probes it over HTTP with **no source and no spec**, and emits a **deduction
 lower is better, `0` means nothing found) across three axes, security, qa (accessibility + correctness), and
 performance. It scores only the **intent-independent floor** every app should have regardless of purpose
 (missing security headers, no rate limiting, inaccessible controls, a shipped dev build, a leaked source map),
-never whether a feature is good. On a corpus of ~1,500 hackathon apps the slop is overwhelmingly *chronic*
+never whether a feature is good. On a corpus of 1,625 hackathon apps the slop is overwhelmingly *chronic*
 (missing hygiene), not *acute* (exploitable holes). **Clone `sloptic-main` alongside this repo and read its
 `README.md`, `claude.md`, `CONTRIBUTING.md`, and `CORPUS_REPORT.md`, that repo is the full, authoritative
 account of what the grade means; this repo only wraps it in a web product.**
@@ -23,10 +23,15 @@ account of what the grade means; this repo only wraps it in a web product.**
   pipeline).
 - **Grading is ASYNC.** A grade takes minutes and needs a browser (Playwright) + an LLM key, so it is a queued
   job: submit -> poll status -> results. Never block a request on a grade.
-- **Percentile** comes from `sloptic`'s frozen curve (`validation/benchmark-curve.json`, 2026.1) plus its
-  benchmark-ranking logic.
-- Start with a worker in the backend; split the grader into its own hardened, network-isolated service when
-  the egress sandbox needs its own context.
+- **Percentile** comes from a `sloptic` frozen curve plus its benchmark-ranking logic. There are TWO, and
+  they must never be mixed: `validation/benchmark-curve.json` (**2026.3**, final, the 102-probe full grade)
+  and `validation/benchmark-curve-passive.json` (**passive-2026.1**, final, n=1,750, the 44-probe battery the
+  anonymous tier runs). Each carries `probe_set`, and `benchmark.rank()` refuses a cross-mode placement.
+- The worker runs on a home desktop behind the LAN, deliberately: a datacenter IP gets challenged by Vercel's
+  WAF, which would make most of the population ungradeable and the measurement incomparable to the curve.
+- **The egress sandbox is BUILT** (see `docs/egress-plan.md`), four tiers: the grader's resolver guard
+  (`sloptic/egress.py`) and browser route filter, a uid-scoped nftables deny on the worker host
+  (`worker/deploy/egress.nft`), and the worker's own fail-closed gate. Self-test: `worker/deploy/selftest.py`.
 
 ## Integration surface (how to call the grader)
 
@@ -39,11 +44,15 @@ Read `sloptic-main`'s `sloptic/cli.py` and `sloptic/pipeline.py` for exact signa
   host/builder identifier), `surface` (what discovery saw). The rank-consumable record and its `findings[]`
   (each: `probe_id, bundle, category, penalty, group, reason, target, evidence`) are built by
   `sloptic.cli._grade_record(report, source)`, reuse that helper rather than re-deriving it.
-- **Percentile:** `scripts/benchmark.py rank --results <record.jsonl>` against `validation/benchmark-curve.json`
-  (curve 2026.1). Use its logic to place a single grade on the frozen population.
+- **Percentile:** `benchmark.rank(curve, score, record)`. Pass the FULL record, not a bare score: the
+  comparator tiebreaks on catastrophe, worst finding, slop potential and categories applied, and a bare score
+  reaches none of them. Query with the exact fractional score; the curve stores fractional slop, so truncating
+  places an app at the floor of its integer bucket (worth up to 8 percentiles; fixed in the grader at
+  `f5067d3`).
 - **Passive vs full:** the worker runs the full pipeline only for a verified origin; for everything else it
-  runs `--passive-only` (SHIPPED in `sloptic-main` v1.1: `sloptic/safety.py` classifies every probe, 37 passive
-  / 54 active; use the flag or `safety.passive_catalog()`). PASSIVE = changes no state AND fetches nothing
+  runs `--passive-only` (`sloptic/safety.py` classifies every probe, **44 passive / 58 active of 102**; use the
+  flag or `safety.passive_catalog()`, which is also what the passive curve was built from, so the product and
+  the curve must select through the same function or they drift). PASSIVE = changes no state AND fetches nothing
   hidden (reads only what the app serves every visitor, even if that reveals a leak). ACTIVE = mutates / sends
   a payload / needs multiple identities / goes fetching hidden data (/.env, backend queries, bulk pulls).
 
@@ -95,10 +104,12 @@ Prove control of the origin to be actively tested by serving a token we issue. T
 
 - **The grader is a dependency.** Pin `sloptic`; call it in `--passive-only` mode for unverified targets and
   the full run only for a verified origin. Do not copy or re-implement probe logic here. (`--passive-only` +
-  `sloptic/safety.py` are shipped in `sloptic-main` v1.1; this repo just uses them.)
-- **A passive grade is a DIFFERENT measurement from a full grade** (fewer probes apply). Label it clearly and
-  rank it against a passive-subset curve, or show raw passive slop + axes. Never mix a passive grade onto the
-  full-grade percentile.
+  `sloptic/safety.py` shipped long ago; this repo just uses them. The two-curve tooling and the rank fix land
+  in the wheel at **2.1.1**, so pin that when moving off the editable clone.)
+- **A passive grade is a DIFFERENT measurement from a full grade** (fewer probes apply). It ranks on
+  `passive-2026.1` and is labelled "passive floor" in the UI. Never mix a passive grade onto the full-grade
+  percentile, and never let a clean passive placement read as "secure": it means clean on what a visitor can
+  see, and the passive floor runs no active security checks at all.
 - **Secrets are server-side only** (LLM key, DB, queue creds). Never ship them to the client bundle, Sloptic
   itself grades for exactly this leak, so leaking one here would be self-parody.
 - **Prose:** no em dashes; use commas, colons, parentheses, periods.
