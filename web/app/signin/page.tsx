@@ -37,7 +37,7 @@ export default async function SignInPage({
       <div className="page-head">
         <h1>Sign in / up</h1>
         <p className="page-lead">
-          One link does both. Only needed to prove a domain or an event is yours.
+          This is needed to prove a domain or an event is yours.
         </p>
       </div>
 

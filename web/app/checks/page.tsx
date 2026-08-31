@@ -20,7 +20,7 @@ export default function ChecksPage() {
         <h1>Every check</h1>
         <p className="page-lead">
           The catalog is {TOTALS.total} checks across {AREAS.reduce((n, a) => n + a.categories, 0)}{" "}
-          kinds of fault. Each check is a single file in the{" "}
+          different faults. Each check is a single file in the{" "}
           <a href={CATALOG_URL} target="_blank" rel="noopener noreferrer">
             open grader
           </a>
@@ -68,10 +68,6 @@ export default function ChecksPage() {
             </tbody>
           </table>
         </div>
-        <p className="section-intro" style={{ marginTop: "1.5rem" }}>
-          The share swings by area because that is where the attack traffic lives. Performance is
-          almost all observation, while security mostly isn't.
-        </p>
       </section>
 
       {AREAS.map((area) => (
@@ -80,7 +76,7 @@ export default function ChecksPage() {
             <span className="measure-swatch" data-axis={area.id} aria-hidden /> {area.label}
           </h2>
           <p className="section-intro">
-            {area.categories} kinds of fault, {area.probes} checks between them. Click on a link to learn more about it.
+            {area.categories} different faults, {area.probes} checks between them. Click on a link to learn more about it.
           </p>
           <div className="table-scroll">
             <table className="cat-table">
@@ -116,24 +112,6 @@ export default function ChecksPage() {
           </div>
         </section>
       ))}
-
-      <section className="section">
-        <h2 className="section-head">Why a kind holds several checks</h2>
-        <p className="section-intro">
-          A kind of fault is often represented by several checks because a single technique proving nothing is not the same
-          as the fault being absent. Injection gets tried several ways before Sloptic will say it found
-          nothing. Those still collapse to one finding when they fire, so a kind with five checks cannot
-          cost you five times.
-        </p>
-        <div className="cta-row">
-          <a className="button" href="/">
-            Grade an app
-          </a>
-          <a className="button secondary" href="/verify">
-            Why only some run
-          </a>
-        </div>
-      </section>
     </>
   );
 }
