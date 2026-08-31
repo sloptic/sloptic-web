@@ -5,6 +5,7 @@ import type { GradeView, Finding, Coverage, GradeProgress, CardEntry, Outcome } 
 import { AREA_LABELS, PASSIVE_BY_AREA, describeProbe, type Area } from "@/lib/checks";
 
 const POLL_MS = 3000;
+const MAX_POLL_FAILS = 8;   // ~1 minute of server errors before giving up on the page
 const AREA_ORDER: Area[] = ["security", "qa", "performance"];
 
 /** What the grader is doing right now, in a visitor's words. The phase label matters more than the
@@ -26,21 +27,38 @@ export default function GradePage({ params }: { params: { id: string } }) {
     let active = true;
     let timer: ReturnType<typeof setTimeout>;
 
+    // A server error is usually transient; a 404 is not. Latching on both meant one bad response
+    // killed the loop for good, so a page open during a brief outage never recovered even after the
+    // grade finished. Retry server errors with backoff, give up only on a real "not found" or after
+    // the retries run out.
+    let fails = 0;
+
     async function poll() {
       try {
         const res = await fetch(`/api/grade/${params.id}`, { cache: "no-store" });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (!active) return;
-        if (!res.ok) {
-          setError(data.error || "Lookup failed.");
+
+        if (res.status === 404) {
+          setError(data.error || "Not found.");
           return;
         }
+        if (!res.ok) {
+          if (++fails > MAX_POLL_FAILS) {
+            setError(data.error || "Lookup failed.");
+            return;
+          }
+          timer = setTimeout(poll, POLL_MS * Math.min(fails, 4));
+          return;
+        }
+
+        fails = 0;
         setView(data);
         if (data.status === "queued" || data.status === "running") {
           timer = setTimeout(poll, POLL_MS);
         }
       } catch {
-        if (active) timer = setTimeout(poll, POLL_MS);
+        if (active) timer = setTimeout(poll, POLL_MS * Math.min(++fails, 4));
       }
     }
     poll();
