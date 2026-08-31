@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Sign in",
-  description: "Sign in to verify a domain or an event, which is what unlocks the checks that send real traffic.",
+  description: "Sign in to verify a domain or an event.",
 };
 
 export default async function SignInPage({
@@ -37,8 +37,7 @@ export default async function SignInPage({
       <div className="page-head">
         <h1>Sign in</h1>
         <p className="page-lead">
-          An account is needed only to prove a domain or an event is yours. Grading a single app
-          passively needs nothing.
+          Only needed to prove a domain or an event is yours.
         </p>
       </div>
 
@@ -50,12 +49,11 @@ export default async function SignInPage({
         )}
         {searchParams.error && (
           <p className="error" role="alert">
-            That sign-in link did not work. Request another.
+            That link did not work, request another.
           </p>
         )}
         <p className="section-intro" style={{ marginTop: "1.5rem" }}>
-          Signing in accepts the <a href="/terms">terms</a>, which is what makes an authorization to
-          test traceable to a person.
+          Signing in accepts the <a href="/terms">terms</a>.
         </p>
       </section>
     </>
