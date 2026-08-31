@@ -13,11 +13,21 @@ export const dynamic = "force-dynamic";
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const db = supabaseAdmin();
 
-  const { data: grade, error } = await db
+  // `progress` is display-only and arrived in a later migration, so ask for it but never let its
+  // absence break the lookup: a report that already exists must keep rendering on a database that
+  // has not been migrated yet. Anything else turns an optional flourish into a 500 on a finished
+  // grade, which is what happened when this shipped ahead of its migration.
+  const CORE = "id, status, submitted_url, submitted_at, error";
+  let { data: grade, error } = await db
     .from("grades")
-    .select("id, status, submitted_url, submitted_at, error, progress")
+    .select(`${CORE}, progress`)
     .eq("id", params.id)
     .maybeSingle();
+
+  if (error?.code === "42703") {
+    console.warn("grades.progress missing; falling back (apply migration 0006)");
+    ({ data: grade, error } = await db.from("grades").select(CORE).eq("id", params.id).maybeSingle());
+  }
 
   if (error) return NextResponse.json({ error: "Lookup failed." }, { status: 500 });
   if (!grade) return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -71,7 +81,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     error: grade.error,
     result,
     queue,
-    progress: grade.status === "running" ? (grade.progress ?? null) : null,
+    progress:
+      grade.status === "running"
+        ? ((grade as { progress?: unknown }).progress as GradeView["progress"]) ?? null
+        : null,
   };
   return NextResponse.json(view);
 }
