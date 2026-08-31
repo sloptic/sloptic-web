@@ -80,17 +80,9 @@ export default function GradePage({ params }: { params: { id: string } }) {
           </span>
         )}
         {stalled ? (
-          <p className="note">
-            No grader has checked in recently, so this has not started and will not start until one
-            is back. Nothing is wrong with the app you submitted. The grade gives up after fifteen
-            minutes rather than leaving you here, and you can submit it again later.
-          </p>
+          <p className="note">No grader is running, so this has not started. It expires in fifteen minutes.</p>
         ) : (
-          <p className="note">
-            A grade takes a few minutes. It maps the surface, then loads the app in a real browser to
-            measure it{q && q.ahead > 0 ? ", and yours starts when the ones ahead finish" : ""}. This
-            page updates on its own.
-          </p>
+          <p className="note">A few minutes. This page updates itself.</p>
         )}
       </section>
     );
@@ -227,15 +219,13 @@ function Report({ view }: { view: GradeView }) {
         <span className="key clean" aria-hidden /> passed
         <span className="key na" aria-hidden /> did not apply
         <span className="legend-note">
-          Checks that failed, out of those that applied, out of every check this mode could run.{" "}
-          {totalApplied} of {totalPossible} applied here.
+          failed / applied / available. {totalApplied} of {totalPossible} applied.
         </span>
       </p>
 
       <p className="passive-note">
-        This is the passive check, the {r.passive_probe_count ?? totalPossible} checks observable
-        without verifying the domain. It is a different measurement from a full grade, so there is no
-        population percentile here. <a href="/verify">Verify the domain</a> to run the rest.
+        This ran the {r.passive_probe_count ?? totalPossible} passive checks, so there is no
+        population percentile. <a href="/verify">Verify the domain</a> for the rest.
       </p>
 
       <Findings findings={r.findings ?? []} card={cardByProbe} />
@@ -275,7 +265,7 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
     return (
       <>
         <h2>What failed</h2>
-        <p className="passive-note">Nothing failed on the checks that applied.</p>
+        <p className="passive-note">Nothing failed.</p>
       </>
     );
   }
@@ -283,7 +273,7 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
   return (
     <>
       <h2>What failed ({findings.length})</h2>
-      <p className="section-intro">Open a finding for what was expected, what we saw, and the fix.</p>
+      <p className="section-intro">Open one for the detail and the fix.</p>
       <div className="sample-findings">
         {sorted.map((f, i) => {
           const entry = card[f.probe_id];
@@ -339,7 +329,7 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
                   </div>
                 )}
                 {!entry && ev.length === 0 && (
-                  <p className="desc">No further detail was recorded for this check.</p>
+                  <p className="desc">No detail recorded.</p>
                 )}
               </div>
             </details>
@@ -363,9 +353,7 @@ function Passed({ items }: { items: PassedItem[] }) {
   return (
     <>
       <h2>What passed ({items.length})</h2>
-      <p className="section-intro">
-        A pass is a measurement, not an absence. Open one to see what it read.
-      </p>
+      <p className="section-intro">Open one for what it measured.</p>
       <div className="sample-findings">
         {items.map((p) => {
           const ev = evidencePairs(p.evidence);
@@ -395,9 +383,7 @@ function Passed({ items }: { items: PassedItem[] }) {
                     ))}
                   </dl>
                 ) : (
-                  <p className="desc">
-                    This check ran and found nothing to report, but recorded no reading of its own.
-                  </p>
+                  <p className="desc">No reading recorded.</p>
                 )}
               </div>
             </details>
@@ -417,10 +403,7 @@ function NotApplicable({ coverage }: { coverage: Coverage }) {
       <h2>
         Did not apply ({c.probes_na}) <span className="offscore">not a pass</span>
       </h2>
-      <p className="passive-note">
-        These could not be tested here, so they are neither a pass nor a fail. A check with no login in
-        front of it cannot report that the login is safe.
-      </p>
+      <p className="passive-note">Not tested here, so neither a pass nor a fail.</p>
       {Object.keys(reasons).length > 0 && (
         <div className="platform">
           <dl>
