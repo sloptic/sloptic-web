@@ -15,7 +15,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const { data: grade, error } = await db
     .from("grades")
-    .select("id, status, submitted_url, submitted_at, error")
+    .select("id, status, submitted_url, submitted_at, error, progress")
     .eq("id", params.id)
     .maybeSingle();
 
@@ -71,6 +71,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     error: grade.error,
     result,
     queue,
+    progress: grade.status === "running" ? (grade.progress ?? null) : null,
   };
   return NextResponse.json(view);
 }

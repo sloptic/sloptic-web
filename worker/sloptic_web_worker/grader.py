@@ -76,7 +76,7 @@ def _axis_potential(report) -> dict:
     return {bundle: compute_slop_score(outs) for bundle, outs in by_bundle.items()}
 
 
-def run_passive_grade(origin: str) -> dict:
+def run_passive_grade(origin: str, progress_cb=None) -> dict:
     """Grade `origin` with the passive battery. Raises Unreachable if the target cannot be reached.
 
     render_routes turns on the browser so the passive a11y and Core Web Vitals probes can run.
@@ -87,8 +87,28 @@ def run_passive_grade(origin: str) -> dict:
         # redirect cannot carry the grade off the origin the submitter named -- not even to another
         # public host. The corpus lane deliberately runs UNSCOPED (its behavior must stay identical
         # to the frozen curve); a public grade for a stranger is exactly where scoping belongs.
+        # The grader reports its own progress; we only forward it. on_progress fires twice per probe
+        # (before with outcomes=None, after with its outcomes), on_phase at each boundary with
+        # important=True for a long silent stretch, which in practice means Lighthouse.
+        state = {"phase": "starting", "label": "", "done": 0, "total": len(catalog), "probe": ""}
+
+        def _emit():
+            if progress_cb:
+                progress_cb(dict(state))
+
+        def _on_progress(done, total, probe, outcomes):
+            state.update(done=done, total=total,
+                         probe=getattr(probe, "id", "") or "")
+            if outcomes is None:            # starting this probe: the useful moment to display
+                _emit()
+
+        def _on_phase(name, label, important=False):
+            state.update(phase=name or "", label=label or "")
+            _emit()
+
         with egress.origin_scope(origin):
-            report = run(RemoteDeployer(origin), catalog, render=browser.render_routes)
+            report = run(RemoteDeployer(origin), catalog, render=browser.render_routes,
+                         on_progress=_on_progress, on_phase=_on_phase)
     except DEPLOY_FAILURES as e:
         raise Unreachable(str(e)[:500]) from e
 

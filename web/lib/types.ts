@@ -96,6 +96,15 @@ export interface ReportCard {
   cov?: Coverage;
 }
 
+/** Live progress of a running grade, straight from the grader's own callbacks. Display only. */
+export interface GradeProgress {
+  phase?: string;
+  label?: string;
+  done?: number;
+  total?: number;
+  probe?: string;
+}
+
 export interface GradeView {
   id: string;
   status: GradeStatus;
@@ -105,4 +114,6 @@ export interface GradeView {
   result: GradeResult | null;
   /** Present only while queued, so the UI can explain the wait instead of spinning. */
   queue?: QueueInfo;
+  /** Present only while running. */
+  progress?: GradeProgress | null;
 }

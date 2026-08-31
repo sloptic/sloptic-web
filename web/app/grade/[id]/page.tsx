@@ -1,11 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { GradeView, Finding, Coverage } from "@/lib/types";
+import type { GradeView, Finding, Coverage, GradeProgress } from "@/lib/types";
 import { AREA_LABELS, PASSIVE_BY_AREA, describeProbe, type Area } from "@/lib/checks";
 
 const POLL_MS = 3000;
 const AREA_ORDER: Area[] = ["security", "qa", "performance"];
+
+/** What the grader is doing right now, in a visitor's words. The phase label matters more than the
+ *  probe count: Lighthouse is a silent two-to-three minute stretch, and saying so is the difference
+ *  between "working" and "stuck". */
+function runningLabel(p?: GradeProgress | null): string {
+  if (!p) return "reading the app and running the checks";
+  if (p.phase === "lighthouse") return "measuring performance, which takes a few minutes";
+  if (p.phase === "crawl") return "mapping the app's surface";
+  if (p.done !== undefined && p.total) return `running the checks, ${p.done} of ${p.total}`;
+  return p.label || "reading the app and running the checks";
+}
 
 export default function GradePage({ params }: { params: { id: string } }) {
   const [view, setView] = useState<GradeView | null>(null);
@@ -47,19 +58,27 @@ export default function GradePage({ params }: { params: { id: string } }) {
     // is: being graded, waiting behind other grades, or waiting on nothing at all.
     const q = view.queue;
     const stalled = view.status === "queued" && q?.stalled;
+    const p = view.progress;
+    const pct =
+      p && p.total && p.done !== undefined ? Math.min(100, Math.round((p.done / p.total) * 100)) : null;
     return (
       <section className="pending">
         <h1>{view.url}</h1>
         <p className="status">
           {!stalled && <span className="tick" aria-hidden />}
           {view.status === "running"
-            ? "reading the app and running the checks"
+            ? runningLabel(view.progress)
             : stalled
               ? "waiting, but nothing is running"
               : q && q.ahead > 0
                 ? `queued, ${q.ahead} ${q.ahead === 1 ? "grade" : "grades"} ahead`
                 : "queued, starting shortly"}
         </p>
+        {view.status === "running" && pct !== null && (
+          <span className="progress-track" aria-hidden>
+            <span className="progress-fill" style={{ width: `${pct}%` }} />
+          </span>
+        )}
         {stalled ? (
           <p className="note">
             No grader has checked in recently, so this has not started and will not start until one

@@ -145,7 +145,19 @@ def process_one(conn, rep: "_Reputation", beat: "_Heartbeat") -> bool:
         # P0 safety gate. Fails closed until the egress sandbox is implemented and enabled.
         guard_target(job.origin, _host_of(job.origin))
 
-        result = run_passive_grade(job.origin)
+        # Throttle: on_progress fires twice per probe, so an unthrottled write would be ~90 UPDATEs
+        # a grade for a field nothing queries. A PHASE change always gets through, since that is the
+        # part that explains a long silence ("measuring performance" during Lighthouse).
+        last = {"at": 0.0, "phase": None}
+
+        def _progress(p: dict) -> None:
+            now = time.time()
+            if p.get("phase") != last["phase"] or now - last["at"] > 2.0:
+                last["at"], last["phase"] = now, p.get("phase")
+                p["at"] = now
+                db.save_progress(conn, job.id, p)
+
+        result = run_passive_grade(job.origin, progress_cb=_progress)
         db.save_result(conn, job.id, result)
         print(f"[done]  {job.id} slop={result['slop_score']} axes={result['axis_slop']}", flush=True)
         # An ENTRY challenge means nothing was graded on THIS app. Whether that means our IP is
@@ -163,6 +175,7 @@ def process_one(conn, rep: "_Reputation", beat: "_Heartbeat") -> bool:
         print(f"[error] {job.id}: {e}", flush=True)
     finally:
         beat.set("polling", "", None)        # grade over, whatever the outcome
+        db.save_progress(conn, job.id, None)
     return True
 
 

@@ -25,6 +25,16 @@ def connect() -> psycopg.Connection:
     return psycopg.connect(config.DATABASE_URL, autocommit=True, row_factory=dict_row)
 
 
+def save_progress(conn: psycopg.Connection, job_id: str, progress: dict) -> None:
+    """Display-only, and deliberately fire-and-forget: a failed progress write must never disturb a
+    grade that is otherwise going fine."""
+    try:
+        payload = json.dumps(progress) if progress is not None else None
+        conn.execute("UPDATE grades SET progress = %s WHERE id = %s;", (payload, job_id))
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def heartbeat(conn: psycopg.Connection, state: str, reason: str = "", in_flight: str | None = None) -> None:
     """Tell the world this worker is alive, and whether it is claiming.
 

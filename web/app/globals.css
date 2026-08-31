@@ -1656,3 +1656,21 @@ code {
 .colophon-nav a:hover {
   color: var(--ink);
 }
+
+/* Progress of a running grade. Deliberately plain: a thin rule that fills, in the ink of the page,
+   not a candy bar. It reports a fact, so it should look like the rest of the instrument. */
+.progress-track {
+  display: block;
+  height: 3px;
+  background: var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 0.75rem 0 0;
+  max-width: var(--measure);
+}
+.progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--ink-soft);
+  transition: width 0.6s ease;
+}
