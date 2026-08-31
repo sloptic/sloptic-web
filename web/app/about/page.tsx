@@ -12,8 +12,7 @@ export default function AboutPage() {
       <div className="page-head">
         <h1>About Sloptic</h1>
         <p className="page-lead">
-          Sloptic points at a running web app, checks it from the outside, and turns what it finds
-          into one number. It never reads your code.
+          Sloptic grades any running web app from outside. It does not need source code.
         </p>
       </div>
 
@@ -21,16 +20,18 @@ export default function AboutPage() {
         <h2 className="section-head">Why it exists</h2>
         <p className="section-intro">
           Building a web app got almost free, and it shows. Apps ship looking finished but never
-          hardened: no security headers, controls a screen reader cannot touch, a development build
-          left running in production.
+          hardened against the real world. No security headers, controls a screen reader cannot touch, 
+          uncaught errors, and more routinely show up. Such is the case of {" "}
+          <a href="https://en.wikipedia.org/wiki/AI_slop" target="_blank" rel="noopener noreferrer">
+          AI slop
+          </a>.
         </p>
         <p className="section-intro">
-          This is not a hackathon problem, it is the state of the web.{" "}
+          This is not a hackathon problem so much as it's the state of the web.{" "}
           <a href="https://webaim.org/projects/million/" target="_blank" rel="noopener noreferrer">
-            95.9% of the top million home pages
+            96% of the top million home pages
           </a>{" "}
-          have detectable accessibility failures, and that number got worse last year rather than
-          better. Only about{" "}
+          have detectable accessibility failures, and that number got worse last year. Only about{" "}
           <a
             href="https://almanac.httparchive.org/en/2025/security"
             target="_blank"
@@ -38,33 +39,30 @@ export default function AboutPage() {
           >
             one site in five
           </a>{" "}
-          sends a Content Security Policy at all.
+          has a Content Security Policy at all. 
         </p>
         <p className="section-intro">
-          It is tempting to file this under minor, since none of it is a break-in. Yet that has it
-          backwards. An exploit is a risk that may never be triggered. A control a screen reader
-          cannot see, or a page that takes five seconds on a phone, is not a risk at all: it happens
-          to every visitor, every time.{" "}
+          It is tempting to call these minor, since none of them are break-ins. Yet that's backwards. 
+          Many apps fail in ways that are obvious to a user, such as dead buttons, controls a screen reader cannot see,
+          and pages that take "forever" to load.
+          {" "}
           <a
-            href="https://www.thinkwithgoogle.com/marketing-strategies/app-and-mobile/mobile-page-speed-new-industry-benchmarks/"
+            href="https://scientiamobile.com/53-of-mobile-site-visitors-abandon-if-it-takes-more-than-3-seconds-to-load-page/"
             target="_blank"
             rel="noopener noreferrer"
           >
             More than half of mobile visitors
           </a>{" "}
-          leave before a slow page finishes loading.
+          leave if a page takes more than 3 seconds to load — that's how low the bar for "takes forever" is.
         </p>
         <p className="section-intro">
-          Sloptic measured this rather than assuming it. Across more than 1,600 live hackathon apps,
-          built fast with AI, a quarter carry an acute fault, something that crashes, leaks, or is
-          unusable. Nearly six in ten carry a problem past the cosmetic. Only about 3% are
-          exploitable. The rest is the part of the app nobody went back to, and for a team with a day
-          and an AI writing the code, most of it is a couple of prompts to fix. It ships because the
-          demo clicks the three buttons that work, not the dead fourth.
+          Oh, and concerning the break-ins, {" "}
+          <a href="https://www.veracode.com/blog/genai-code-security-report/" target="_blank" rel="noopener noreferrer">according to Veracode</a>
+          , AI produces vulnerable code 45% of the time, an alarmingly high rate especially considering the rise of vibecoding and agentic AI.
         </p>
         <p className="section-intro">
-          These failures are known, named, and the same year after year. They go undone because
-          nobody checks, which is a job for a machine.
+          These failures persist year after year. And yet nobody bothers to check, because nobody is rewarded for it. 
+          Especially in hackathon teams. Hence the need for Sloptic.
         </p>
       </section>
 
@@ -78,7 +76,7 @@ export default function AboutPage() {
           <p className="definition-body">
             From <b>slop</b>, Merriam-Webster&apos;s word of the year for 2025, the shoddy digital
             content AI now produces in bulk, and <b>optic</b>, an instrument for bringing something
-            into focus. The instrument that resolves software slop, the app that ships working but
+            into focus. The instrument that grades software slop, the app that ships working but
             unhardened, into one comparable number, serenely indifferent to whatever it was meant to
             be.
           </p>
@@ -86,10 +84,11 @@ export default function AboutPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">What makes it different</h2>
+        <h2 className="section-head">Why not a scanner?</h2>
         <p className="section-intro">
-          A scanner finds you a list of things to fix. Sloptic produces a number, so apps with
-          nothing in common can go on one scale. Much the same probing, opposite purpose.
+          A scanner, like Burp Suite, Nuclei, Nikto, or even PageSpeed Insights, exists to hand you a list of
+          findings to fix on one app. Sloptic exists to produce one number, so apps with nothing in common
+          can go on the same scale. Much the same probing, opposite purpose.
         </p>
         <div className="table-scroll">
           <table className="compare-table">
@@ -102,13 +101,13 @@ export default function AboutPage() {
             </thead>
             <tbody>
               <tr>
-                <th scope="row">what it reads</th>
-                <td>source, repositories, pull requests</td>
-                <td className="mine">the running app, from the outside</td>
+                <th scope="row">what it assumes</th>
+                <td>what you tell it to look for, or what the app is meant to do</td>
+                <td className="mine">nothing about what the app is for</td>
               </tr>
               <tr>
                 <th scope="row">what it needs</th>
-                <td>access to the code, and setup</td>
+                <td>configuration, templates, or a spec</td>
                 <td className="mine">a URL</td>
               </tr>
               <tr>
@@ -129,9 +128,8 @@ export default function AboutPage() {
       <section className="section">
         <h2 className="section-head">What it can and cannot judge</h2>
         <p className="section-intro">
-          Sloptic only judges what is wrong no matter what an app is for. Before a check is added it
-          must answer one question: is there a legitimate app for which this behavior is correct? If
-          there is, the check does not belong, and a human judges that kind of thing better anyway.
+          Sloptic only judges what is wrong no matter what an app is for. 
+          It does not judge the rest — besides, humans judge them better anyway.
         </p>
         <div className="judge-grid">
           <div className="judge" data-kind="can">
@@ -141,7 +139,7 @@ export default function AboutPage() {
               <li>Whether the page loads fast enough on a phone</li>
               <li>Whether the defenses a browser expects are set</li>
               <li>Whether a secret is sitting in the code you ship</li>
-              <li>Whether links resolve and pages fail honestly</li>
+              <li>Whether links resolve and errors are handled properly</li>
               <li>Whether what is live is a finished build</li>
             </ul>
           </div>
@@ -160,46 +158,6 @@ export default function AboutPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">How it is kept honest</h2>
-        <div className="rows">
-          <div className="row2">
-            <span className="term">Findings need proof</span>
-            <p className="desc">
-              A finding rests on something only that fault could produce, never on something that
-              looks suspicious.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">It admits what it could not test</span>
-            <p className="desc">
-              A check that cannot run says so and says why, because a clean result that was never
-              tested is a missed problem wearing a pass.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">It never claims you are safe</span>
-            <p className="desc">
-              A 0 means nothing was found, not that nothing is there. Treat the score as a minimum.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">It is checked against known answers</span>
-            <p className="desc">
-              Checks are tested against apps that are deliberately broken and deliberately clean, so
-              one that cannot tell them apart does not ship.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">It plays fair</span>
-            <p className="desc">
-              Sloptic respects the defenses a site puts up. Defeating bot protection is out of scope,
-              permanently.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="section">
         <h2 className="section-head">Who made it</h2>
         <p className="section-intro">
           Sloptic was built and calibrated by{" "}
@@ -207,35 +165,20 @@ export default function AboutPage() {
             Ian Sun
           </a>
           . He finished a computer science degree at Boston University in May 2026 and starts a
-          cybersecurity master&apos;s there this fall. He holds the PNPT, has spoken at SecureWorld,
-          Layer 8 and the NICE Conference, and hosted sessions at RSAC 2026.
+          master&apos;s in CS there the same year. He holds the PNPT and has been active in the security community, 
+          having spoken at SecureWorld, Layer 8 and the NICE Conference, and hosted sessions at RSAC 2026.
         </p>
         <p className="section-intro">
-          It started as the objective scoring axis for a hackathon league, built for one stubborn
-          problem: a human judge cannot hold a hundred different stacks in their head and rank them
-          fairly. It became its own project once grading turned out to be harder than the league
-          needed. It is open source under Apache 2.0, installable with pip install sloptic.
-        </p>
-        <p className="section-intro">
-          One person can fool themselves, so correctness is not checked only against the reference
-          apps in the repo, which the same person wrote. It is also checked against targets whose
-          answers nobody here controls:{" "}
-          <a href="https://gapbench.vibe-eval.com/" target="_blank" rel="noopener noreferrer">
-            GapBench
-          </a>{" "}
-          and the intentionally vulnerable apps the industry already uses, DVWA, Juice Shop, VAmPI
-          and bWAPP.
-        </p>
-        <p className="section-intro">
-          The recall audit, measuring what Sloptic misses rather than what it gets wrong, is still
-          running. Until it finishes, no recall number is claimed.
+          It started as an objective scorer for a hackathon league, dealing with the problem of
+          judging a diverse set of web apps identically. But it evolved as its own project as this problem
+          proved harder than anticipated. 
         </p>
         <div className="cta-row">
           <a className="button" href="/">
             Grade an app
           </a>
           <a className="button secondary" href="https://github.com/sloptic/sloptic-main">
-            The grader, in full
+            View the source code
           </a>
         </div>
       </section>
