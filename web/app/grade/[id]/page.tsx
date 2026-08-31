@@ -16,6 +16,14 @@ function fmtScore(v: number | string | null | undefined): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
 
+/** English ordinal suffix. The teens are the exception that catches naive implementations: 11th,
+ *  12th and 13th, not 11st/12nd/13rd, and they recur at 111, 112, 113. */
+function ordinal(n: number): string {
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return `${n}th`;
+  return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
+}
+
 /** What the grader is doing right now, in a visitor's words. The phase label matters more than the
  *  probe count: Lighthouse is a silent two-to-three minute stretch, and saying so is the difference
  *  between "working" and "stuck". */
@@ -225,9 +233,9 @@ function Report({ view }: { view: GradeView }) {
                 Showing it raw reads as its own opposite: "p19" looks like the bottom fifth when it
                 means the top fifth. `cleaner_than_pct` is the share strictly worse, which is the
                 direction everyone already expects from a percentile. */}
-            <span className="rank-num">{r.ranking.cleaner_than_pct}%</span>
+            <span className="rank-num">{ordinal(r.ranking.cleaner_than_pct)}</span>
             <span className="score-cap">
-              <b>cleaner than others</b>
+              <b>percentile compared to others</b>
             </span>
           </span>
         )}
