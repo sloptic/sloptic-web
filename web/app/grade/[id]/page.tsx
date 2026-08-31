@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { GradeView, Finding, Coverage, GradeProgress } from "@/lib/types";
+import type { GradeView, Finding, Coverage, GradeProgress, CardEntry } from "@/lib/types";
 import { AREA_LABELS, PASSIVE_BY_AREA, describeProbe, type Area } from "@/lib/checks";
 
 const POLL_MS = 3000;
@@ -158,6 +158,16 @@ function Report({ view }: { view: GradeView }) {
   const totalApplied = rows.reduce((n, x) => n + x.applied, 0);
   const totalPossible = rows.reduce((n, x) => n + x.possible, 0);
 
+  // The report card explains a finding (expected / seen / means / fix); the finding itself carries
+  // the evidence. Join them on probe_id so an expanded row can show both.
+  const cardByProbe = useMemo(() => {
+    const m: Record<string, CardEntry> = {};
+    for (const sec of r.card?.sections ?? []) {
+      for (const e of sec.entries ?? []) if (e.probe_id) m[e.probe_id] = e;
+    }
+    return m;
+  }, [r]);
+
   return (
     <section className="report">
       <h1>
@@ -207,7 +217,7 @@ function Report({ view }: { view: GradeView }) {
         population percentile here. <a href="/verify">Verify the domain</a> to run the rest.
       </p>
 
-      <Findings findings={r.findings ?? []} />
+      <Findings findings={r.findings ?? []} card={cardByProbe} />
       <Passed items={passed} />
       {r.platform && Object.keys(r.platform).length > 0 && <Platform platform={r.platform} />}
       <NotApplicable coverage={r.coverage} />
@@ -215,7 +225,31 @@ function Report({ view }: { view: GradeView }) {
   );
 }
 
-function Findings({ findings }: { findings: Finding[] }) {
+/** Evidence is whatever the probe recorded, so the shape varies per check: axe-core rules and a
+ *  contrast shortfall here, a status code and timing there. Render it as plain pairs rather than
+ *  pretending to a schema, and skip the internals a reader cannot act on. */
+const EVIDENCE_SKIP = new Set(["penalty_override", "na_reason"]);
+
+function evidencePairs(ev?: Record<string, unknown>): [string, string][] {
+  if (!ev) return [];
+  const out: [string, string][] = [];
+  for (const [k, v] of Object.entries(ev)) {
+    if (EVIDENCE_SKIP.has(k) || v === null || v === undefined) continue;
+    if (Array.isArray(v)) {
+      if (v.length === 0) continue;
+      out.push([k, v.map(String).join(", ")]);
+    } else if (typeof v === "object") {
+      const inner = Object.entries(v as Record<string, unknown>);
+      if (inner.length === 0) continue;
+      out.push([k, inner.map(([ik, iv]) => `${ik}: ${String(iv)}`).join(", ")]);
+    } else {
+      out.push([k, String(v)]);
+    }
+  }
+  return out;
+}
+
+function Findings({ findings, card }: { findings: Finding[]; card: Record<string, CardEntry> }) {
   if (findings.length === 0) {
     return (
       <>
@@ -228,20 +262,68 @@ function Findings({ findings }: { findings: Finding[] }) {
   return (
     <>
       <h2>What failed ({findings.length})</h2>
+      <p className="section-intro">Open a finding for what was expected, what we saw, and the fix.</p>
       <div className="sample-findings">
-        {sorted.map((f, i) => (
-          <div className="finding-row" data-axis={f.bundle} key={`${f.probe_id}-${i}`}>
-            <span className="finding-dot" />
-            <span className="finding-body">
-              <span className="finding-cat">{f.category}</span>
-              {f.reason && <span className="finding-desc">{f.reason}</span>}
-              <span className="finding-meta">
-                {[f.probe_id, f.target].filter(Boolean).join("  /  ")}
-              </span>
-            </span>
-            <span className="finding-pen">+{f.penalty}</span>
-          </div>
-        ))}
+        {sorted.map((f, i) => {
+          const entry = card[f.probe_id];
+          const ev = evidencePairs(f.evidence as Record<string, unknown> | undefined);
+          return (
+            <details className="finding-detail" data-axis={f.bundle} key={`${f.probe_id}-${i}`}>
+              <summary className="finding-row">
+                <span className="finding-dot" />
+                <span className="finding-body">
+                  <span className="finding-cat">{f.category}</span>
+                  {f.reason && <span className="finding-desc">{f.reason}</span>}
+                  <span className="finding-meta">
+                    {[f.probe_id, f.target].filter(Boolean).join("  /  ")}
+                  </span>
+                </span>
+                <span className="finding-pen">+{f.penalty}</span>
+              </summary>
+              <div className="finding-expand">
+                {entry?.expected && (
+                  <div className="row2">
+                    <span className="term">What should be true</span>
+                    <p className="desc">{entry.expected}</p>
+                  </div>
+                )}
+                {(entry?.actual || ev.length > 0) && (
+                  <div className="row2">
+                    <span className="term">What we saw</span>
+                    <div className="desc">
+                      {entry?.actual && <p>{entry.actual}</p>}
+                      {ev.length > 0 && (
+                        <dl className="evidence">
+                          {ev.map(([k, v]) => (
+                            <div key={k}>
+                              <dt>{k.replace(/_/g, " ")}</dt>
+                              <dd>{v}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {entry?.indicates && (
+                  <div className="row2">
+                    <span className="term">Why it matters</span>
+                    <p className="desc">{entry.indicates}</p>
+                  </div>
+                )}
+                {entry?.remediation && (
+                  <div className="row2">
+                    <span className="term">How to fix it</span>
+                    <p className="desc">{entry.remediation}</p>
+                  </div>
+                )}
+                {!entry && ev.length === 0 && (
+                  <p className="desc">No further detail was recorded for this check.</p>
+                )}
+              </div>
+            </details>
+          );
+        })}
       </div>
     </>
   );

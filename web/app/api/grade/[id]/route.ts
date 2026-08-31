@@ -27,7 +27,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     const { data: r } = await db
       .from("results")
       .select(
-        "mode, catalog_version, passive_probe_count, slop_score, axis_slop, coverage, platform, surface, findings"
+        "mode, catalog_version, passive_probe_count, slop_score, axis_slop, coverage, platform, surface, findings, card"
       )
       .eq("grade_id", params.id)
       .maybeSingle();
