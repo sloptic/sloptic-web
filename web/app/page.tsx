@@ -143,8 +143,7 @@ export default function Home() {
         </form>
         {open === false && (
           <p className="closed-note" role="status">
-            Grading is not open yet. The checks below are real and the grader is finished; it is just
-            not accepting submissions until a worker is running to answer them.
+            Grading is not open yet.
           </p>
         )}
         {error && (

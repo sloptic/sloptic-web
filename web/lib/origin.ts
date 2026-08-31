@@ -18,7 +18,7 @@ export function normalizeTarget(raw: string): NormalizedTarget {
   try {
     u = new URL(trimmed);
   } catch {
-    throw new UrlRejected("That does not look like a valid URL. Include https://");
+    throw new UrlRejected("Not a valid URL. Include https://");
   }
 
   if (u.protocol !== "http:" && u.protocol !== "https:") {

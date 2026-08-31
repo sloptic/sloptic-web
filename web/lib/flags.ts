@@ -16,5 +16,4 @@ export function gradingOpen(): boolean {
   return v === "1" || v === "true" || v === "yes";
 }
 
-export const GRADING_CLOSED_MESSAGE =
-  "Grading is not open yet. The site is up but the grader is not accepting submissions, so nothing would come back. Check back shortly.";
+export const GRADING_CLOSED_MESSAGE = "Grading is not open yet.";
