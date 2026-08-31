@@ -24,20 +24,39 @@ function ordinal(n: number): string {
   return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
 }
 
-/** What the grader is doing right now, in a visitor's words. The phase label matters more than the
- *  probe count: Lighthouse is a silent two-to-three minute stretch, and saying so is the difference
- *  between "working" and "stuck". */
-function runningLabel(p?: GradeProgress | null): string {
+/** mm:ss for an elapsed duration. A long silence reads as a hang; a ticking clock reads as work. */
+function elapsed(sinceIso: string, now: number): string {
+  const secs = Math.max(0, Math.floor((now - Date.parse(sinceIso)) / 1000));
+  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
+}
+
+/** What the grader is doing right now, in a visitor's words. Phase names come from the pipeline:
+ *  discover / discovered / lighthouse / lighthouse_done / probes. During probes the current check's
+ *  own name is the most informative thing available, and it is how the accessibility pass (axe-core)
+ *  announces itself without needing a phase of its own. */
+function runningLabel(p: GradeProgress | null | undefined, name: string | null): string {
   if (!p) return "reading the app and running the checks";
-  if (p.phase === "lighthouse") return "measuring performance, which takes a few minutes";
-  if (p.phase === "crawl") return "mapping the app's surface";
-  if (p.done !== undefined && p.total) return `running the checks, ${p.done} of ${p.total}`;
+  if (p.phase === "lighthouse") {
+    // The worker counts the runs, so this reads "performance run 2 of 3" once measuring starts.
+    return p.label || "measuring performance, which takes a few minutes";
+  }
+  if (p.phase === "discover") return "mapping the app's surface";
+  if (p.phase === "discovered") return p.label || "mapped the surface";
+  if (p.done !== undefined && p.total) {
+    return name ? `checking ${name}, ${p.done} of ${p.total}` : `running the checks, ${p.done} of ${p.total}`;
+  }
   return p.label || "reading the app and running the checks";
 }
 
 export default function GradePage({ params }: { params: { id: string } }) {
   const [view, setView] = useState<GradeView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Ticks once a second so the elapsed clock moves between polls, which are 3s apart.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -101,13 +120,14 @@ export default function GradePage({ params }: { params: { id: string } }) {
         <p className="status">
           {!stalled && <span className="tick" aria-hidden />}
           {view.status === "running"
-            ? runningLabel(view.progress)
+            ? runningLabel(view.progress, view.progress?.probe ? (describeProbe(view.progress.probe)?.name ?? null) : null)
             : stalled
               ? "waiting, but nothing is running"
               : q && q.ahead > 0
                 ? `queued, ${q.ahead} ${q.ahead === 1 ? "grade" : "grades"} ahead`
                 : "queued, starting shortly"}
         </p>
+        <p className="elapsed">{elapsed(view.submitted_at, now)}</p>
         {view.status === "running" && pct !== null && (
           <span className="progress-track" aria-hidden>
             <span className="progress-fill" style={{ width: `${pct}%` }} />

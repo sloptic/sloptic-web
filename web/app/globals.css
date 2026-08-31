@@ -1778,3 +1778,13 @@ code {
   line-height: 1;
   color: var(--ink-soft);
 }
+
+/* Elapsed clock on a running grade. Mono so the digits do not jitter as they change width, and
+   quiet: it exists to prove something is happening, not to be read closely. */
+.elapsed {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0.4rem 0 0;
+  font-variant-numeric: tabular-nums;
+}

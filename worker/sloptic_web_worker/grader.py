@@ -7,7 +7,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from dataclasses import asdict
 
-from sloptic import browser, egress, reportcard, safety
+from sloptic import browser, egress, lighthouse, reportcard, safety
 from sloptic.aggregate import compute_slop_score
 from sloptic.catalog import load_catalog
 from sloptic.cli import _grade_record
@@ -104,11 +104,36 @@ def run_passive_grade(origin: str, progress_cb=None) -> dict:
 
         def _on_phase(name, label, important=False):
             state.update(phase=name or "", label=label or "")
+            if name == "lighthouse":
+                lh["run"] = 0          # a fresh count per grade, not per process
             _emit()
 
-        with egress.origin_scope(origin):
-            report = run(RemoteDeployer(origin), catalog, render=browser.render_routes,
-                         on_progress=_on_progress, on_phase=_on_phase)
+        # Lighthouse is the long silent stretch, and it reports nothing while it runs: run_local
+        # shells the CLI with --quiet under subprocess.run(capture_output=True), so nothing is
+        # readable until the process exits. But measure() calls run_local once PER RUN (three by
+        # default), so wrapping that function turns an opaque three-minute block into "run 2 of 3".
+        # This wraps rather than replaces, restores in a finally, and is the same seam the grader's
+        # own test suite patches. If the attribute ever moves, the except below leaves progress
+        # coarser and the grade untouched.
+        lh = {"run": 0}
+        real_run_local = getattr(lighthouse, "run_local", None)
+
+        def _counting_run_local(url, **kw):
+            lh["run"] += 1
+            state.update(phase="lighthouse",
+                         label=f"performance run {lh['run']} of {getattr(lighthouse, 'DEFAULT_RUNS', 3)}")
+            _emit()
+            return real_run_local(url, **kw)
+
+        try:
+            if real_run_local is not None:
+                lighthouse.run_local = _counting_run_local
+            with egress.origin_scope(origin):
+                report = run(RemoteDeployer(origin), catalog, render=browser.render_routes,
+                             on_progress=_on_progress, on_phase=_on_phase)
+        finally:
+            if real_run_local is not None:
+                lighthouse.run_local = real_run_local
     except DEPLOY_FAILURES as e:
         raise Unreachable(str(e)[:500]) from e
 
