@@ -211,6 +211,14 @@ function Report({ view }: { view: GradeView }) {
         <span className="score-cap">
           <b>slop score</b>
         </span>
+        {r.percentile !== null && r.percentile !== undefined && (
+          <span className="rank-block">
+            <span className="rank-num">p{r.percentile}</span>
+            <span className="score-cap">
+              <b>passive floor</b>
+            </span>
+          </span>
+        )}
       </div>
 
       <div className="sample-axes">
@@ -240,8 +248,8 @@ function Report({ view }: { view: GradeView }) {
       </p>
 
       <p className="passive-note">
-        This ran the {r.passive_probe_count ?? totalPossible} passive checks, so there is no
-        population percentile. <a href="/verify">Verify the domain</a> for the rest.
+        Ranked on the passive floor, which measures what a visitor can see, not whether the app is
+        secure. <a href="/verify">Verify the domain</a> for the rest.
       </p>
 
       <Findings findings={r.findings ?? []} card={cardByProbe} />

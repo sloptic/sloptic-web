@@ -20,6 +20,10 @@ from pathlib import Path
 
 from . import config
 
+# The passive battery the frozen curve measured. A grade that ran a different count is not
+# comparable to it, whatever the catalog happens to hold today.
+PASSIVE_BATTERY = 44
+
 _curve_cache: dict | None = None
 _curve_tried = False
 
@@ -66,6 +70,16 @@ def rank_passive(record: dict, score) -> dict | None:
     """Rank one passive grade, or None if it cannot be ranked. Never raises."""
     curve = load_curve()
     if curve is None:
+        return None
+
+    # The grader's rank() already refuses a cross-mode placement, and load_curve already refuses a
+    # curve that is not tagged passive. This is the third check on the same rule, deliberately: the
+    # curve measured EXACTLY the 44-probe battery, so a record that ran a different number of probes
+    # is a different measurement no matter how close the number looks.
+    total = (record.get("coverage") or {}).get("probes_total")
+    if total is not None and total != PASSIVE_BATTERY:
+        print(f"[rank]  not ranked: this grade ran {total} probes, the curve measured {PASSIVE_BATTERY}",
+              flush=True)
         return None
     bench = _benchmark_module()
     if bench is None:

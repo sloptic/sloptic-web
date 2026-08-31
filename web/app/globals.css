@@ -1742,3 +1742,39 @@ code {
 }
 .mast-auth button:hover,
 .mast-auth-link:hover { color: var(--ink); border-color: var(--ink); }
+
+/* The placement sits beside the score, not above it: it is the same reading in another unit, and
+   giving it its own row would imply a second measurement. Deliberately quieter than the score. */
+.rank-block {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding-left: 1.5rem;
+  margin-left: 0.5rem;
+  border-left: 1px solid var(--line);
+}
+.rank-num {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--ink-soft);
+}
+
+/* The placement sits beside the score, not under it: same reading, another unit. A second row would
+   imply a second measurement. Quieter than the score on purpose. */
+.rank-block {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding-left: 1.5rem;
+  margin-left: 0.75rem;
+  border-left: 1px solid var(--line);
+}
+.rank-num {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--ink-soft);
+}

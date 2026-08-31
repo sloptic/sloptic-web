@@ -52,6 +52,19 @@ export interface GradeResult {
   platform?: Record<string, unknown> | null;
   surface?: Record<string, unknown> | null;
   findings: Finding[];
+  /** Placement on the frozen PASSIVE floor curve. Null when no curve is configured or the grade
+   *  could not be ranked; a missing percentile is an honest absence, never a zero. */
+  percentile?: number | null;
+  percentile_band?: string | null;
+  curve_version?: string | null;
+  ranking?: {
+    percentile?: number;
+    band?: string;
+    cleaner_than_pct?: number;
+    reference?: string;
+    absolute_gates?: string[];
+    axes?: Record<string, { applicable: boolean; percentile?: number; band?: string }>;
+  } | null;
   /** sloptic.reportcard.build_card(): per finding, what was expected, what was seen, what it means,
    *  and the remediation. The thing a reader actually wants after a grade. */
   card?: ReportCard | null;

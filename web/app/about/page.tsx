@@ -87,8 +87,8 @@ export default function AboutPage() {
         <h2 className="section-head">Why not a scanner?</h2>
         <p className="section-intro">
           A scanner, like Burp Suite, Nuclei, Nikto, or even PageSpeed Insights, exists to hand you a list of
-          findings to fix on one app. Sloptic exists to produce one number, so apps with nothing in common
-          can go on the same scale. Much the same probing, opposite purpose.
+          findings to fix on one app. Sloptic exists to grade, so apps with nothing in common
+          can go on the same scale. 
         </p>
         <div className="table-scroll">
           <table className="compare-table">
