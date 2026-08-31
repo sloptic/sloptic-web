@@ -146,15 +146,29 @@ Verification gates publishing and active probing. There is no private-ranking ti
 - It is also the cheaper option: no unverified user can enqueue hundreds of grades, which matters on
   one residential worker where a 400-app field is already ~46 hours.
 
-**Tier 4 does NOT mean the organizer can authorize active probing of entries.** Running an event
-proves nothing about owning the apps in it, and a team's app is the team's. So:
+**Tier 4 DOES authorize active probing of the entries, and no per-app token is required.** An
+earlier draft here demanded one from every team; that was the owner tier's standard applied where it
+does not belong. It would have cost most of the field (teams disband after an event, so a token
+nobody collects means an empty board) for a consent signal the rules already supply.
 
-- organizer verified -> publish + rank the field PASSIVELY;
-- an individual entry is graded ACTIVELY only if that team serves the per-app token, required by the
-  event rules and collected at submission time, which supplies both the team's consent and evidence
-  they control the deployment;
-- entries without a token stay passive or sit out the board. One event runs at one tier; never a
-  silent mix of two measurements on one leaderboard.
+The consent chain: the organizer's rules carry the disclosure, the team reads the rules and submits,
+and submitting IS the team's own act of consent. The "Grading policy" link is that disclosure; being
+the participant notice was always its second job, not a side effect.
 
-This is the same principle as the owner tier's two factors: whoever authorizes the testing has to be
-whoever controls the thing being tested.
+Two conditions make that chain real, neither costing per-team effort:
+
+1. **The disclosure must be specific.** "Entries will be judged" is not consent to having SQL
+   injection and upload payloads fired at your app. The `/e/<token>` page is ours, so it must state
+   plainly what an active grade does, and it is what a participant following the link actually reads.
+2. **It must PRECEDE submission.** An organizer who verifies after the event ended showed
+   participants nothing, and retroactive consent is not consent. Active grading therefore requires
+   that verification predates the submission deadline, which is checkable: the hackathons API returns
+   `submission_period_dates`.
+
+Residual, handled cheaply instead of with a token: a team that submits someone ELSE's URL (a
+placeholder, a lazy link) would aim active traffic at an uninvolved third party. The grader already
+owns the answer, `sloptic/scope.py:off_target`, the authoritative off-target deny-list that
+`devpost_repos.py` already uses. Run every entry through it before active probing.
+
+Teams keep a per-team opt-out regardless, and one event still runs at ONE tier: never a silent mix of
+two measurements on one leaderboard.
