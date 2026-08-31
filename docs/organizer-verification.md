@@ -99,3 +99,31 @@ block as an absence.
   for a large event.
 - **Which page do we tell organizers to edit?** Rules is the honest home (it is the notice), but
   Overview is more reliably populated. Probably: accept either, instruct Rules.
+
+## Accounts: what a grant binds to
+
+Under-specified above, and it determines the build order: a grant has to attach to an identity, so
+verification cannot precede accounts. This is the first feature that needs them.
+
+Note WHY, because it is not the reason the owner tier needs them. Passive checks are safe on any
+public URL, so a passive event ranking has no legal gate. Its gate is CONSENT, and consent needs an
+identity: with no accounts, a stranger could rank a hackathon they have nothing to do with and
+publish a table judging other people's work. The account is what makes "the organizer started this"
+a claim someone is answerable for.
+
+Minimum shape:
+
+- **Supabase Auth, email magic link.** Already present in the project (part of why Supabase was
+  chosen), and a magic link means no password hashes to store. Sloptic grades for exactly that leak
+  class; storing credentials we do not need would be self-parody.
+- **`grants(account_id, scope, role, expires_at)`**, scope being `event:<slug>` or
+  `origin:<scheme://host:port>`. Time-boxed, re-checked at grade time.
+- **ToS acceptance at signup**, since the attestation is what makes abuse traceable and bannable,
+  one of the layers the active tier rests on.
+
+What does NOT change: anonymous single-URL passive grading stays account-free. Value first, sign-in
+only when a feature genuinely needs an identity. The report page's "verify the domain to run the
+rest" is already that prompt.
+
+Order, smallest first, each gating the next: accounts -> organizer verification -> passive event
+ranking -> per-app tokens for the active event tier.
