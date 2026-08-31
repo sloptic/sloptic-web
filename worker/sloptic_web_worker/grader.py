@@ -15,7 +15,7 @@ from sloptic.deploy import RemoteDeployer
 from sloptic.pipeline import run
 from sloptic.schema import Outcome
 
-from . import config
+from . import config, ranking
 
 # Deploy failures the pipeline can raise for an unreachable / non-web target -> a clean "failed" grade.
 DEPLOY_FAILURES = (RuntimeError, TimeoutError, OSError)
@@ -99,6 +99,12 @@ def run_passive_grade(origin: str) -> dict:
     # The record above is the benchmark-rankable shape: it keeps only the checks that FIRED, because
     # ranking does not care what passed. A report does. Everything below comes from the grader's own
     # public API, so none of the scoring or wording is re-derived here.
+    # Percentile against the frozen PASSIVE curve, if one is configured. Returns None otherwise, and
+    # never raises: the score is the product, the rank is context.
+    rank = ranking.rank_passive(record, record["slop_score"])
+    if rank is not None:
+        rank["curve_version"] = (ranking.load_curve() or {}).get("version")
+
     card = _build_card(record, origin)
     outcomes = [asdict(o) for o in report.outcomes]
     axis_potential = _axis_potential(report)
@@ -113,6 +119,7 @@ def run_passive_grade(origin: str) -> dict:
         "card": card,
         "outcomes": outcomes,
         "axis_potential": axis_potential,
+        "ranking": rank,
         "mode": "passive",
         "catalog_version": _catalog_version(),
         "passive_probe_count": len(catalog),

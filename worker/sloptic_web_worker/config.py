@@ -57,3 +57,12 @@ CHALLENGE_BACKOFF_SECONDS = float(os.environ.get("CHALLENGE_BACKOFF_SECONDS", st
 # and is returned to the queue. Generous: a real grade with three Lighthouse runs takes ~7 minutes.
 STALE_JOB_SECONDS = float(os.environ.get("STALE_JOB_SECONDS", "1800"))
 MAX_ATTEMPTS = int(os.environ.get("MAX_ATTEMPTS", "3"))
+
+
+# --- reference curve (percentile for anonymous passive grades) ---------------------------------
+# Empty until the passive-only corpus run produces one. A passive grade may ONLY rank on a curve
+# tagged `probe_set: "passive"`; the grader's benchmark.rank refuses anything else, and
+# ranking.load_curve refuses it a second time here. No curve simply means no percentile.
+PASSIVE_CURVE_PATH = os.environ.get("PASSIVE_CURVE_PATH", "")
+# Where the grader's scripts/ live, for benchmark.rank (it sits outside the importable package).
+CURVE_SCRIPTS_DIR = os.environ.get("CURVE_SCRIPTS_DIR", "../sloptic-main/scripts")

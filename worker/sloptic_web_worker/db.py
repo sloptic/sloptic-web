@@ -101,16 +101,20 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
             """
             INSERT INTO results (grade_id, mode, catalog_version, passive_probe_count, slop_score,
                                  axis_slop, coverage, platform, surface, findings,
-                                 card, outcomes, axis_potential)
+                                 card, outcomes, axis_potential,
+                                 percentile, percentile_band, curve_version, ranking)
             VALUES (%(grade_id)s, %(mode)s, %(catalog_version)s, %(passive_probe_count)s, %(slop_score)s,
                     %(axis_slop)s, %(coverage)s, %(platform)s, %(surface)s, %(findings)s,
-                    %(card)s, %(outcomes)s, %(axis_potential)s)
+                    %(card)s, %(outcomes)s, %(axis_potential)s,
+                    %(percentile)s, %(percentile_band)s, %(curve_version)s, %(ranking)s)
             ON CONFLICT (grade_id) DO UPDATE SET
                 slop_score = EXCLUDED.slop_score, axis_slop = EXCLUDED.axis_slop,
                 coverage = EXCLUDED.coverage, platform = EXCLUDED.platform,
                 surface = EXCLUDED.surface, findings = EXCLUDED.findings,
                 card = EXCLUDED.card, outcomes = EXCLUDED.outcomes,
-                axis_potential = EXCLUDED.axis_potential;
+                axis_potential = EXCLUDED.axis_potential,
+                percentile = EXCLUDED.percentile, percentile_band = EXCLUDED.percentile_band,
+                curve_version = EXCLUDED.curve_version, ranking = EXCLUDED.ranking;
             """,
             {
                 "grade_id": job_id,
@@ -126,6 +130,12 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
                 "card": json.dumps(result.get("card") or {}),
                 "outcomes": json.dumps(result.get("outcomes") or []),
                 "axis_potential": json.dumps(result.get("axis_potential") or {}),
+                # All four are NULL when there is no curve, or when rank() declined to place this
+                # grade. A missing percentile is an honest absence, never a zero.
+                "percentile": (result.get("ranking") or {}).get("percentile"),
+                "percentile_band": (result.get("ranking") or {}).get("band"),
+                "curve_version": (result.get("ranking") or {}).get("curve_version"),
+                "ranking": json.dumps(result["ranking"]) if result.get("ranking") else None,
             },
         )
         conn.execute(
