@@ -38,7 +38,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   // nothing running look identical from the outside, and the second is the one worth admitting to.
   let queue: QueueInfo | undefined;
   if (grade.status === "queued") {
-    const [{ data: worker }, { count: ahead }] = await Promise.all([
+    const [{ data: worker, error: workerErr }, { count: ahead }] = await Promise.all([
       db.from("worker_status").select("last_seen, state").eq("id", "worker").maybeSingle(),
       db
         .from("grades")
@@ -46,8 +46,15 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         .eq("status", "queued")
         .lt("submitted_at", grade.submitted_at),
     ]);
+    // Failing to READ the heartbeat is not evidence that no worker exists. A missing grant on the
+    // table made every read 403, and reporting that as "nothing is running" told visitors something
+    // confidently false while the worker was polling. On an error, say nothing rather than lie: the
+    // page falls back to the ordinary "this takes a few minutes" copy.
+    if (workerErr) console.error("worker_status unreadable:", workerErr.message);
     const lastSeen = worker?.last_seen ? Date.parse(worker.last_seen) : 0;
-    const workerAlive = lastSeen > 0 && Date.now() - lastSeen < HEARTBEAT_STALE_SECONDS * 1000;
+    const workerAlive = workerErr
+      ? true
+      : lastSeen > 0 && Date.now() - lastSeen < HEARTBEAT_STALE_SECONDS * 1000;
     queue = {
       worker_alive: workerAlive,
       stalled: !workerAlive,

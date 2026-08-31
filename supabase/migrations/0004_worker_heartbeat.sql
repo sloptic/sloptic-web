@@ -18,6 +18,12 @@ create table if not exists public.worker_status (
 
 alter table public.worker_status enable row level security;   -- service role only, like every other table
 
+-- RLS alone is NOT enough, and forgetting this cost an evening: Supabase auto-grants privileges only
+-- for objects created through its own migration flow, never for a table created over a raw pooler
+-- connection, so without the line below every read 403s with "permission denied" and the site
+-- concludes no worker is running. See 0005, which adds it. EVERY new table needs its own grant.
+grant select, insert, update, delete on public.worker_status to service_role;
+
 comment on table public.worker_status is
   'Heartbeat from the grade worker. Absence of a recent row means no worker is running, which is what
    lets a queued grade fail honestly instead of spinning forever.';
