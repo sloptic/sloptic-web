@@ -18,24 +18,15 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
   if (error || !data.user) return NextResponse.redirect(`${origin}/signin?error=exchange_failed`);
 
-  // Mirror the account into profiles. Written with the service role because a user must not be able
-  // to write their own acceptance record.
+  // Mirror the account into profiles, with the service role: a user must not write their own record.
   //
-  // Two steps, because terms_accepted_at records WHEN THEY FIRST accepted and must not be rewritten
-  // on every sign-in: an acceptance date that always says "just now" cannot answer whether an
-  // account agreed to the terms as they stood at the time, which is the only question it exists to
-  // answer. So the upsert deliberately omits the column (leaving an existing value untouched), and
-  // a second write fills it only where it is still null.
+  // terms_accepted_at is deliberately NOT set. There are no terms to accept yet, and stamping a
+  // date would manufacture evidence of an agreement nobody made. It stays null until a terms page
+  // exists and the sign-in form actually says so, which is also the gate the active tier needs.
   try {
-    const admin = supabaseAdmin();
-    await admin
+    await supabaseAdmin()
       .from("profiles")
       .upsert({ id: data.user.id, email: data.user.email }, { onConflict: "id" });
-    await admin
-      .from("profiles")
-      .update({ terms_accepted_at: new Date().toISOString() })
-      .eq("id", data.user.id)
-      .is("terms_accepted_at", null);
   } catch {
     // A profile row is bookkeeping; failing it must not strand a signed-in user with no way back.
   }

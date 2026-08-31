@@ -13,6 +13,9 @@ create table if not exists public.profiles (
   email             text,
   -- Set when the account accepts the terms. The active tier rests partly on an attestation being
   -- traceable to someone who agreed to them, so a NULL here means the account cannot hold a grant.
+  -- CURRENTLY ALWAYS NULL AND THAT IS CORRECT: there is no terms page yet, and writing a date for
+  -- an agreement nobody was shown would be manufacturing the evidence. Start writing it when a
+  -- terms page exists and sign-in says signing in accepts them.
   terms_accepted_at timestamptz,
   created_at        timestamptz not null default now()
 );

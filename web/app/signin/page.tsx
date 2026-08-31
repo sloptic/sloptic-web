@@ -52,9 +52,6 @@ export default async function SignInPage({
             That link did not work, request another.
           </p>
         )}
-        <p className="section-intro" style={{ marginTop: "1.5rem" }}>
-          Signing in accepts the <a href="/terms">terms</a>.
-        </p>
       </section>
     </>
   );
