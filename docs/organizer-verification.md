@@ -170,19 +170,23 @@ Two conditions make that chain real, neither costing per-team effort:
 declaration, not an organizer's list about them, which is exactly the provenance the consent chain
 wants.
 
-But the extraction is a HEURISTIC, and that bites differently once probing is active. `links_for()`
-takes the first link in `app-links` that is not version control, video, docs, design or social, and
-its own docstring concedes "a stray portfolio link is possible noise". Harmless when passive. When
-active, picking a team member's personal site instead of the demo means firing injection payloads at
-a target that was never the submission, and no consent covers it.
+Teams are responsible for what they put there, so a link they published is a link they published,
+and second-guessing that would be misplaced. There is one boundary the team CANNOT extend past,
+though, and it is not hypothetical: `eligibility.wrong_owner_reason` exists because the corpus
+contained submissions pointing at third-party PLATFORM surfaces, an S3 bucket, a Jira / SharePoint /
+Notion page, a Gamma deck, a no-code site, a Lovable editor URL. Those are still the team's own
+artifacts, but active probing of one does not hit the team, it hits Atlassian or Notion or AWS, and
+no team can consent on their behalf.
 
-Two guards, neither a token:
+So the screen is about the LIMIT of consent, not about doubting teams, and it is automated rather
+than a review process. Both pieces already exist in the grader:
 
-- `sloptic/scope.py:off_target`, the authoritative off-target deny-list `devpost_repos.py` already
-  uses, run over every entry before active probing.
-- **The organizer's review-the-field step is load-bearing, not a nicety.** It is the human check on a
-  heuristic and the last moment a wrong URL can be caught before payloads fly. Show the resolved
-  live URL per entry and require approval before an active run.
+- `eligibility.wrong_owner_reason` / `platform_id.wrong_owner_host`, which classify exactly these,
+- `sloptic/scope.py:off_target`, the authoritative off-target deny-list `devpost_repos.py` uses.
+
+Run both before an ACTIVE run and skip what they flag (passively, they are merely a measurement
+problem; actively, they are someone else's servers). Showing the organizer the resolved field stays
+worth doing as ordinary transparency, but it is not the control.
 
 Teams keep a per-team opt-out regardless, and one event still runs at ONE tier: never a silent mix of
 two measurements on one leaderboard.
