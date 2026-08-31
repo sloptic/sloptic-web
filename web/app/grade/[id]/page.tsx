@@ -8,6 +8,14 @@ const POLL_MS = 3000;
 const MAX_POLL_FAILS = 8;   // ~1 minute of server errors before giving up on the page
 const AREA_ORDER: Area[] = ["security", "qa", "performance"];
 
+/** The score is a damped decimal, so 21.6 must read as 21.6 and 22 must not read as 22.0. Postgres
+ *  numeric arrives over JSON as a string, so coerce before formatting. */
+function fmtScore(v: number | string | null | undefined): string {
+  const n = typeof v === "string" ? Number(v) : v;
+  if (n === null || n === undefined || Number.isNaN(n)) return "-";
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
 /** What the grader is doing right now, in a visitor's words. The phase label matters more than the
  *  probe count: Lighthouse is a silent two-to-three minute stretch, and saying so is the difference
  *  between "working" and "stuck". */
@@ -207,7 +215,7 @@ function Report({ view }: { view: GradeView }) {
       </h1>
 
       <div className="score-block">
-        <span className="score-num">{r.slop_score}</span>
+        <span className="score-num">{fmtScore(r.slop_score)}</span>
         <span className="score-cap">
           <b>slop score</b>
         </span>
@@ -248,8 +256,7 @@ function Report({ view }: { view: GradeView }) {
       </p>
 
       <p className="passive-note">
-        Ranked on the passive floor, which measures what a visitor can see, not whether the app is
-        secure. <a href="/verify">Verify the domain</a> for the rest.
+        This is a passive grade only, seeing only what a visitor sees. <a href="/verify">Verify the domain</a> for an active grade.
       </p>
 
       <Findings findings={r.findings ?? []} card={cardByProbe} />
