@@ -1512,6 +1512,11 @@ code {
   padding: 0;
   border-top: 1px solid var(--line);
 }
+/* A paragraph following a stat list needs its own top gap: .stat-list has no bottom margin and
+   .section-intro only carries a bottom one, which is what tempts a <br> into the markup. */
+.stat-list + .section-intro {
+  margin-top: 2.25rem;
+}
 .stat-list li {
   display: grid;
   grid-template-columns: 11rem 1fr;

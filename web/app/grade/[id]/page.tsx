@@ -98,9 +98,9 @@ export default function GradePage({ params }: { params: { id: string } }) {
           </span>
         )}
         {stalled ? (
-          <p className="note">No grader is running, so this has not started. It expires in fifteen minutes.</p>
+          <p className="note">No grader is running.</p>
         ) : (
-          <p className="note">A few minutes. This page updates itself.</p>
+          <p className="note">This takes a few minutes. This page updates itself.</p>
         )}
       </section>
     );
@@ -210,8 +210,6 @@ function Report({ view }: { view: GradeView }) {
         <span className="score-num">{r.slop_score}</span>
         <span className="score-cap">
           <b>slop score</b>
-          lower is better
-          <br />0 means nothing found
         </span>
       </div>
 
@@ -283,7 +281,7 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
     return (
       <>
         <h2>What failed</h2>
-        <p className="passive-note">Nothing failed.</p>
+        <p className="passive-note">Nothing failed :)</p>
       </>
     );
   }
@@ -291,7 +289,7 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
   return (
     <>
       <h2>What failed ({findings.length})</h2>
-      <p className="section-intro">Open one for the detail and the fix.</p>
+      <p className="section-intro">Open one for details</p>
       <div className="sample-findings">
         {sorted.map((f, i) => {
           const entry = card[f.probe_id];
@@ -312,13 +310,13 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
               <div className="finding-expand">
                 {entry?.expected && (
                   <div className="row2">
-                    <span className="term">What should be true</span>
+                    <span className="term">What should we see</span>
                     <p className="desc">{entry.expected}</p>
                   </div>
                 )}
                 {(entry?.actual || ev.length > 0) && (
                   <div className="row2">
-                    <span className="term">What we saw</span>
+                    <span className="term">What we saw instead</span>
                     <div className="desc">
                       {entry?.actual && <p>{entry.actual}</p>}
                       {ev.length > 0 && (
@@ -421,7 +419,6 @@ function NotApplicable({ coverage }: { coverage: Coverage }) {
       <h2>
         Did not apply ({c.probes_na}) <span className="offscore">not a pass</span>
       </h2>
-      <p className="passive-note">Not tested here, so neither a pass nor a fail.</p>
       {Object.keys(reasons).length > 0 && (
         <div className="platform">
           <dl>

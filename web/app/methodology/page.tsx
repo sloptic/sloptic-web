@@ -12,38 +12,40 @@ export default function MethodologyPage() {
       <div className="page-head">
         <h1>How the grade works</h1>
         <p className="page-lead">
-          What Sloptic looks at, what it counts as a finding, how those become a number, and what it
-          does not claim. The grader is open, so anything here can be checked against the code.
+          What Sloptic looks at, what it counts as a finding, how the score is built, and what it
+          does not claim
         </p>
       </div>
 
       <section className="section">
         <h2 className="section-head">It only looks from the outside</h2>
         <p className="section-intro">
-          Sloptic never sees your code. It checks the app the way a visitor would, over the web, with no
-          source and no description of what the app is meant to do. That constraint is the point. The
-          same method works on any app, whatever it was built with, which is what makes two unrelated
-          apps comparable at all.
+          Sloptic never sees your code. It checks the app the way a visitor would over the web. This method
+          works on any app you give it, which is what makes two unrelated apps comparable at all.
         </p>
       </section>
 
       <section className="section">
         <h2 className="section-head">What counts as a finding</h2>
         <p className="section-intro">
-          <b>It has to be wrong in every app.</b> Before a check is added it must survive one question.
-          Is there a legitimate app for which this behavior is correct? A table any visitor can
-          read is exactly right for a product catalogue, so the check cannot fire on an open table. It
-          fires on what is in the columns. Whether <em>this</em> user should see <em>that</em> record is
-          intent, and stays human. Whether a stranger can read a table containing{" "}
-          <code>contact_email</code> is not.
+          <b>It has to be wrong in every app.</b> Before a check is added it must answer a simple question:
+          Is there a legitimate app for which this behavior is correct? For example, a table any visitor can
+          read can be right for a product catalogue. Allowing duplicates may be correct for logs but wrong for payment transactions. These examples are cases where an app can <em>legitimately
+          exhibit a particular behavior</em> and is thus not penalized for it.
         </p>
         <p className="section-intro">
-          <b>It has to be proven, not guessed.</b> A finding rests on something only that fault could
-          produce, and echoing back our own payload never counts. The check for exposed files does not
-          match the path it asked for, it matches a line out of the password file it should never have
-          received. The scripting check requires the payload to execute in the page, not merely
-          appear in it. One filter check keys on a fragment of the app&apos;s own query template
-          surfacing in an error, which nothing we sent could have produced.
+          However, behavior like exposed secrets, SQL injection, an unhandled server error, or a pathologically slow
+          app, are wrong for <em>any app you come across</em>. No app on earth exists where such behaviors are
+          &quot;correct&quot; and thus Sloptic checks for them.
+        </p>
+        <p className="section-intro">
+          <b>It has to be proven.</b> A finding rests on something only that fault could
+          produce, with evidence to back it up. For example, injection probes only trigger a finding when 
+          a site verifiably produces a response that could only come from execution. Unlike traditional{" "} 
+          <a href="https://en.wikipedia.org/wiki/Dynamic_application_security_testing" target="_blank" rel="noopener noreferrer">DAST</a> tools, 
+          where a false positive can be dismissed with only some wasted time, Sloptic's findings
+          must be trustworthy on their own, since (1) the score is meant to be taken at face value, and (2) any
+          human intervention affects the objective nature of Sloptic.
         </p>
       </section>
 
@@ -53,16 +55,15 @@ export default function MethodologyPage() {
           <li>
             <span className="k">deduction only</span>
             <span className="v">
-              Nothing is earned for passing. This mirrors how failure works. Defending seven of
-              eight injectable inputs is still a breach, so the seven add nothing and the eighth adds
-              its full penalty.
+              Nothing is earned for passing, but you get penalized for failing. This mirrors how failures work:
+              successes are quiet but failures are visible. A lower score is better.
             </span>
           </li>
           <li>
             <span className="k">risk priced</span>
             <span className="v">
-              A penalty is expected harm, how often it hurts someone multiplied by how badly, rather
-              than raw severity. Nothing else outranks a single catastrophic security fault.
+              A penalty is expected harm, or how often it hurts someone multiplied by how badly, rather
+              than raw severity. 
             </span>
           </li>
           <li>
@@ -74,11 +75,10 @@ export default function MethodologyPage() {
             </span>
           </li>
           <li>
-            <span className="k">per area, not out of 100</span>
+            <span className="k">unbounded, not out of 100</span>
             <span className="v">
               Security, quality and performance each report their own subtotal and the three sum to the
-              score. Scaling to 100 was tried and reverted, because a denominator makes apps with
-              different amounts of surface incomparable, which defeats the purpose.
+              score.
             </span>
           </li>
         </ul>
@@ -87,9 +87,9 @@ export default function MethodologyPage() {
       <section className="section">
         <h2 className="section-head">Where the numbers come from</h2>
         <p className="section-intro">
-          A penalty is never a matter of taste. Every number traces to a published authority, and where
-          a finding lands inside that authority&apos;s range is set by what the probe saw. The
-          full ledger, every class and every number, is{" "}
+          A penalty is not a matter of taste. Every number traces to a published authority, and where
+          a finding lands inside that authority&apos;s range is set by what the check saw. You can find the 
+          full rationale{" "}
           <a
             href="https://github.com/sloptic/sloptic-main/blob/main/docs/PENALTY_RATIONALE.md"
             target="_blank"
@@ -100,14 +100,7 @@ export default function MethodologyPage() {
           .
         </p>
         <p className="section-intro">
-          The scale has one anchor. A 100 is a single total catastrophe, an attacker with no account
-          running their own code on the server and nothing left to protect. Every other penalty is a
-          fraction of that, so a finding priced at 40 is 40% of a catastrophe and a missing referrer
-          policy at 2 is 2% of one. Nothing caps the total, because an app carrying three catastrophes
-          is worse than one carrying a single catastrophe.
-        </p>
-        <p className="section-intro">
-          Different failures answer to different authorities, and only the severity layer sets the
+          Different failures answer to different authorities, and only severity sets the
           number.
         </p>
         <ul className="stat-list">
@@ -177,117 +170,76 @@ export default function MethodologyPage() {
           </li>
         </ul>
         <p className="section-intro">
-          Within a class a check charges the lowest price by default and raises it only when it proves
-          worse harm. An access control flaw that leaks one record is priced well below one that hands
-          over a whole table, and the gap is set by what each probe pulled back, not by how the
-          finding sounds.
-        </p>
-        <p className="section-intro">
-          The hygiene floor is cheap on purpose. A missing security header is one line of config and
-          none of them bites on its own, so the whole header group is priced low, and it was trimmed
-          further after a corpus audit found it firing on nine apps in ten and swamping everything else.
-          Performance is held below the lowest security catastrophe as well, so a slow app, however
-          slow, never outweighs a breach.
-        </p>
-        <p className="section-intro">
-          All of this is enforced rather than promised. A build gate rejects any penalty that carries no
-          authority behind it, so a number with no source cannot ship.
+          Within a class, a check charges the lowest price by default and raises it only when it proves
+          worse harm. For example, an access control flaw that leaks one record is priced well below one that hands
+          over a whole table.
         </p>
       </section>
 
       <section className="section">
         <h2 className="section-head">Two kinds of checks</h2>
         <p className="section-intro">
-          <b>Look-only</b> checks read what your app already shows every visitor: its settings, the page
-          it serves, how fast it loads, whether a screen reader can use it. Running them on a
-          stranger&apos;s site is no different from visiting it, so they run on any URL.
+          <b>Passive</b> checks read what your app already shows every visitor. Running them on a
+          stranger&apos;s site is no different from visiting it.
         </p>
         <p className="section-intro">
-          <b>Hands-on</b> checks go looking for holes by sending real attack traffic. Doing that to a
-          site you do not own is unauthorized testing, so they run only once ownership is proven.{" "}
-          <a href="/verify">What that involves.</a>
-        </p>
-      </section>
-
-      <section className="section">
-        <h2 className="section-head">What happens when a check cannot run</h2>
-        <p className="section-intro">
-          Every check returns one of three answers, and the third is the one that matters. It found the
-          fault, it tested and did not find it, or it could not establish the conditions to test at all.
-          A check with no login in front of it cannot report that the login is safe.
-        </p>
-        <p className="section-intro">
-          That third answer is never quietly folded into a pass, because a clean result that was never tested is a missed fault wearing a pass. Each one records why it could not run. The
-          same rule applies when a target is too noisy to read. An app that answers every request with
-          error grammar carries no signal, so the benign case is checked first and the result is marked
-          untestable rather than guessed. Every grade ships the tally, and on the population we
-          measured, the median app ran 57% of the battery.
+          <b>Active</b> checks go looking for holes by sending real attacks. Doing that to a
+          site you do not own is considered unauthorized testing, so they run only once ownership is proven.{" "}
+          <a href="/verify">What verifying involves.</a>
         </p>
       </section>
 
       <section className="section">
         <h2 className="section-head">How the checks are validated</h2>
         <p className="section-intro">
-          Checks are calibrated against apps with known answers, in layers, because no single target
+          Checks are calibrated against apps with known answers because no single target
           proves much on its own.
         </p>
         <ul className="stat-list">
           <li>
             <span className="k">a matched pair</span>
             <span className="v">
-              One reference app deliberately broken, one deliberately clean. A check that cannot tell
-              them apart does not ship.
+              One reference app deliberately broken, one clean. A check that can't tell these apart does not get added.
             </span>
           </li>
           <li>
             <span className="k">apps broken on purpose</span>
             <span className="v">
-              DVWA, Juice Shop, VAmPI and bWAPP, the deliberately vulnerable apps the industry already
-              uses, whose faults are documented by people with no stake here.
+              DVWA, Juice Shop, VAmPI and bWAPP, the intentionally vulnerable apps the industry already
+              uses with documented faults.
             </span>
           </li>
           <li>
             <span className="k">an outside benchmark</span>
             <span className="v">
-              GapBench, an outside recall benchmark with its own ground truth, run politely and without
-              any attempt to defeat its protections.
+              {" "}<a href="https://gapbench.vibe-eval.com/" target="_blank" rel="noopener noreferrer">GapBench</a>, 
+              a recall benchmark with an answer key for testing security scanners. 
             </span>
           </li>
           <li>
             <span className="k">a population</span>
             <span className="v">
-              More than 1,600 real deployed apps, which shows how often a fault occurs but never
-              whether a given call was right, because a corpus has no answer key.
+              More than 1,600 real deployed apps, which shows how often a fault occurs but not
+              whether one actually exists or not, which requires hand auditing.
             </span>
           </li>
         </ul>
       </section>
 
       <div className="method" data-tone="limits">
-        <h2>What it does not claim</h2>
+        <h2>What Sloptic does not claim</h2>
         <p>
-          <b>It never says you are safe.</b> A 0 means nothing was found, not that nothing is there. The
-          score cannot tell a defended thing from an absent one, and calling that clean would be a false
-          assurance.
+          <b>It never says you are safe.</b> A 0 means nothing was found. The
+          score cannot tell a defended thing from an absent one, and it cannot see everything. Hence, 
+          you should treat the score as a minimum, not a maximum.
         </p>
         <p>
-          <b>It only sees what a visitor can reach without logging in.</b> Faults behind a login it
-          cannot get past are missed, and the coverage report says so rather than implying it saw
-          everything.
+          <b>Precision is vouched in places.</b> The classes with precision
+          rules are checked, but the rest are considered unaudited.
         </p>
         <p>
-          <b>Some findings belong to the platform, not the app.</b> An app on a hosting subdomain may be
-          serving the platform&apos;s own login page, and a fault there is not the team&apos;s. That
-          boundary is narrowed, never claimed closed, which is one reason a human stays in the loop.
-        </p>
-        <p>
-          <b>Precision is vouched in places, not everywhere.</b> The classes with explicit precision
-          rules are checked. The rest is reported as unaudited rather than dressed up as verified, and
-          most of it is presence checks where getting it wrong is structurally hard.
-        </p>
-        <p>
-          <b>The miss rate is not measured yet.</b> The audit of what Sloptic fails to catch, across the
-          whole catalog, is still running. Until it finishes, no recall figure is claimed.
+          <b>The miss rate is not measured yet.</b> The checks are validated for precision, but full recall is
+          difficult due to the diversity of web apps. To compensate, Sloptic checks parity, the range of coverage across apps.
         </p>
         <div className="cta-row">
           <a className="button" href="/">
