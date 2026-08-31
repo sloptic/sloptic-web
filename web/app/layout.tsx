@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import ThemeToggle from "./ThemeToggle";
+import { currentUser } from "@/lib/auth";
 import "./globals.css";
 
 // Instrument type: IBM Plex Sans for text, Plex Mono for the readouts. Technical, distinctive, and not
@@ -28,7 +29,18 @@ export const metadata: Metadata = {
 // the system, which the CSS does on its own.
 const themeInit = `try{var t=localStorage.getItem('sloptic-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}`;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+// The masthead reflects sign-in state, so the layout is dynamic. Auth being unconfigured is not an
+// error: the site works entirely signed-out, and only verification needs an account.
+export const dynamic = "force-dynamic";
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  let user = null;
+  try {
+    user = await currentUser();
+  } catch {
+    user = null;
+  }
+
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body>
@@ -45,6 +57,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <a href="/organizers">organizers</a>
             <a href="/methodology">methodology</a>
           </nav>
+          {user ? (
+            <form action="/auth/signout" method="post" className="mast-auth">
+              <span className="mast-user" title={user.email ?? ""}>
+                {user.email}
+              </span>
+              <button type="submit">sign out</button>
+            </form>
+          ) : (
+            <a className="mast-auth-link" href="/signin">
+              sign in
+            </a>
+          )}
           <ThemeToggle />
         </header>
         <main className="sheet">{children}</main>

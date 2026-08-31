@@ -1703,3 +1703,30 @@ code {
 .evidence > div { display: flex; gap: 0.6rem; padding: 0.15rem 0; }
 .evidence dt { color: var(--muted); min-width: 9rem; }
 .evidence dd { margin: 0; color: var(--ink-soft); word-break: break-word; }
+
+/* Sign-in state in the masthead. Text, not a badge: it is a fact about the session, not a feature
+   to advertise, and the site is fully usable signed out. */
+.mast-auth { display: flex; align-items: center; gap: 0.5rem; }
+.mast-user {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mast-auth button,
+.mast-auth-link {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line-strong);
+  padding: 0 0 1px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.mast-auth button:hover,
+.mast-auth-link:hover { color: var(--ink); border-color: var(--ink); }

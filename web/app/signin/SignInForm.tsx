@@ -1,0 +1,96 @@
+"use client";
+
+import { useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
+
+/** Providers appear only when configured, so enabling GitHub or Google is a config change plus an
+ *  env var, never a code change: Supabase treats every provider as the same OAuth handshake, and
+ *  they all land on /auth/callback. */
+const OAUTH: { id: "github" | "google"; label: string }[] = [
+  { id: "github", label: "GitHub" },
+  { id: "google", label: "Google" },
+];
+
+export default function SignInForm({
+  url,
+  anonKey,
+  providers,
+  next,
+}: {
+  url: string;
+  anonKey: string;
+  providers: string[];
+  next: string;
+}) {
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const supabase = createBrowserClient(url, anonKey);
+  const redirectTo = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback?next=${encodeURIComponent(next)}`;
+
+  async function sendLink(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: redirectTo },
+    });
+    setBusy(false);
+    if (error) setError(error.message);
+    else setSent(true);
+  }
+
+  async function oauth(provider: "github" | "google") {
+    setError(null);
+    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } });
+    if (error) setError(error.message);
+  }
+
+  if (sent) {
+    return (
+      <p className="status" role="status">
+        Check {email} for the link.
+      </p>
+    );
+  }
+
+  const enabled = OAUTH.filter((p) => providers.includes(p.id));
+
+  return (
+    <>
+      <form onSubmit={sendLink} className="grade-form">
+        <input
+          type="email"
+          required
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          aria-label="Email address"
+          autoFocus
+        />
+        <button type="submit" disabled={busy}>
+          {busy ? "sending" : "email me a link"}
+        </button>
+      </form>
+
+      {enabled.length > 0 && (
+        <div className="cta-row" style={{ marginTop: "1rem" }}>
+          {enabled.map((p) => (
+            <button key={p.id} className="button secondary" onClick={() => oauth(p.id)} type="button">
+              Continue with {p.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
