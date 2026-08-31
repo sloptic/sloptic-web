@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { GradeView, Finding, Coverage, GradeProgress, CardEntry } from "@/lib/types";
+import type { GradeView, Finding, Coverage, GradeProgress, CardEntry, Outcome } from "@/lib/types";
 import { AREA_LABELS, PASSIVE_BY_AREA, describeProbe, type Area } from "@/lib/checks";
 
 const POLL_MS = 3000;
@@ -147,9 +147,30 @@ function Report({ view }: { view: GradeView }) {
       slop: r.axis_slop?.[id as keyof typeof r.axis_slop] ?? 0,
     }));
 
-    const passed = appliedIds
-      .filter((id) => !firedIds.has(id))
-      .map((id) => ({ id, ...(describeProbe(id) ?? { area: "security" as Area, name: id }) }))
+    // Prefer the OUTCOMES for what passed: they record what each check actually measured, which is
+    // the difference between "clean" as a bare label and "clean" as a claim with a reading behind
+    // it. Outcomes fan out per target, so group by probe. Fall back to coverage.applied minus the
+    // fired probes for older grades stored before outcomes were kept.
+    const cleanByProbe = new Map<string, { evidence: Record<string, unknown>; targets: string[] }>();
+    for (const o of (r.outcomes ?? []) as Outcome[]) {
+      if (o.outcome !== "clean") continue;
+      const cur = cleanByProbe.get(o.probe_id) ?? { evidence: {}, targets: [] };
+      if (o.evidence) Object.assign(cur.evidence, o.evidence);
+      if (o.target) cur.targets.push(o.target);
+      cleanByProbe.set(o.probe_id, cur);
+    }
+
+    const passedIds = cleanByProbe.size
+      ? [...cleanByProbe.keys()]
+      : appliedIds.filter((id) => !firedIds.has(id));
+
+    const passed = passedIds
+      .map((id) => ({
+        id,
+        ...(describeProbe(id) ?? { area: "security" as Area, name: id }),
+        evidence: cleanByProbe.get(id)?.evidence ?? {},
+        targets: cleanByProbe.get(id)?.targets ?? [],
+      }))
       .sort((a, b) => AREA_ORDER.indexOf(a.area) - AREA_ORDER.indexOf(b.area) || a.name.localeCompare(b.name));
 
     return { rows, passed };
@@ -329,22 +350,59 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
   );
 }
 
-function Passed({ items }: { items: { id: string; area: Area; name: string }[] }) {
+type PassedItem = {
+  id: string;
+  area: Area;
+  name: string;
+  evidence: Record<string, unknown>;
+  targets: string[];
+};
+
+function Passed({ items }: { items: PassedItem[] }) {
   if (items.length === 0) return null;
   return (
     <>
       <h2>What passed ({items.length})</h2>
+      <p className="section-intro">
+        A pass is a measurement, not an absence. Open one to see what it read.
+      </p>
       <div className="sample-findings">
-        {items.map((p) => (
-          <div className="finding-row passed" data-axis={p.area} key={p.id}>
-            <span className="finding-dot" />
-            <span className="finding-body">
-              <span className="finding-cat">{p.name}</span>
-              <span className="finding-meta">{p.id}</span>
-            </span>
-            <span className="finding-pen">0</span>
-          </div>
-        ))}
+        {items.map((p) => {
+          const ev = evidencePairs(p.evidence);
+          const targets = [...new Set(p.targets)];
+          return (
+            <details className="finding-detail passed" data-axis={p.area} key={p.id}>
+              <summary className="finding-row passed">
+                <span className="finding-dot" />
+                <span className="finding-body">
+                  <span className="finding-cat">{p.name}</span>
+                  <span className="finding-meta">
+                    {[p.id, targets.length > 1 ? `${targets.length} targets` : targets[0]]
+                      .filter(Boolean)
+                      .join("  /  ")}
+                  </span>
+                </span>
+                <span className="finding-pen">0</span>
+              </summary>
+              <div className="finding-expand">
+                {ev.length > 0 ? (
+                  <dl className="evidence">
+                    {ev.map(([k, v]) => (
+                      <div key={k}>
+                        <dt>{k.replace(/_/g, " ")}</dt>
+                        <dd>{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : (
+                  <p className="desc">
+                    This check ran and found nothing to report, but recorded no reading of its own.
+                  </p>
+                )}
+              </div>
+            </details>
+          );
+        })}
       </div>
     </>
   );
