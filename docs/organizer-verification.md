@@ -188,5 +188,14 @@ Run both before an ACTIVE run and skip what they flag (passively, they are merel
 problem; actively, they are someone else's servers). Showing the organizer the resolved field stays
 worth doing as ordinary transparency, but it is not the control.
 
+**A platform SUBDOMAIN is not a vendor surface, and conflating them would gut the feature.** An app
+at `team-thing.vercel.app` is the team's own code that Vercel happens to host: actively gradeable,
+and about 63% of the corpus lives there. What is excluded is a vendor's PRODUCT holding the team's
+content: a Notion page, a Jira board, a Gamma deck, an S3 bucket, a Lovable editor URL. The line is
+whether the team BUILT the thing being tested, which is what `wrong_owner_host` already encodes.
+(Note this differs from the OWNER tier, where a platform subdomain gets the passive floor because it
+cannot satisfy the DNS factor. The event tier drops DNS, so the same app is actively gradeable there
+via the organizer's chain.)
+
 Teams keep a per-team opt-out regardless, and one event still runs at ONE tier: never a silent mix of
 two measurements on one leaderboard.
