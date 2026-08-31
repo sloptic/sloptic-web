@@ -6,8 +6,8 @@ import { currentUser, publicSupabaseConfig } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Sign in",
-  description: "Sign in to verify a domain or an event.",
+  title: "Sign in or up",
+  description: "Sign in or create an account to verify a domain or an event.",
 };
 
 export default async function SignInPage({
@@ -35,9 +35,9 @@ export default async function SignInPage({
   return (
     <>
       <div className="page-head">
-        <h1>Sign in</h1>
+        <h1>Sign in / up</h1>
         <p className="page-lead">
-          Only needed to prove a domain or an event is yours.
+          One link does both. Only needed to prove a domain or an event is yours.
         </p>
       </div>
 

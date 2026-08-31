@@ -66,7 +66,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </form>
           ) : (
             <a className="mast-auth-link" href="/signin">
-              sign in
+              sign in / up
             </a>
           )}
           <ThemeToggle />
