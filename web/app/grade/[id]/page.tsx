@@ -219,11 +219,16 @@ function Report({ view }: { view: GradeView }) {
         <span className="score-cap">
           <b>slop score</b>
         </span>
-        {r.percentile !== null && r.percentile !== undefined && (
+        {r.ranking?.cleaner_than_pct !== null && r.ranking?.cleaner_than_pct !== undefined && (
           <span className="rank-block">
-            <span className="rank-num">p{r.percentile}</span>
+            {/* The grader's `percentile` counts apps BETTER than this one, so a low number is good.
+                Showing it raw reads as its own opposite: "p19" looks like the bottom fifth when it
+                means the top fifth. `cleaner_than_pct` is the share strictly worse, which is the
+                direction everyone already expects from a percentile. */}
+            <span className="rank-num">{r.ranking.cleaner_than_pct}%</span>
             <span className="score-cap">
-              <b>passive floor</b>
+              <b>cleaner than</b>
+              of the passive floor
             </span>
           </span>
         )}
