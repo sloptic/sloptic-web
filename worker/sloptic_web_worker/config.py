@@ -62,10 +62,16 @@ CHALLENGE_BACKOFF_SECONDS = float(os.environ.get("CHALLENGE_BACKOFF_SECONDS", st
 # someone watching a page poll. The old fixed 1800s predated the deadline and made a service restart
 # cost 30 minutes of false "grading".
 
-# A queued grade nobody has started within this long is failed rather than left spinning. Generous
-# against a real grade (~7 minutes) so an honest backlog is not mistaken for an outage; the read path
-# uses the worker heartbeat, not this timer, to detect "nothing is running at all".
-QUEUE_TIMEOUT_SECONDS = float(os.environ.get("QUEUE_TIMEOUT_SECONDS", "900"))
+# A queued grade nobody has started within this long is failed rather than left spinning. The read
+# path uses the worker heartbeat, not this timer, to detect "nothing is running at all".
+#
+# 60 minutes, not the original 15. At 4 concurrent and 4-7 minutes a grade the worker clears roughly
+# 35-50 an hour, so 15 minutes only ever covered a backlog of about 10: past that, a HEALTHY worker
+# grinding through a real queue would fail everyone it had not reached yet, and the visitor would
+# learn it after a quarter hour on a progress page. That is a launch-shaped failure, since a burst is
+# exactly what publicity produces. The site now refuses at the door instead (MAX_QUEUE_DEPTH in
+# web/lib/flags.ts, 30), so this window only has to outlast a full queue, which it does with room.
+QUEUE_TIMEOUT_SECONDS = float(os.environ.get("QUEUE_TIMEOUT_SECONDS", "3600"))
 MAX_ATTEMPTS = int(os.environ.get("MAX_ATTEMPTS", "3"))
 
 # --- per-grade deadline and concurrency ---------------------------------------------------------

@@ -17,3 +17,24 @@ export function gradingOpen(): boolean {
 }
 
 export const GRADING_CLOSED_MESSAGE = "Grading is not open yet.";
+
+/**
+ * How many grades may be WAITING before the site stops accepting more.
+ *
+ * The arithmetic this has to satisfy: the worker runs 4 grades at once at roughly 4 to 7 minutes
+ * each, so it clears somewhere around 35 to 50 an hour, and the worker fails any grade that has sat
+ * queued longer than QUEUE_TIMEOUT_SECONDS (now 60 minutes). A cap of 30 means the back of the queue
+ * waits about 35 to 50 minutes, which lands inside that window with room to spare.
+ *
+ * The point is WHERE the refusal happens. Without a cap the queue accepts everyone and then fails
+ * whoever it could not reach, so the visitor learns they were turned away after watching a progress
+ * page for the length of the timeout. Refusing in one second is the kinder half of the same answer,
+ * and it is the difference between a launch that looks busy and one that looks broken.
+ */
+export function maxQueueDepth(): number {
+  const n = Number(process.env.MAX_QUEUE_DEPTH ?? 30);
+  return Number.isFinite(n) && n > 0 ? n : 30;
+}
+
+export const QUEUE_FULL_MESSAGE =
+  "Too many grades are already waiting. Try again in a few minutes.";
