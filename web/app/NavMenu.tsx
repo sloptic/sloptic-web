@@ -14,7 +14,23 @@ type Item = { href: string; label: string };
  *  you navigate back to the page. Escape and an outside click both close it here, and focus returns
  *  to the trigger on Escape so a keyboard user is not dropped at the top of the document.
  */
-export default function NavMenu({ label, items }: { label: string; items: Item[] }) {
+export default function NavMenu({
+  label,
+  items,
+  title,
+  align = "center",
+  children,
+}: {
+  label: string;
+  items: Item[];
+  /** Full text for a label the CSS may truncate, such as a long email address. */
+  title?: string;
+  align?: "center" | "right";
+  /** Rendered under the links. Exists so the account menu can hold sign out, which has to be a POST
+   *  form rather than a link: signing out changes state, and a link would let a prefetch or a
+   *  crawler do it. */
+  children?: React.ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -44,6 +60,7 @@ export default function NavMenu({ label, items }: { label: string; items: Item[]
         ref={trigger}
         type="button"
         className="nav-menu-trigger"
+        title={title}
         aria-expanded={open}
         aria-haspopup="true"
         onClick={() => setOpen((v) => !v)}
@@ -54,12 +71,13 @@ export default function NavMenu({ label, items }: { label: string; items: Item[]
         </span>
       </button>
       {open ? (
-        <div className="nav-menu-panel">
+        <div className="nav-menu-panel" data-align={align}>
           {items.map((it) => (
             <a key={it.href} href={it.href} onClick={() => setOpen(false)}>
               {it.label}
             </a>
           ))}
+          {children}
         </div>
       ) : null}
     </div>

@@ -2340,3 +2340,41 @@ a.mast-user:hover {
   font-size: 0.8rem;
   text-align: left;
 }
+
+/* Account menu ------------------------------------------------------------- */
+
+/* Anchored to its right edge, since it hangs off the end of the masthead and a centred panel would
+   run past the viewport. */
+.nav-menu-panel[data-align="right"] {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+.mast-auth .nav-menu-trigger {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-flex;
+}
+.nav-menu-signout {
+  margin-top: 0.3rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--line);
+}
+.nav-menu-signout button {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0.5rem 0.6rem;
+  border-radius: calc(var(--radius) - 2px);
+  font: inherit;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.nav-menu-signout button:hover,
+.nav-menu-signout button:focus-visible {
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  color: var(--ink);
+}

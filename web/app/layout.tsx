@@ -53,7 +53,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <span className="masthead-note">grades any live web app</span>
           <span className="masthead-spacer" />
           <nav className="mast-nav">
-            <a href="/grades">your grades</a>
             {/* The reference pages fold into one menu so the masthead stays scannable. /about is the
                 first item rather than the trigger, since a control that both navigates and opens a
                 menu does neither predictably. */}
@@ -67,15 +66,27 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               ]}
             />
             <a href="/organizers">organizers</a>
-            {user ? <a href="/events">your events</a> : null}
+            {/* Signed OUT, the browser's own list is the only way back to a report, so it stays a
+                top level link. Signed in it moves into the account menu with the rest. */}
+            {user ? null : <a href="/grades">your grades</a>}
           </nav>
           {user ? (
-            <form action="/auth/signout" method="post" className="mast-auth">
-              <a className="mast-user" href="/account" title={user.email ?? ""}>
-                {user.email}
-              </a>
-              <button type="submit">sign out</button>
-            </form>
+            <div className="mast-auth">
+              <NavMenu
+                label={user.email ?? "account"}
+                title={user.email ?? ""}
+                align="right"
+                items={[
+                  { href: "/account", label: "Account" },
+                  { href: "/grades", label: "Your grades" },
+                  { href: "/events", label: "Your events" },
+                ]}
+              >
+                <form action="/auth/signout" method="post" className="nav-menu-signout">
+                  <button type="submit">Sign out</button>
+                </form>
+              </NavMenu>
+            </div>
           ) : (
             <a className="mast-auth-link" href="/signin">
               sign in / up
