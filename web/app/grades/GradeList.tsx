@@ -221,7 +221,7 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
           <p className="callout-label">{signedIn ? "not saved" : "this browser only"}</p>
           <p>
             {unclaimed.length === 1 ? "One report is" : `${unclaimed.length} reports are`} held by
-            this browser alone. {unclaimed.length === 1 ? "It is" : "They are"} deleted{" "} after
+            this browser alone. {unclaimed.length === 1 ? "It is" : "They are"} deleted{" "} after {" "}
             {ANON_REPORT_DAYS} days.{" "}
             {signedIn ? "Save them to keep them." : "Sign in to keep them."}
           </p>
