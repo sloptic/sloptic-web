@@ -91,6 +91,15 @@ export default function SignInForm({
           {error}
         </p>
       )}
+
+      {/* Next to the buttons, not buried in the footer. What makes terms binding is that someone had
+          reasonable notice and acted anyway, and a link beside the control they press is that notice;
+          a footer link on its own generally is not. This sentence is also what makes the
+          terms_accepted_at stamp in the auth callback honest. */}
+      <p className="signin-terms">
+        Signing in accepts the <a href="/terms">terms of use</a> and the{" "}
+        <a href="/privacy">privacy policy</a>.
+      </p>
     </>
   );
 }

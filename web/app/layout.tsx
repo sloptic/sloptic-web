@@ -86,6 +86,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <a className="colophon-contact" href="mailto:hello@sloptic.org">
                 hello@sloptic.org
               </a>
+              <p className="colophon-legal">
+                <a href="/terms">Terms of use</a> <span aria-hidden>·</span>{" "}
+                <a href="/privacy">Privacy</a>
+              </p>
             </div>
 
             <div className="colophon-col">

@@ -2189,3 +2189,14 @@ code {
 .band-table .band-pct {
   color: var(--muted);
 }
+
+.signin-terms {
+  margin: 1.4rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.colophon-legal {
+  margin: 0.6rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
