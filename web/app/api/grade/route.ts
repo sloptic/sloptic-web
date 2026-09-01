@@ -4,6 +4,7 @@ import { normalizeTarget, UrlRejected } from "@/lib/origin";
 import { egressPrecheck } from "@/lib/egress";
 import { allow, clientIp, hashIp } from "@/lib/ratelimit";
 import { gradingOpen, GRADING_CLOSED_MESSAGE } from "@/lib/flags";
+import { currentUser } from "@/lib/auth";
 
 export const runtime = "nodejs"; // needs node:dns / node:crypto; not edge
 export const dynamic = "force-dynamic";
@@ -46,7 +47,10 @@ export async function POST(req: NextRequest) {
   const blocked = await egressPrecheck(target.host);
   if (blocked) return NextResponse.json({ error: blocked }, { status: 400 });
 
-  // 4. Enqueue.
+  // 4. Enqueue, attached to the account if there is one. Without this a signed-in user's own grade
+  // lands unowned and quietly expires unless they later go and claim it, which makes signing in
+  // look like it does nothing.
+  const user = await currentUser();
   const db = supabaseAdmin();
   const { data, error } = await db
     .from("grades")
@@ -56,6 +60,7 @@ export async function POST(req: NextRequest) {
       mode: "passive",
       status: "queued",
       submitter_ip_hash: ipHash,
+      account_id: user?.id ?? null,
     })
     .select("id, status, origin")
     .single();

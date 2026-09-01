@@ -17,7 +17,7 @@ export default async function GradesPage() {
       <div className="page-head">
         <h1>Your grades</h1>
         <p className="page-lead">
-          Grades you ran, whether or not you were signed in when you ran them.
+          Grades you ran
         </p>
       </div>
       <GradeList signedIn={!!user} />

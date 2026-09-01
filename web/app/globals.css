@@ -1861,3 +1861,37 @@ code {
   color: var(--muted);
   font-size: 0.85rem;
 }
+
+.add-report {
+  margin-top: 1.75rem;
+}
+.add-report label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+.add-report-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.add-report input {
+  flex: 1 1 20rem;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  padding: 0.6rem 0.75rem;
+  color: var(--ink);
+  background: var(--paper, transparent);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+.add-report input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.add-report .button {
+  padding: 0.6rem 1.1rem;
+}

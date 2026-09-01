@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { forgetGrades, readHistory } from "@/lib/history";
+import { forgetGrades, readHistory, rememberGrade } from "@/lib/history";
 import { ANON_REPORT_DAYS, daysUntil, reportExpiresAt } from "@/lib/retention";
 import type { GradeSummary } from "@/lib/grades";
 
@@ -11,6 +11,8 @@ const STATUS_TEXT: Record<GradeSummary["status"], string> = {
   done: "",
   failed: "did not finish",
 };
+
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
 function fmtScore(v: number | null): string {
   if (v === null || Number.isNaN(v)) return "-";
@@ -24,46 +26,63 @@ function fmtDate(iso: string): string {
     : d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-/** What happens to this report, said plainly. The whole point of an account is that this line
- *  changes, so it is worth stating on every row rather than once in a footnote. */
 function keepText(g: GradeSummary): string {
   if (g.status !== "done") return "";
-  if (g.claimed) return "kept with your account";
+  if (g.claimed) return "kept";
   const when = reportExpiresAt(g.finished_at, false);
   if (!when) return "";
   const days = daysUntil(when);
-  if (days === 0) return "expires today";
-  return `expires in ${days} day${days === 1 ? "" : "s"}`;
+  return days === 0 ? "expires today" : `expires in ${days}d`;
+}
+
+async function getJson(url: string) {
+  const res = await fetch(url, { cache: "no-store" });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Request failed.");
+  return data;
+}
+
+async function postJson(url: string, body: unknown) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Request failed.");
+  return data;
 }
 
 export default function GradeList({ signedIn }: { signedIn: boolean }) {
   const [grades, setGrades] = useState<GradeSummary[] | null>(null);
   const [localIds, setLocalIds] = useState<string[]>([]);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [link, setLink] = useState("");
+  const [adding, setAdding] = useState(false);
 
   const load = useCallback(async () => {
     const history = readHistory();
     setLocalIds(history.map((e) => e.id));
 
-    // Two sources, merged: what this BROWSER remembers submitting, and what the ACCOUNT owns. They
-    // overlap for a signed-in user who has claimed, and neither is a superset of the other, since
-    // an account carries grades run on another machine and a browser carries ones never claimed.
+    // Two sources, merged: what this BROWSER remembers submitting, and what the ACCOUNT owns.
+    // Neither is a superset. An account carries grades run on another machine, a browser carries
+    // ones never claimed.
+    let failed = false;
     const [mine, local] = await Promise.all([
       signedIn
-        ? fetch("/api/grades", { cache: "no-store" })
-            .then((r) => (r.ok ? r.json() : { grades: [] }))
-            .catch(() => ({ grades: [] }))
+        ? getJson("/api/grades").catch(() => {
+            failed = true;
+            return { grades: [] };
+          })
         : Promise.resolve({ grades: [] }),
       history.length
-        ? fetch("/api/grades/lookup", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ ids: history.map((e) => e.id) }),
-            cache: "no-store",
+        ? postJson("/api/grades/lookup", { ids: history.map((e) => e.id) }).catch(() => {
+            failed = true;
+            return { grades: [] };
           })
-            .then((r) => (r.ok ? r.json() : { grades: [] }))
-            .catch(() => ({ grades: [] }))
         : Promise.resolve({ grades: [] }),
     ]);
 
@@ -72,12 +91,16 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
       byId.set(g.id, g);
     }
 
-    // A local entry with no row behind it is a grade that has already been deleted or swept, so
-    // stop remembering it rather than rendering a link to a 404.
-    const alive = new Set(byId.keys());
-    const stale = history.map((e) => e.id).filter((id) => !alive.has(id));
-    if (stale.length) forgetGrades(stale);
+    // Only forget a local entry when the server ANSWERED and did not have it, which means the grade
+    // was deleted or swept. A failed lookup is not evidence of absence, and treating it as one would
+    // let one bad response permanently erase a browser's history.
+    if (!failed && history.length) {
+      const alive = new Set(byId.keys());
+      const stale = history.map((e) => e.id).filter((id) => !alive.has(id));
+      if (stale.length) forgetGrades(stale);
+    }
 
+    setLoadFailed(failed);
     setGrades(
       [...byId.values()].sort((a, b) => Date.parse(b.submitted_at) - Date.parse(a.submitted_at))
     );
@@ -93,13 +116,7 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
     setClaiming(true);
     setNote(null);
     try {
-      const res = await fetch("/api/grades/claim", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ids: unclaimed.map((g) => g.id) }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not save them.");
+      const data = await postJson("/api/grades/claim", { ids: unclaimed.map((g) => g.id) });
       setNote(`Saved ${data.claimed.length} to your account.`);
       await load();
     } catch (e) {
@@ -109,27 +126,80 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
     }
   }
 
-  async function remove(g: GradeSummary) {
-    if (!window.confirm(`Delete the grade for ${g.origin}? This cannot be undone.`)) return;
-    const res = await fetch(`/api/grade/${g.id}`, { method: "DELETE" });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setNote(data.error || "Could not delete it.");
+  /** Add a report this browser does not know about, by its link. Requires nothing but the link,
+   *  which is already the whole of the access control, so this grants nothing new. It is the way
+   *  back from a bookmark, another device, or a tab closed before the list existed. */
+  async function addByLink(e: React.FormEvent) {
+    e.preventDefault();
+    const match = link.match(UUID);
+    if (!match) {
+      setNote("That is not a report link.");
       return;
     }
-    forgetGrades([g.id]);
-    await load();
+    setAdding(true);
+    setNote(null);
+    try {
+      const data = await postJson("/api/grades/lookup", { ids: [match[0]] });
+      const found = (data.grades ?? [])[0] as GradeSummary | undefined;
+      if (!found) {
+        setNote("No report at that link. It may have been deleted.");
+        return;
+      }
+      rememberGrade({ id: found.id, origin: found.origin, at: found.submitted_at });
+      setLink("");
+      await load();
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : "Could not add it.");
+    } finally {
+      setAdding(false);
+    }
   }
 
-  if (grades === null) return <p className="section-intro">Looking for your grades...</p>;
+  const addForm = (
+    <form className="add-report" onSubmit={addByLink}>
+      <label htmlFor="add-report">Add a report by its link</label>
+      <div className="add-report-row">
+        <input
+          id="add-report"
+          type="text"
+          value={link}
+          onChange={(ev) => setLink(ev.target.value)}
+          placeholder="https://sloptic.org/grade/..."
+          spellCheck={false}
+        />
+        <button className="button secondary" type="submit" disabled={adding || !link.trim()}>
+          {adding ? "adding..." : "add"}
+        </button>
+      </div>
+    </form>
+  );
+
+  async function remove(g: GradeSummary) {
+    if (!window.confirm(`Delete the grade for ${g.origin}? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`/api/grade/${g.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not delete it.");
+      forgetGrades([g.id]);
+      await load();
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : "Could not delete it.");
+    }
+  }
+
+  if (grades === null) return <p className="section-intro">Looking...</p>;
 
   if (grades.length === 0) {
     return (
       <section className="section">
+        {/* Never report "nothing" when the answer is "could not tell". */}
         <p className="section-intro">
-          Nothing here yet. A grade you run shows up on this page, and the report itself stays at its
-          own link.
+          {loadFailed
+            ? "Could not load your grades. Reload the page."
+            : "Nothing here yet. A grade you run shows up here, and stays at its own link."}
         </p>
+        {note ? <p className="section-intro">{note}</p> : null}
+        {addForm}
         <div className="cta-row">
           <a className="button" href="/">
             Grade an app
@@ -141,23 +211,24 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
 
   return (
     <section className="section">
+      {loadFailed ? (
+        <p className="section-intro">Some grades could not be loaded. This list may be short.</p>
+      ) : null}
       {note ? <p className="section-intro">{note}</p> : null}
 
       {unclaimed.length > 0 ? (
         <div className="callout" data-tone={signedIn ? undefined : "warn"}>
-          <p className="callout-label">{signedIn ? "not saved yet" : "this browser only"}</p>
+          <p className="callout-label">{signedIn ? "not saved" : "this browser only"}</p>
           <p>
-            {unclaimed.length === 1 ? "One grade is" : `${unclaimed.length} grades are`} remembered by
-            this browser alone, and {unclaimed.length === 1 ? "its report" : "their reports"} will be
-            deleted {ANON_REPORT_DAYS} days after {unclaimed.length === 1 ? "it ran" : "they ran"}.{" "}
-            {signedIn
-              ? "Saving them to your account keeps them, and makes them reachable from anywhere you sign in."
-              : "Signing in keeps them, and makes them reachable from anywhere you sign in."}
+            {unclaimed.length === 1 ? "One report is" : `${unclaimed.length} reports are`} held by
+            this browser alone, and {unclaimed.length === 1 ? "it is" : "they are"} deleted{" "}
+            {ANON_REPORT_DAYS} days after grading.{" "}
+            {signedIn ? "Save them to keep them." : "Sign in to keep them."}
           </p>
           <div className="cta-row">
             {signedIn ? (
               <button className="button" type="button" onClick={claimAll} disabled={claiming}>
-                {claiming ? "saving..." : "Save them to my account"}
+                {claiming ? "saving..." : "Save to my account"}
               </button>
             ) : (
               <a className="button" href="/signin?next=/grades">
@@ -187,7 +258,7 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
                   <a href={`/grade/${g.id}`}>{g.origin.replace(/^https?:\/\//, "")}</a>
                 </th>
                 <td>{g.status === "done" ? fmtScore(g.slop_score) : STATUS_TEXT[g.status]}</td>
-                <td>{g.percentile === null ? "-" : `${Math.round(g.percentile)}`}</td>
+                <td>{g.percentile === null ? "-" : Math.round(g.percentile)}</td>
                 <td>{fmtDate(g.submitted_at)}</td>
                 <td className="keep">{keepText(g)}</td>
                 <td>
@@ -201,9 +272,10 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
         </table>
       </div>
 
+      {addForm}
+
       <p className="section-intro fineprint">
-        A report also stays at its own link, which is the only thing that opens it, so treat that link
-        as private. Anyone holding it can read the report and can delete it.
+        A report opens for anyone holding its link, who can also delete it. Treat the link as private.
       </p>
     </section>
   );
