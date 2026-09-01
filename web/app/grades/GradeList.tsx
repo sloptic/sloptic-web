@@ -191,7 +191,7 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
 
   if (grades.length === 0) {
     return (
-      <section className="section">
+      <section className="section attached">
         {/* Never report "nothing" when the answer is "could not tell". */}
         <p className="section-intro">
           {loadFailed
@@ -210,7 +210,7 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
   }
 
   return (
-    <section className="section">
+    <section className="section attached">
       {loadFailed ? (
         <p className="section-intro">Some grades could not be loaded. This list may be short.</p>
       ) : null}
@@ -221,8 +221,8 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
           <p className="callout-label">{signedIn ? "not saved" : "this browser only"}</p>
           <p>
             {unclaimed.length === 1 ? "One report is" : `${unclaimed.length} reports are`} held by
-            this browser alone, and {unclaimed.length === 1 ? "it is" : "they are"} deleted{" "}
-            {ANON_REPORT_DAYS} days after grading.{" "}
+            this browser alone. {unclaimed.length === 1 ? "It is" : "They are"} deleted{" "} after
+            {ANON_REPORT_DAYS} days.{" "}
             {signedIn ? "Save them to keep them." : "Sign in to keep them."}
           </p>
           <div className="cta-row">
@@ -232,7 +232,7 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
               </button>
             ) : (
               <a className="button" href="/signin?next=/grades">
-                Sign in to keep them
+                Sign in
               </a>
             )}
           </div>
