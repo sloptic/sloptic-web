@@ -2378,3 +2378,7 @@ a.mast-user:hover {
   background: color-mix(in srgb, var(--ink) 7%, transparent);
   color: var(--ink);
 }
+/* Scoped rather than widening .cta-row, which is a shared row on every page. */
+.claim-check {
+  margin-bottom: 1.5rem;
+}

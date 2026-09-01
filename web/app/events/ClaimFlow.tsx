@@ -139,18 +139,16 @@ export default function ClaimFlow({ initialEvent = "" }: { initialEvent?: string
                 </p>
                 <p className="section-intro">
                   This link will open a page informing participants that Sloptic will grade this app
-                  and what that entails.
+                  and what that entails. Publish it before your submission deadline if you want active
+                  grading.
                 </p>
-                <div className="cta-row">
+                <div className="cta-row claim-check">
                   <button className="button secondary" type="button" onClick={() => void recheck(c.id)}>
                     Check now
                   </button>
                 </div>
                 <p className="section-intro fineprint">
                   (We check on our own every few minutes, so no need to keep this page open.)
-                </p>
-                <p className="section-intro fineprint">
-                  Publish it before your submission deadline if you want active grading.
                 </p>
               </>
             ) : null}
