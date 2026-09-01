@@ -13,6 +13,7 @@ const SEV = ACTIVE.severity;
 const W = ACTIVE.winners;
 const A = ACTIVE.attrition;
 const STAR = ACTIVE.star_finding;
+const RHO = ACTIVE.axis_independence;
 
 /** Slop across the corpus. One series, so no legend: the heading names it. Direct labels sit on the
  *  landmarks only, never on every bar, and each bar carries a <title> so a reader can hover for the
@@ -246,6 +247,30 @@ export default function FindingsPage() {
           Most hackathons employ human judging, which rewards ideas, features, presentation, and the demo over durability.
           Winning apps tend to ship more features, meaning more surfaces to misconfigure or get wrong, and human judges do not 
           have time to judge quality over hundreds of apps.
+        </p>
+      </section>
+
+      <section className="section">
+        <h2 className="section-head">A fast app is not a clean app</h2>
+        <p className="section-intro">
+          Lighthouse performance barely predicts anything else. Measured against slop with the
+          performance axis taken out, the correlation is {RHO.perf_vs_nonperf_slop_rho} across{" "}
+          {RHO.n.toLocaleString()} apps, which is close enough to zero to call the two independent.
+          Knowing an app loads fast tells you almost nothing about whether it is secure or usable.
+        </p>
+        <ul className="stat-list numeric">
+          <li>
+            <span className="k"><b>{RHO.perf_vs_nonperf_slop_rho}</b></span>
+            <span className="v">
+              Spearman correlation between Lighthouse performance and the rest of the slop. The
+              performance axis is excluded from that slop on purpose: leaving it in would correlate
+              Lighthouse with itself.
+            </span>
+          </li>
+        </ul>
+        <p className="section-intro">
+          This is why one number can carry three axes. If speed predicted security, the grade would
+          be measuring one thing wearing three names.
         </p>
       </section>
 
