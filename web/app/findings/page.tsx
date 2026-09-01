@@ -47,7 +47,7 @@ function Histogram() {
         </g>
         <g className="landmark soft">
           <line x1={x(D.q3)} y1="20" x2={x(D.q3)} y2={H} />
-          <text x={x(D.q3) + 6} y="34">upper quarter starts at {fmt(D.q3)}</text>
+          <text x={x(D.q3) + 6} y="34">Q3 at {fmt(D.q3)}</text>
         </g>
         <g className="tick">
           {[0, 50, 100, 150, 200].map((v) => (
@@ -57,6 +57,62 @@ function Histogram() {
         </g>
       </svg>
     </figure>
+  );
+}
+
+/** The five penalty bands, which unlike the levels ARE a partition, but only of FINDINGS.
+ *
+ *  This is the distinction the section turns on. Every finding is priced once, so it falls in exactly
+ *  one band and the shares sum to 100. Apps do not partition: an app with a critical and a moderate
+ *  finding is counted in both bands, and those columns sum to 222% of the corpus. So the bar is drawn
+ *  on findings, and the app column is labelled "at least one" rather than left to be read as a share
+ *  of anything. */
+const BAND_ORDER = ["minor", "moderate", "serious", "severe", "critical"] as const;
+
+function Bands() {
+  const tiers = SEV.tiers as Record<string, { findings: number; apps: number; pct_apps: number }>;
+  const total = BAND_ORDER.reduce((n, k) => n + tiers[k].findings, 0);
+  const peak = Math.max(...BAND_ORDER.map((k) => tiers[k].findings));
+
+  return (
+    <div className="table-scroll">
+      <table className="band-table">
+        <thead>
+          <tr>
+            <th>penalty</th>
+            <th>band</th>
+            <th colSpan={2}>findings</th>
+            <th>share</th>
+            <th>apps with at least one</th>
+          </tr>
+        </thead>
+        <tbody>
+          {BAND_ORDER.map((k) => {
+            const t = tiers[k];
+            return (
+              <tr key={k}>
+                <th scope="row">{SEV.tier_bands[k as keyof typeof SEV.tier_bands]}</th>
+                <td className="band-name">{k}</td>
+                <td className="band-bar">
+                  <span style={{ width: `${(t.findings / peak) * 100}%` }} data-band={k} />
+                </td>
+                <td>{t.findings.toLocaleString()}</td>
+                <td>{((t.findings / total) * 100).toFixed(1)}%</td>
+                <td>{t.apps.toLocaleString()}</td>
+              </tr>
+            );
+          })}
+          <tr className="total-row">
+            <th scope="row">all</th>
+            <td />
+            <td />
+            <td>{total.toLocaleString()}</td>
+            <td>100%</td>
+            <td className="band-note">overlapping, so these do not add up</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -99,7 +155,7 @@ export default function FindingsPage() {
       <div className="page-head">
         <h1>What hackathon apps look like</h1>
         <p className="page-lead">
-          1,625 apps in {ACTIVE.provenance.n_events} hackathons graded the same way. This is evidence that functionality is worth its own prize.
+          The results of 1,625 apps in {ACTIVE.provenance.n_events} hackathons graded objectively
         </p>
       </div>
 
@@ -130,10 +186,17 @@ export default function FindingsPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">Broken far too often</h2>
+        <h2 className="section-head">What kinds of problems do apps have?</h2>
         <p className="section-intro">
-          Sorting each app by its single worst finding gives three levels. They are cumulative, so
-          every acute finding is also significant.
+          Every finding is priced once, so it lands in exactly one band. Three quarters of everything
+          Sloptic found across the corpus sits in the mildest band, which is the shape of the problem:
+          chronic, not acute.
+        </p>
+        <Bands />
+        <p className="section-intro">
+          Grading an app by its single worst finding gives the levels below. Each one contains the
+          ones under it, so almost 3 in 5 projects carry a significant problem and virtually every app
+          overlooks some hygiene.
         </p>
         <Levels />
       </section>
@@ -179,44 +242,40 @@ export default function FindingsPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">Events differ by more than threefold</h2>
+        <h2 className="section-head">Breakdown per hackathon</h2>
         <p className="section-intro">
-          Across the {events.length} events with {MIN_EVENT_N} or more graded apps, median slop runs
+          Across {events.length} hackathons out of {ACTIVE.provenance.n_events} with {MIN_EVENT_N} or more graded apps, median slop runs
           from {fmt(events[events.length - 1].median)} to {fmt(events[0].median)}, a {" "}
           {spread.toFixed(1)}x difference. Hover over a bar for the event in question.
         </p>
         <EventSpread events={events} minN={MIN_EVENT_N} />
-        <p className="section-intro fineprint">
-          *events with fewer than {MIN_EVENT_N} graded apps are left out.
-        </p>
       </section>
 
       <section className="section">
-        <h2 className="section-head">The exploitable slice is thin and real</h2>
+        <h2 className="section-head">Yet exploits are rare</h2>
         <p className="section-intro">
           Only {fmt(SEV.exploitable_pct)}% of apps carry something an attacker could use today. The
-          largest single class is a managed backend left open: {STAR.apps} apps served a Supabase or
-          Firebase database that anyone could read, because row level security was never switched on.
+          largest single finding is an exposed backend, with {STAR.apps} apps serving a Supabase or
+          Firebase database that anyone could read, because row level security was not turned on.
           Of those, {STAR.breakdown.bulk_records} returned records in bulk and{" "}
-          {STAR.breakdown.with_pii_columns} held columns of personal data.
+          {STAR.breakdown.with_pii_columns} held personal data in its columns.
         </p>
         <div className="callout" data-tone="warn">
           <p className="callout-label">what this needs</p>
           <p>
-            Finding an open backend takes an active check, which Sloptic runs only for an event whose
-            organizer has verified it, or an owner who has verified their own domain. The anonymous
-            tier never runs it, so a clean passive grade is not evidence that a backend is closed.
+            Note that to find an exposed backend or other exploitable vulnerability, Sloptic must grade 
+            actively. Grading passively holds back active attacks, at the cost of missing exploitable findings.
+            To grade actively, verify your domain or event.
           </p>
         </div>
       </section>
 
       <section className="section">
-        <h2 className="section-head">What did not get graded</h2>
+        <h2 className="section-head">What didn't get graded</h2>
         <p className="section-intro">
           Sloptic attempted {A.attempted.toLocaleString()} apps and graded{" "}
-          {A.graded.toLocaleString()} of them, {fmt(A.graded_pct)}%. The gap is mostly link rot, since
-          this corpus reaches back through old events. An app graded at judging time, while it is still
-          deployed, fares far better.
+          {A.graded.toLocaleString()} of them, or {fmt(A.graded_pct)}%. Most of the rest
+          were due to link rot (expired free tier), timeouts, a WAF challenge, or other reasons.
         </p>
         <div className="table-scroll">
           <table className="count-table">
@@ -241,24 +300,21 @@ export default function FindingsPage() {
           </table>
         </div>
         <p className="section-intro fineprint">
-          {ACTIVE.by_stack_excluded.map((s) => `${s.apps} ${s.stack} apps`).join(", ")} are excluded
-          from the per stack comparison: the grade measures the framework those apps are hosted in
-          rather than the app itself, so their score describes the host and would read as a clean
-          result when it is really an unmeasurable one.
+          Also excluded are {ACTIVE.by_stack_excluded.map((s) => `${s.apps} ${s.stack} apps`).join(", ")} since
+          Sloptic is unable to properly separate what the teams built from the platform.
         </p>
       </section>
 
       <div className="method" data-tone="limits">
         <h2>How to read this</h2>
         <p>
-          <b>Every figure here is an aggregate.</b> No app is named, no URL appears, and no row
-          describes one team. The apps in this study were graded to build the ruler, not to be
-          published.
+          Every figure here is an aggregate. 
+          No apps were named to protect the privacy of individual teams that built them.
+          The apps in this study were graded as a calibration to build Sloptic itself.
         </p>
         <p>
-          <b>These are the full grade numbers.</b> {ACTIVE.provenance.n_probes} checks, run against a
-          corpus, ranked on curve {ACTIVE.provenance.curve_version}. An anonymous grade on sloptic.org
-          runs the passive floor instead, which is a different and smaller measurement.
+          These are the full grade numbers that comprise the corpus used for percentile ranking on 
+          active grades. A separate curve exists for passive grading.
         </p>
         <div className="cta-row">
           <a className="button" href="/organizers">
