@@ -23,6 +23,7 @@ import signal
 import subprocess
 import sys
 import threading
+import traceback
 import time
 from dataclasses import dataclass
 
@@ -185,7 +186,18 @@ def process_event_checks(conn) -> int:
         if claim is None:
             break
         n += 1
-        out = verify_event.check(claim.slug, claim.token)
+        try:
+            out = verify_event.check(claim.slug, claim.token)
+        except Exception as e:  # noqa: BLE001
+            # Do NOT let this reach the loop's catch-all. That handler prints one line with no
+            # traceback and records nothing on the row, so the claim just sat at attempts=8 with a
+            # null checked_at: the worker was failing every five minutes and saying so nowhere a
+            # reader could look. A failure we cannot see is the recurring bug in this project.
+            detail = f"worker error: {type(e).__name__}: {e}"
+            traceback.print_exc()
+            print(f"[event] {claim.slug}: {detail}", flush=True)
+            db.record_check(conn, claim.id, "blocked", detail, 15 * 60)
+            continue
         if out.verified:
             # Captured at the moment of verification, because that is the question the participant
             # notice asks: was the window still open when this event was proven, not now.

@@ -38,6 +38,8 @@ export default function ClaimFlow({ initialEvent = "" }: { initialEvent?: string
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [origin, setOrigin] = useState("");
+  const [checking, setChecking] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => setOrigin(window.location.origin), []);
 
@@ -84,13 +86,27 @@ export default function ClaimFlow({ initialEvent = "" }: { initialEvent?: string
     }
   }
 
+  // Was: fire the request, swallow every outcome, reload. Success and failure looked identical, and
+  // both looked like a dead button, because the worker answers asynchronously so the row does not
+  // change on this tick either way. Say what happened.
   async function recheck(id: string) {
-    await fetch("/api/events/recheck", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id }),
-    }).catch(() => {});
-    await load();
+    setChecking(id);
+    setNote(null);
+    try {
+      const res = await fetch("/api/events/recheck", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not ask for a check.");
+      setNote("Checking now. This page updates on its own when it settles.");
+      await load();
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : "Could not ask for a check.");
+    } finally {
+      setChecking(null);
+    }
   }
 
   return (
@@ -126,6 +142,7 @@ export default function ClaimFlow({ initialEvent = "" }: { initialEvent?: string
             <div className="callout" data-tone={c.status === "verified" ? "award" : undefined}>
               <p className="callout-label">{c.status}</p>
               <p>{checkMessage(c)}</p>
+              {note && checking === null ? <p className="fineprint">{note}</p> : null}
             </div>
 
             {c.status === "pending" ? (
@@ -143,8 +160,13 @@ export default function ClaimFlow({ initialEvent = "" }: { initialEvent?: string
                   grading.
                 </p>
                 <div className="cta-row claim-check">
-                  <button className="button secondary" type="button" onClick={() => void recheck(c.id)}>
-                    Check now
+                  <button
+                    className="button secondary"
+                    type="button"
+                    onClick={() => void recheck(c.id)}
+                    disabled={checking === c.id}
+                  >
+                    {checking === c.id ? "checking..." : "Check now"}
                   </button>
                 </div>
                 <p className="section-intro fineprint">
