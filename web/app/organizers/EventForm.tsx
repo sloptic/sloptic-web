@@ -22,7 +22,7 @@ export default function EventForm({ initialEvent = "" }: { initialEvent?: string
     }
     // Hand the address to the verification flow rather than validating it twice. That page is
     // signed-in-only, and the sign-in it sends you to carries the address back here afterwards.
-    window.location.href = `/organizers/verify?event=${encodeURIComponent(eventUrl.trim())}`;
+    window.location.href = `/events?event=${encodeURIComponent(eventUrl.trim())}`;
   }
 
   return (

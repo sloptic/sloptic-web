@@ -67,12 +67,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               ]}
             />
             <a href="/organizers">organizers</a>
+            {user ? <a href="/events">your events</a> : null}
           </nav>
           {user ? (
             <form action="/auth/signout" method="post" className="mast-auth">
-              <span className="mast-user" title={user.email ?? ""}>
+              <a className="mast-user" href="/account" title={user.email ?? ""}>
                 {user.email}
-              </span>
+              </a>
               <button type="submit">sign out</button>
             </form>
           ) : (

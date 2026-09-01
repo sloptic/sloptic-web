@@ -2304,3 +2304,32 @@ code {
   color: var(--ink);
   vertical-align: baseline;
 }
+
+.delete-form {
+  margin-top: 1.25rem;
+}
+.delete-form label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+  overflow-wrap: anywhere;
+}
+.delete-form input {
+  flex: 1 1 18rem;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  padding: 0.6rem 0.75rem;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+a.mast-user {
+  text-decoration: none;
+}
+a.mast-user:hover {
+  color: var(--ink);
+}
