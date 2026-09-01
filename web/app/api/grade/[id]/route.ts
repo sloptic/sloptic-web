@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { GradeView, GradeResult, QueueInfo } from "@/lib/types";
+import { currentUser } from "@/lib/auth";
+import { ANON_REPORT_DAYS, reportExpiresAt } from "@/lib/retention";
 
 // A worker writes its heartbeat every poll (5s). Allow generous slack for a slow poll or a clock
 // skew before calling it dead: this only decides whether we EXPLAIN the wait, never whether we grade.
@@ -8,6 +10,17 @@ const HEARTBEAT_STALE_SECONDS = 90;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+
+/** How long this report has left, computed in one place so the page never has to know the window.
+ *  Returns nothing at all when the ownership column is not there yet, since "unknown" must not be
+ *  rendered as "expires in 30 days" on a database that expires nothing. */
+function retention(grade: { account_id?: unknown; finished_at?: string | null }) {
+  if (!("account_id" in grade)) return {};
+  const claimed = grade.account_id !== null && grade.account_id !== undefined;
+  const when = reportExpiresAt(grade.finished_at ?? null, claimed);
+  return { claimed, expires_at: when ? when.toISOString() : null, retain_days: ANON_REPORT_DAYS };
+}
 
 // GET /api/grade/:id  ->  poll status; includes the result once status === "done".
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -17,15 +30,15 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   // absence break the lookup: a report that already exists must keep rendering on a database that
   // has not been migrated yet. Anything else turns an optional flourish into a 500 on a finished
   // grade, which is what happened when this shipped ahead of its migration.
-  const CORE = "id, status, submitted_url, submitted_at, error";
+  const CORE = "id, status, submitted_url, submitted_at, finished_at, error";
   let { data: grade, error } = await db
     .from("grades")
-    .select(`${CORE}, progress`)
+    .select(`${CORE}, progress, account_id`)
     .eq("id", params.id)
     .maybeSingle();
 
   if (error?.code === "42703") {
-    console.warn("grades.progress missing; falling back (apply migration 0006)");
+    console.warn("grades.progress/account_id missing; falling back (apply migrations 0006, 0009)");
     ({ data: grade, error } = await db.from("grades").select(CORE).eq("id", params.id).maybeSingle());
   }
 
@@ -85,6 +98,45 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       grade.status === "running"
         ? ((grade as { progress?: unknown }).progress as GradeView["progress"]) ?? null
         : null,
+    ...retention(grade as { account_id?: unknown; finished_at?: string | null }),
   };
   return NextResponse.json(view);
+}
+
+// DELETE /api/grade/:id  ->  destroy the grade and its report.
+//
+// Who may: whoever holds the URL, while nobody owns the grade. That sounds loose and is not, because
+// holding the URL is already total read access, so deletion adds no capability an attacker lacked;
+// what it adds is a REMEDY. Anyone can grade an app they do not own, so the person best placed to
+// want a report gone is the one it is about, and they will only ever have the link.
+//
+// Once an account claims a grade, only that account may delete it: a claim is the point at which
+// someone takes responsibility for the row, and a stranger with an old link must not undo it.
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  const db = supabaseAdmin();
+
+  const { data: grade, error } = await db
+    .from("grades")
+    .select("id, account_id")
+    .eq("id", params.id)
+    .maybeSingle();
+
+  if (error) return NextResponse.json({ error: "Lookup failed." }, { status: 500 });
+  // Already gone is the outcome the caller asked for, so do not make them handle a 404 for it.
+  if (!grade) return NextResponse.json({ deleted: true });
+
+  if (grade.account_id) {
+    const user = await currentUser();
+    if (!user || user.id !== grade.account_id) {
+      return NextResponse.json(
+        { error: "This grade belongs to an account. Sign in to delete it." },
+        { status: 403 }
+      );
+    }
+  }
+
+  // results.grade_id is ON DELETE CASCADE, so the report goes with it.
+  const { error: delErr } = await db.from("grades").delete().eq("id", params.id);
+  if (delErr) return NextResponse.json({ error: "Could not delete." }, { status: 500 });
+  return NextResponse.json({ deleted: true });
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { rememberGrade } from "@/lib/history";
 import { useRouter } from "next/navigation";
 import { AREAS, AREA_BLURBS, categoriesFor } from "@/lib/checks";
 
@@ -111,6 +112,9 @@ export default function Home() {
         setBusy(false);
         return;
       }
+      // Remember it here, not on the report page: this is the one moment we know the grade is
+      // this browser's own rather than a link someone was sent.
+      rememberGrade({ id: data.id, origin: data.origin ?? url.trim(), at: new Date().toISOString() });
       router.push(`/grade/${data.id}`);
     } catch {
       setError("Network error. Try again.");

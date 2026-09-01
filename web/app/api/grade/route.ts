@@ -57,11 +57,11 @@ export async function POST(req: NextRequest) {
       status: "queued",
       submitter_ip_hash: ipHash,
     })
-    .select("id, status")
+    .select("id, status, origin")
     .single();
 
   if (error || !data) {
     return NextResponse.json({ error: "Could not enqueue the grade." }, { status: 500 });
   }
-  return NextResponse.json({ id: data.id, status: data.status }, { status: 202 });
+  return NextResponse.json({ id: data.id, status: data.status, origin: data.origin }, { status: 202 });
 }

@@ -198,3 +198,19 @@ def mark_failed(conn: psycopg.Connection, job_id: str, message: str) -> None:
         "UPDATE grades SET status = 'failed', finished_at = now(), error = %s WHERE id = %s;",
         (message[:1000], job_id),
     )
+
+
+def sweep_retention(conn: psycopg.Connection) -> tuple[int, int]:
+    """Drop expired report bodies and forget stale submitter IP hashes.
+
+    Lives in the worker because the worker is the only thing here that runs on a clock; a Vercel
+    route runs when someone visits, which is not a schedule. Both statements are idempotent and
+    bounded by an index, so running them every minute costs a no-op once the backlog is clear.
+
+    Returns (reports dropped, ip hashes forgotten). Retention windows are the SQL defaults, so the
+    policy lives in migration 0009 rather than being restated here.
+    """
+    reports = conn.execute("SELECT public.expire_anonymous_reports();").fetchone()
+    ips = conn.execute("SELECT public.forget_submitter_ips();").fetchone()
+    first = lambda row: (list(row.values())[0] if isinstance(row, dict) else row[0]) if row else 0
+    return first(reports), first(ips)

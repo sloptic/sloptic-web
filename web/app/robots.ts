@@ -5,6 +5,6 @@ import type { MetadataRoute } from "next";
  *  search index and undo the whole model. Keep the marketing pages indexable, keep reports out. */
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [{ userAgent: "*", allow: "/", disallow: ["/grade/", "/api/"] }],
+    rules: [{ userAgent: "*", allow: "/", disallow: ["/grade/", "/grades", "/api/"] }],
   };
 }

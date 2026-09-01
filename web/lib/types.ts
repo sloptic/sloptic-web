@@ -129,4 +129,9 @@ export interface GradeView {
   queue?: QueueInfo;
   /** Present only while running. */
   progress?: GradeProgress | null;
+  /** Whether an account owns this grade. Absent (not false) when the server cannot tell. */
+  claimed?: boolean;
+  /** When the report is deleted, or null once an account keeps it. */
+  expires_at?: string | null;
+  retain_days?: number;
 }

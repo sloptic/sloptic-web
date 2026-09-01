@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { GradeView, Finding, Coverage, GradeProgress, CardEntry, Outcome } from "@/lib/types";
 import { AREA_LABELS, PASSIVE_BY_AREA, describeProbe, type Area } from "@/lib/checks";
+import { daysUntil } from "@/lib/retention";
+import { forgetGrade } from "@/lib/history";
 
 const POLL_MS = 3000;
 const MAX_POLL_FAILS = 8;   // ~1 minute of server errors before giving up on the page
@@ -295,7 +297,70 @@ function Report({ view }: { view: GradeView }) {
       <Passed items={passed} />
       {r.platform && Object.keys(r.platform).length > 0 && <Platform platform={r.platform} />}
       <NotApplicable coverage={r.coverage} />
+      <ReportKeep view={view} />
     </section>
+  );
+}
+
+/** What happens to this report, and the button that ends it now.
+ *
+ *  Anyone may run a grade on an app they do not own, so a report can be about someone who never
+ *  asked for it, and the only handle they will ever have is this link. Putting the delete here means
+ *  the person with the strongest reason to want it gone can act on that without asking us. */
+function ReportKeep({ view }: { view: GradeView }) {
+  const [busy, setBusy] = useState(false);
+  const [gone, setGone] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function remove() {
+    if (!window.confirm("Delete this report? The link stops working and this cannot be undone.")) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/grade/${view.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not delete it.");
+      forgetGrade(view.id);
+      setGone(true);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not delete it.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (gone) {
+    return (
+      <p className="report-keep">
+        Deleted. <a href="/">Grade another app</a>.
+      </p>
+    );
+  }
+
+  // `claimed` is absent, not false, when the server cannot tell, and guessing at a retention line
+  // is worse than leaving it out.
+  const known = view.claimed !== undefined;
+  const days = view.expires_at ? daysUntil(new Date(view.expires_at)) : null;
+
+  return (
+    <p className="report-keep">
+      {known && view.claimed ? "Saved to your account, so this report is kept." : null}
+      {known && !view.claimed && days !== null
+        ? days === 0
+          ? "This report is deleted today unless you sign in and save it."
+          : `This report is deleted in ${days} day${days === 1 ? "" : "s"} unless you sign in and save it.`
+        : null}
+      {known && !view.claimed ? (
+        <>
+          {" "}
+          <a href="/grades">Your grades</a>.
+        </>
+      ) : null}{" "}
+      <button className="link-button" type="button" onClick={() => void remove()} disabled={busy}>
+        {busy ? "deleting..." : "delete this report"}
+      </button>
+      {err ? <span className="report-keep-err"> {err}</span> : null}
+    </p>
   );
 }
 

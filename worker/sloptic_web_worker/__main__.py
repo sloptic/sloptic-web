@@ -207,6 +207,12 @@ def main() -> None:
                     print(f"[reap]  failed {n} grade(s) nobody started within the queue window",
                           flush=True)
 
+                # Retention: an unowned report is not kept forever (migration 0009).
+                dropped, forgotten = db.sweep_retention(conn)
+                if dropped or forgotten:
+                    print(f"[keep]  dropped {dropped} expired report(s), "
+                          f"forgot {forgotten} submitter IP hash(es)", flush=True)
+
             # Say WHY we are idle, but only when the reason changes: this loop runs every 5s.
             halted = rep.blocked(conn)
             if halted != last_halt:

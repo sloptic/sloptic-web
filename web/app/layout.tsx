@@ -52,6 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <span className="masthead-note">grades any live web app</span>
           <span className="masthead-spacer" />
           <nav className="mast-nav">
+            <a href="/grades">your grades</a>
             <a href="/about">about</a>
             <a href="/checks">checks</a>
             <a href="/organizers">organizers</a>
