@@ -6,24 +6,24 @@ import { TOTALS } from "@/lib/checks";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "How this event's entries are graded",
-  description: "What Sloptic checks, what it sends, and how to opt out.",
+  title: "How your entries are graded",
+  description: "What Sloptic checks, what it sends, and how to be excluded.",
 };
 
-// The participant notice, and the second job the verification token was always doing.
+// The participant notice, and the reason the verification token is a link rather than a string.
 //
-// An organizer publishes a link to this page in their event's rules. That link proves to US that
-// they run the event, and it shows PARTICIPANTS what will be done to the app they submit. The
-// consent chain the event tier rests on is only real if this page is specific: "entries will be
-// judged" is not agreement to having injection payloads sent at your app, so this page says what is
-// actually sent, in the place a participant will actually read it.
+// An organizer publishes this link in their event's rules. That proves to US that they run the
+// event, and it shows PARTICIPANTS what will be done to the app they submit. The consent chain the
+// event tier rests on is only real if this page is SPECIFIC: "entries will be judged" is not
+// agreement to having injection payloads fired at your app. So when active checks apply, this page
+// says what they actually send, in the one place a participant will read it.
 //
-// Public on purpose, and it names only the event. Never the organizer's identity or email: a
-// participant needs to know what happens to their app, not who filed the claim.
+// It names the event and never the organizer: a participant needs to know what happens to their app,
+// not who filed the claim.
 export default async function DisclosurePage({ params }: { params: { token: string } }) {
   const { data: claim } = await supabaseAdmin()
     .from("event_claims")
-    .select("slug, status, verified_at")
+    .select("slug, status, verified_at, window_open_at_verification")
     .eq("token", params.token)
     .maybeSingle();
 
@@ -31,66 +31,89 @@ export default async function DisclosurePage({ params }: { params: { token: stri
 
   const host = `${claim.slug}.devpost.com`;
   const verified = claim.status === "verified";
+  // Three states, not two. NULL means we could not tell whether the window was open, and rendering
+  // that as either answer would tell participants something we do not know.
+  const active = verified && claim.window_open_at_verification === true;
+  const passiveOnly = verified && claim.window_open_at_verification === false;
 
   return (
     <>
       <div className="page-head">
-        <h1>How this event&apos;s entries are graded</h1>
+        <h1>How your entries are graded</h1>
         <p className="page-lead">
           The organizer of <a href={`https://${host}`} rel="noopener noreferrer">{host}</a> uses
-          Sloptic to grade the web app entries. If you are entering, this page is what that means for
-          your app.
+          Sloptic to grade your project if you submitted a web app. This page explains what Sloptic
+          will do to it.
         </p>
       </div>
 
       <section className="section attached">
         <h2 className="section-head">What Sloptic does</h2>
         <p className="section-intro">
-          Sloptic grades a running web app from the outside, over the public internet. It never sees
-          your source code, your repository, or your accounts. It reads your app the way a visitor
-          does and scores a fixed floor every app should meet: security headers, whether a screen
-          reader can operate the controls, how fast the page loads, whether links resolve and errors
-          are handled. Lower is better, and it is compared against the same scale for every entry.
+          Sloptic grades a running web app from the outside, over the public internet. It does not see
+          your source code, your repository, or your accounts. It examines your app like a visitor
+          would and scores it on things every app must get right, including secrets kept out of what
+          you ship, errors handled, controls that work, accessibility, and pages loading respectably
+          fast.
         </p>
         <p className="section-intro">
-          It cannot judge your idea, whether a feature does what you say, how hard it was to build, or
-          whether the design works. Those stay with the human judges.
+          You get a number, the slop score, for what your app got wrong, with a breakdown of each
+          finding. You also get a percentile showing how it fares against others.{" "}
+          <a href="/findings">See what the other apps looked like</a>.
+        </p>
+        <p className="section-intro">
+          Sloptic will <em>not</em> judge your idea, your presentation, or whether a feature is worth
+          building. Those stay with the human judges.
         </p>
       </section>
 
       <section className="section">
-        <h2 className="section-head">Two kinds of checks, and which one runs</h2>
+        <h2 className="section-head">What Sloptic looks for</h2>
         <p className="section-intro">
-          <b>Passive checks read only what your app already serves to anyone.</b> Loading a page,
-          reading headers, running an accessibility pass on what rendered. Running them is no different
-          from someone visiting your site. {TOTALS.passive} of the {TOTALS.total} checks are passive.
+          Sloptic examines your app against a catalog of{" "}
+          <a href="/checks">{TOTALS.total} different checks</a>. Typically an app only gets{" "}
+          {TOTALS.passive} of them, the passive ones, which send no attack traffic and change nothing.
         </p>
+        {active ? (
+          <>
+            <p className="section-intro">
+              This event was verified before submissions closed, so entries face the full battery,
+              passive and active.
+            </p>
+            {/* One sentence, and it stays. /methodology says the same thing, but THIS page is the
+                notice the organizer's rules point at, so what a participant was told is what is
+                written here rather than a click away. */}
+            <p className="section-intro">
+              Active checks send real attack traffic at your app, including injection payloads and
+              malformed input, which may show up in your logs.
+            </p>
+          </>
+        ) : passiveOnly ? (
+          <p className="section-intro">
+            This event was verified only after its submission deadline, so entries get the passive
+            checks and nothing else. A notice published after an event closes was shown to nobody, so
+            it cannot authorize attack traffic.
+          </p>
+        ) : (
+          <p className="section-intro">
+            Which battery this event gets is settled when the organizer verifies it. Active checks
+            apply only if that happened before the submission deadline.
+          </p>
+        )}
+      </section>
+
+      <section className="section">
+        <h2 className="section-head">What gets graded</h2>
         <p className="section-intro">
-          <b>Active checks send real attack traffic.</b> Injection payloads, malformed input, path
-          traversal attempts, and requests designed to make the app fail. Nothing is destroyed on
-          purpose, but this is genuine attack traffic aimed at your app, and it may appear in your
-          logs, trip your error reporting, or create test records.
-        </p>
-        <p className="section-intro">
-          Active checks run for an event only when the organizer verified before the submission
-          deadline, so this notice existed before you entered. If they verified afterwards, the
-          entries get passive checks only.
+          The URL your team submitted, and nothing else. If your submission points at a third party
+          product, a hosted notebook, a design tool, a storage bucket, it is skipped: probing it would
+          hit that company rather than you, and your team cannot agree to that on their behalf. If the
+          app cannot be reached or the URL does not resolve, it is skipped too and recorded as a DNF.
         </p>
       </section>
 
       <section className="section">
-        <h2 className="section-head">Which app gets graded</h2>
-        <p className="section-intro">
-          The address your team published on your own submission, and nothing else. Sloptic does not
-          go looking for other things you own. If your submission points at a third party product
-          rather than something your team built, a hosted document, a design tool, a storage bucket,
-          it is skipped: probing it would hit that company rather than you, and your team cannot agree
-          to that on their behalf.
-        </p>
-      </section>
-
-      <section className="section">
-        <h2 className="section-head">If you would rather not</h2>
+        <h2 className="section-head">Exclusions</h2>
         <p className="section-intro">
           Write to <a href="mailto:hello@sloptic.org">hello@sloptic.org</a> with your submission and we
           will exclude it. You do not need to give a reason, and it does not affect your entry in the

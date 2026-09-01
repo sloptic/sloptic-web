@@ -21,6 +21,38 @@ from . import config
 
 
 @dataclass
+class Window:
+    """Whether the submission window was still running, and the raw state behind that call.
+
+    `open` is None when we could not tell. The notice renders that as uncertainty, never as either
+    answer: telling participants they face active checks when they might not, or the reverse, are
+    both worse than saying we are not sure.
+    """
+    open: bool | None
+    state: dict
+
+
+def window_state(slug: str) -> Window:
+    """Ask Devpost whether this event is still taking submissions.
+
+    Gated on `open_state` and `winners_announced`, NOT on `submission_period_dates`, which the grader
+    documents as display text carrying no timezone. Parsing a date string to decide whether attack
+    traffic is authorized would be a guess dressed as a rule.
+    """
+    try:
+        meta = devpost.event_meta(slug)
+    except Exception as e:  # noqa: BLE001
+        return Window(None, {"error": f"{type(e).__name__}: {e}"})
+    if meta.status != "ok" or not meta.event:
+        return Window(None, {"status": meta.status, "detail": meta.detail[:500]})
+    ev = meta.event
+    state = {k: ev.get(k) for k in ("open_state", "winners_announced", "invite_only",
+                                    "submission_period_dates", "submission_gallery_url")}
+    open_now = ev.get("open_state") == "open" and not ev.get("winners_announced")
+    return Window(bool(open_now), state)
+
+
+@dataclass
 class Outcome:
     """What one check settled, in the vocabulary the row stores."""
     check_status: str          # ok | not_found | blocked, straight from devpost

@@ -187,7 +187,10 @@ def process_event_checks(conn) -> int:
         n += 1
         out = verify_event.check(claim.slug, claim.token)
         if out.verified:
-            result = db.verify_claim(conn, claim, out.detail, config.GRANT_DAYS)
+            # Captured at the moment of verification, because that is the question the participant
+            # notice asks: was the window still open when this event was proven, not now.
+            w = verify_event.window_state(claim.slug)
+            result = db.verify_claim(conn, claim, out.detail, config.GRANT_DAYS, w.open, w.state)
             if result == "granted":
                 print(f"[event] verified {claim.slug} for {claim.account_id}", flush=True)
             else:

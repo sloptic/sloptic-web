@@ -280,7 +280,8 @@ def record_check(conn: psycopg.Connection, claim_id: str, check_status: str, det
     )
 
 
-def verify_claim(conn: psycopg.Connection, claim: "Claim", detail: str, grant_days: int) -> str:
+def verify_claim(conn: psycopg.Connection, claim: "Claim", detail: str, grant_days: int,
+                 window_open: bool | None = None, event_state: dict | None = None) -> str:
     """Mark a claim verified and write the grant it earns, in one transaction.
 
     Returns 'granted', or 'blocked_on_terms' when the account has not accepted the terms. That gate is
@@ -309,10 +310,12 @@ def verify_claim(conn: psycopg.Connection, claim: "Claim", detail: str, grant_da
             """
             UPDATE event_claims
                SET status = 'verified', check_status = 'ok', checked_at = now(),
-                   verified_at = now(), check_detail = left(%(d)s, 2000)
+                   verified_at = now(), check_detail = left(%(d)s, 2000),
+                   window_open_at_verification = %(open)s, event_state = %(state)s
              WHERE id = %(id)s;
             """,
-            {"d": detail, "id": claim.id},
+            {"d": detail, "id": claim.id, "open": window_open,
+             "state": json.dumps(event_state) if event_state is not None else None},
         )
         # One live grant per account per scope (0007's unique index), so a re-verification refreshes
         # the window rather than stacking a second authorization nobody would ever revoke.
