@@ -63,6 +63,28 @@ STALE_JOB_SECONDS = float(os.environ.get("STALE_JOB_SECONDS", "1800"))
 QUEUE_TIMEOUT_SECONDS = float(os.environ.get("QUEUE_TIMEOUT_SECONDS", "900"))
 MAX_ATTEMPTS = int(os.environ.get("MAX_ATTEMPTS", "3"))
 
+# --- per-grade deadline and concurrency ---------------------------------------------------------
+# A grade that exceeds this is killed. It is a HARD wall clock, enforced by the supervisor against a
+# child process, because that is the only thing that stops the failure mode it exists for: a
+# Playwright sync call on a CPU-spun renderer holds the GIL, so the child cannot time itself out and
+# no signal it might handle will land (sloptic's own corpus runners reached the same conclusion, see
+# scripts/run_batch.py). Counts from claim, so it includes any wait for the Lighthouse trace lane.
+GRADE_TIMEOUT_SECONDS = float(os.environ.get("GRADE_TIMEOUT_SECONDS", "600"))
+
+# How many grades may run at once. Each is its own process, so a wedge costs one slot rather than the
+# worker.
+MAX_CONCURRENT_GRADES = int(os.environ.get("MAX_CONCURRENT_GRADES", "4"))
+
+# Concurrent grades must NOT trace at the same time: Lighthouse measures LCP/TBT on this box, so two
+# traces sharing a CPU measure each other's contention and the perf axis stops being comparable to
+# the frozen curve. sloptic solves this with a counting semaphore over flock files
+# (pipeline._lighthouse_lock), which works across processes, which is why grades are processes here.
+# SLOTS=1 is the grader's default and means one clean trace at a time: full concurrency everywhere
+# else in the grade, a strict queue for the trace lane. Raise it only after MEASURING contention on
+# this box, never by guessing, since the number silently changes what the perf axis means.
+LIGHTHOUSE_LOCK_PATH = os.environ.get("SLOPTIC_LIGHTHOUSE_LOCK", "/tmp/sloptic-lighthouse.lock")
+LIGHTHOUSE_SLOTS = os.environ.get("SLOPTIC_LIGHTHOUSE_SLOTS", "1")
+
 
 # --- reference curve (percentile for anonymous passive grades) ---------------------------------
 # Empty until the passive-only corpus run produces one. A passive grade may ONLY rank on a curve

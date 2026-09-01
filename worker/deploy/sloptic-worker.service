@@ -39,6 +39,15 @@
 #   # DO NOT start it yet: run the self-test first (worker/deploy/selftest.py), and leave
 #   # EGRESS_SANDBOX_READY unset in .env until that passes.
 #
+# CONCURRENCY. The worker runs each grade in a CHILD process (MAX_CONCURRENT_GRADES, default 4) and
+# kills any that passes GRADE_TIMEOUT_SECONDS. Two things follow:
+#   * Children inherit User=sloptic, so the `meta skuid sloptic` nftables rule still covers every one
+#     of them, including the Chrome that Lighthouse spawns. The load-bearing line stays load-bearing.
+#   * systemd's default KillMode=control-group means a restart or stop takes the whole tree, so no
+#     orphaned Chrome survives a `systemctl restart`.
+# Four concurrent grades means up to four headless Chromes. Watch memory on a small box; lower
+# MAX_CONCURRENT_GRADES in .env rather than editing this unit.
+#
 # The worker makes no inbound connections and needs no ports: it polls Supabase outbound.
 
 [Unit]

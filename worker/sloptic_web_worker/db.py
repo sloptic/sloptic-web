@@ -143,6 +143,17 @@ def claim_job(conn: psycopg.Connection) -> Job | None:
     return Job(id=str(row["id"]), origin=row["origin"], submitted_url=row["submitted_url"], mode=row["mode"])
 
 
+def get_job(conn: psycopg.Connection, job_id: str) -> Job | None:
+    """Read an already-claimed job by id. The child grader gets an id on its command line rather than
+    a serialized job, so the row stays the single source of truth for what is being graded."""
+    row = conn.execute(
+        "SELECT id, origin, submitted_url, mode FROM grades WHERE id = %s;", (job_id,)
+    ).fetchone()
+    if not row:
+        return None
+    return Job(id=str(row["id"]), origin=row["origin"], submitted_url=row["submitted_url"], mode=row["mode"])
+
+
 def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
     """Persist a finished grade and flip the job to done, in one transaction."""
     with conn.transaction():

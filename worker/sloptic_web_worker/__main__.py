@@ -1,20 +1,34 @@
 """Worker entry point: python -m sloptic_web_worker
 
-Loop: claim the oldest queued grade -> egress-guard the target -> run the passive grade -> persist.
+A SUPERVISOR, not a grader. It claims queued grades, runs each one in a child process
+(`grade_child`), holds every child to a wall clock, and persists nothing itself: a child writes its
+own result, so a supervisor restart cannot lose a finished grade.
+
+It is built this way for one reason. A grade can wedge somewhere no timeout reaches: a Playwright
+sync call against a CPU-spun renderer holds the GIL, so the grade cannot time itself out and no
+signal it might handle is ever scheduled. Grading in this loop meant a single wedged app pinned the
+only worker forever, while the heartbeat thread kept truthfully reporting the process alive and the
+queue behind it aged out at the 15-minute queue timeout. An external SIGKILL of the child's process
+group is the only thing that ends it, and it takes the headless Chrome with it.
+
+Running several at once follows from the same decision: separate processes are what let sloptic's
+cross-process Lighthouse lock serialize the trace lane, which is what keeps the perf axis comparable
+to the frozen curve while everything else runs in parallel.
+
 An empty queue sleeps POLL_INTERVAL_SECONDS. Any grade error fails just that job; the loop never dies.
 """
 
+import os
+import signal
+import subprocess
+import sys
 import threading
 import time
-from urllib.parse import urlparse
+from dataclasses import dataclass
 
 from . import config, db
-from .egress import EgressNotReady, guard_target, install as install_egress
-from .grader import Unreachable, run_passive_grade
-
-
-def _host_of(origin: str) -> str:
-    return (urlparse(origin).hostname or "").lower()
+from .egress import install as install_egress
+from .grade_child import EXIT_ENTRY_CHALLENGE
 
 
 class _Heartbeat:
@@ -125,78 +139,120 @@ class _Reputation:
         return ""
 
 
-def process_one(conn, rep: "_Reputation", beat: "_Heartbeat") -> bool:
-    """Claim and process a single job. Returns False if nothing was done."""
-    halted = rep.blocked(conn)
-    if halted:
-        return False
+@dataclass
+class _Running:
+    job: db.Job
+    proc: subprocess.Popen
+    started: float
 
-    job = db.claim_job(conn)
-    if job is None:
-        return False
+    def age(self) -> float:
+        return time.time() - self.started
 
-    print(f"[claim] {job.id} {job.origin} (mode={job.mode})", flush=True)
-    beat.set("polling", "", job.id)          # the timer thread keeps writing this for the whole grade
+
+def _spawn(job: db.Job) -> _Running:
+    """Start a child on its OWN session, so `killpg` reaches the grade and everything it spawned.
+    Without start_new_session the child shares our process group and killing it would take the
+    supervisor with it."""
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "sloptic_web_worker.grade_child", job.id],
+        start_new_session=True,
+    )
+    return _Running(job=job, proc=proc, started=time.time())
+
+
+def _kill(run: _Running) -> None:
+    """SIGKILL the child AND its descendants (headless Chrome, node). Not SIGTERM: the case this
+    exists for is a GIL-holding C-spin, which never runs a Python signal handler."""
     try:
-        # v1 grades passive only; an active job should never reach this worker yet.
-        if job.mode != "passive":
-            raise ValueError(f"unsupported mode {job.mode!r} (v1 is passive only)")
+        os.killpg(os.getpgid(run.proc.pid), signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        pass
+    try:
+        run.proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        print(f"[kill]  {run.job.id}: did not reap after SIGKILL", flush=True)
 
-        # P0 safety gate. Fails closed until the egress sandbox is implemented and enabled.
-        guard_target(job.origin, _host_of(job.origin))
 
-        # Throttle: on_progress fires twice per probe, so an unthrottled write would be ~90 UPDATEs
-        # a grade for a field nothing queries. A PHASE change always gets through, since that is the
-        # part that explains a long silence ("measuring performance" during Lighthouse).
-        last = {"at": 0.0, "phase": None}
+def harvest(conn, rep: "_Reputation", running: list[_Running]) -> bool:
+    """Reap finished children and kill any that blew the deadline. Returns whether anything changed."""
+    changed = False
+    for run in list(running):
+        code = run.proc.poll()
 
-        def _progress(p: dict) -> None:
-            now = time.time()
-            if p.get("phase") != last["phase"] or now - last["at"] > 2.0:
-                last["at"], last["phase"] = now, p.get("phase")
-                p["at"] = now
-                db.save_progress(conn, job.id, p)
+        if code is None:
+            if run.age() <= config.GRADE_TIMEOUT_SECONDS:
+                continue
+            # The deadline counts from the claim, so it includes any wait for the Lighthouse trace
+            # lane. Fail rather than requeue: a wedge is usually a property of the app, so retrying
+            # would spend the limit again (and two more slots) to reach the same place, and telling
+            # someone plainly that their app did not finish beats three silent retries.
+            mins = config.GRADE_TIMEOUT_SECONDS / 60
+            print(f"[kill]  {run.job.id} {run.job.origin}: over {mins:.0f} min, killing", flush=True)
+            _kill(run)
+            db.mark_failed(
+                conn, run.job.id,
+                f"grading did not finish within {mins:.0f} minutes and was stopped",
+            )
+            db.save_progress(conn, run.job.id, None)
+            running.remove(run)
+            changed = True
+            continue
 
-        result = run_passive_grade(job.origin, progress_cb=_progress)
-        db.save_result(conn, job.id, result)
-        print(f"[done]  {job.id} slop={result['slop_score']} axes={result['axis_slop']}", flush=True)
-        # An ENTRY challenge means nothing was graded on THIS app. Whether that means our IP is
-        # flagged depends on whether it keeps happening across different apps, which is what
-        # _Reputation.observe decides; a LATE challenge never trips anything.
-        rep.observe(job.origin, result.get("challenge_stage") or "")
-    except EgressNotReady as e:
-        db.mark_failed(conn, job.id, str(e))
-        print(f"[blocked] {job.id}: {e}", flush=True)
-    except Unreachable as e:
-        db.mark_failed(conn, job.id, f"target not gradeable: {e}")
-        print(f"[fail]  {job.id}: unreachable: {e}", flush=True)
-    except Exception as e:  # noqa: BLE001 — one bad grade must not kill the worker
-        db.mark_failed(conn, job.id, f"worker error: {e}")
-        print(f"[error] {job.id}: {e}", flush=True)
-    finally:
-        beat.set("polling", "", None)        # grade over, whatever the outcome
-        db.save_progress(conn, job.id, None)
-    return True
+        running.remove(run)
+        changed = True
+        # An ENTRY challenge means nothing was graded on THIS app. Whether that says anything about
+        # our IP depends on it repeating across different apps, which _Reputation.observe decides.
+        rep.observe(run.job.origin, "entry" if code == EXIT_ENTRY_CHALLENGE else "")
+        if code < 0:
+            # Killed by a signal we did not send (OOM killer, an operator). The child never got to
+            # write a reason, so the row would sit in `running` until the reaper found it.
+            print(f"[error] {run.job.id}: child died on signal {-code}", flush=True)
+            db.mark_failed(conn, run.job.id, f"the grader process was killed (signal {-code})")
+            db.save_progress(conn, run.job.id, None)
+        print(f"[reap]  {run.job.id} exit={code} after {run.age():.0f}s "
+              f"({len(running)} still running)", flush=True)
+    return changed
+
+
+def fill(conn, running: list[_Running]) -> bool:
+    """Claim up to the concurrency limit. Returns whether anything was started."""
+    started = False
+    # The budget was checked once for this pass, so a fill can overshoot it by at most
+    # MAX_CONCURRENT_GRADES - 1. That is deliberate: re-reading it per claim would cost a query per
+    # job to defend a soft daily cap against an overshoot of three.
+    while len(running) < config.MAX_CONCURRENT_GRADES:
+        job = db.claim_job(conn)
+        if job is None:
+            break
+        print(f"[claim] {job.id} {job.origin} (mode={job.mode}, "
+              f"{len(running) + 1}/{config.MAX_CONCURRENT_GRADES})", flush=True)
+        running.append(_spawn(job))
+        started = True
+    return started
 
 
 def main() -> None:
-    # The grader's resolver guard is opt-in as of sloptic 2.1.0. pipeline.run() installs it, so every
-    # grade is covered regardless; installing here too covers anything this process does OUTSIDE a
-    # grade. Idempotent, and it must happen before the first outbound connection of any kind.
+    # The grader's resolver guard is opt-in as of sloptic 2.1.0. Every child installs it, and
+    # pipeline.run() installs it again inside the grade; this covers what the SUPERVISOR itself does.
+    # Idempotent, and it must happen before the first outbound connection of any kind.
     install_egress()
     print(f"sloptic-web worker starting (poll={config.POLL_INTERVAL_SECONDS}s, "
           f"egress_ready={config.EGRESS_SANDBOX_READY}, "
-          f"budget={config.DAILY_GRADE_BUDGET}/day)", flush=True)
+          f"budget={config.DAILY_GRADE_BUDGET}/day, "
+          f"concurrency={config.MAX_CONCURRENT_GRADES}, "
+          f"deadline={config.GRADE_TIMEOUT_SECONDS / 60:.0f}min, "
+          f"lighthouse_slots={config.LIGHTHOUSE_SLOTS})", flush=True)
     conn = db.connect()
     beat = _Heartbeat()
     beat.start()
     rep = _Reputation()
+    running: list[_Running] = []
     last_reap = 0.0
     last_halt = ""
     while True:
         try:
-            # Reclaim jobs a killed worker abandoned, and fail ones nobody ever started. Cheap, and
-            # only worth doing occasionally.
+            # Reclaim jobs a killed worker abandoned, and fail ones nobody ever started. This is
+            # finally reachable while grades are in flight: the loop no longer blocks on one.
             if time.time() - last_reap > 60:
                 last_reap = time.time()
                 n = db.reap_stale_jobs(conn)
@@ -213,6 +269,10 @@ def main() -> None:
                     print(f"[keep]  dropped {dropped} expired report(s), "
                           f"forgot {forgotten} submitter IP hash(es)", flush=True)
 
+            # Reap what finished and kill what ran long, BEFORE claiming, so a freed slot is filled
+            # on the same pass.
+            worked = harvest(conn, rep, running)
+
             # Say WHY we are idle, but only when the reason changes: this loop runs every 5s.
             halted = rep.blocked(conn)
             if halted != last_halt:
@@ -220,11 +280,19 @@ def main() -> None:
                     print(f"[hold]  not claiming: {halted}", flush=True)
                 last_halt = halted
 
-            # Tell the heartbeat thread what to report. It does the writing on its own timer, so
-            # liveness keeps flowing while process_one blocks for minutes on a grade.
-            beat.set("holding" if halted else "polling", halted)
+            # The heartbeat thread does the writing on its own timer. Report the OLDEST in-flight
+            # job, which is the one a stuck queue is stuck behind.
+            oldest = max(running, key=lambda r: r.age()).job.id if running else None
+            if halted:
+                beat.set("holding", halted, oldest)
+            elif running:
+                beat.set("grading", f"{len(running)} of {config.MAX_CONCURRENT_GRADES} in flight",
+                         oldest)
+            else:
+                beat.set("polling", "", None)
 
-            worked = process_one(conn, rep, beat)
+            if not halted:
+                worked = fill(conn, running) or worked
         except Exception as e:  # connection dropped, etc. — reconnect and keep going
             print(f"[loop] error: {e}; reconnecting", flush=True)
             time.sleep(config.POLL_INTERVAL_SECONDS)
@@ -233,8 +301,12 @@ def main() -> None:
             except Exception:
                 pass
             continue
-        if not worked:
+        # Sleep only when idle. With children in flight, keep polling so the deadline is enforced
+        # promptly rather than up to POLL_INTERVAL late.
+        if not worked and not running:
             time.sleep(config.POLL_INTERVAL_SECONDS)
+        elif not worked:
+            time.sleep(1.0)
 
 
 if __name__ == "__main__":
