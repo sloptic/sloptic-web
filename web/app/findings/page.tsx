@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ACTIVE, comparableEvents, MIN_EVENT_N, fmt } from "@/lib/corpus";
+import EventSpread from "./EventSpread";
 
 export const metadata: Metadata = {
   title: "What hackathon apps looked like",
@@ -89,33 +90,6 @@ function Levels() {
   );
 }
 
-/** Event medians, sorted. The claim is about the SPREAD, so the chart is the spread: one mark per
- *  event, the ends labelled, nothing in between labelled at all. */
-function EventSpread() {
-  const events = comparableEvents();
-  const hi = events[0];
-  const lo = events[events.length - 1];
-  const max = Math.max(...events.map((e) => e.median));
-  return (
-    <figure className="chart">
-      <svg viewBox={`0 0 720 ${events.length * 7 + 26}`} role="img"
-           aria-label={`Median slop for each of ${events.length} events, from ${fmt(lo.median)} to ${fmt(hi.median)}.`}>
-        {events.map((e, i) => (
-          <g key={e.event}>
-            <title>{`${e.event}: median ${fmt(e.median)} across ${e.n} apps`}</title>
-            <rect x="0" y={i * 7} width={(e.median / max) * 720} height="5" rx="2.5" className="bar" />
-          </g>
-        ))}
-        <g className="tick">
-          <text x="0" y={events.length * 7 + 18}>
-            each row is one event, sorted by median. {events.length} events with {MIN_EVENT_N} or more graded apps.
-          </text>
-        </g>
-      </svg>
-    </figure>
-  );
-}
-
 export default function FindingsPage() {
   const events = comparableEvents();
   const spread = events[0].median / events[events.length - 1].median;
@@ -133,7 +107,7 @@ export default function FindingsPage() {
         <h2 className="section-head">Almost nothing is clean</h2>
         <p className="section-intro">
           Only one app scored 0. The median is {fmt(D.median)}, and a
-          quarter scored above {fmt(D.q3)}. There is something wrong with almost every app.
+          quarter scored above {fmt(D.q3)}. In other words, there is something wrong with almost every app.
         </p>
         <Histogram />
         <h2 className="section-head">
@@ -156,23 +130,18 @@ export default function FindingsPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">Broken far more often than hackable</h2>
+        <h2 className="section-head">Broken far too often</h2>
         <p className="section-intro">
           Sorting each app by its single worst finding gives three levels. They are cumulative, so
           every acute finding is also significant.
         </p>
         <Levels />
-        <p className="section-intro">
-          The set of significant findings 
-        </p>
       </section>
 
       <section className="section">
         <h2 className="section-head">Winners ship more slop</h2>
         <p className="section-intro">
-          Apps that won something carry a {fmt(W.delta_pct)}% higher median slop than apps that did
-          not. Human judging is not failing here, it is measuring something else: the idea, the pitch,
-          the demo. Nothing in a five minute demo exercises the parts Sloptic reads.
+          Counterintuitively, winning apps have {fmt(W.delta_pct)}% <em>higher</em> median slop than the rest.
         </p>
         <div className="versus">
           <div className="versus-side" data-side="winner">
@@ -187,9 +156,25 @@ export default function FindingsPage() {
           </div>
         </div>
         <p className="section-intro">
-          It holds on performance too. Winners have a median Lighthouse performance score of{" "}
-          {ACTIVE.lighthouse.winners.median} against {ACTIVE.lighthouse.non_winners.median} for
-          everyone else, measured by a pinned local Lighthouse rather than anything hand rolled.
+          The same is true for Lighthouse:
+        </p>
+        <div className="versus">
+          <div className="versus-side" data-side="winner">
+            <span className="versus-num"><b>{fmt(ACTIVE.lighthouse.winners.median)}</b></span>
+            <span className="versus-cap">median Lighthouse score, winners</span>
+            <span className="versus-n">{W.winner.n} apps</span>
+          </div>
+          <div className="versus-side">
+            <span className="versus-num">{fmt(ACTIVE.lighthouse.non_winners.median)}</span>
+            <span className="versus-cap">median Lighthouse score, everyone else</span>
+            <span className="versus-n">{W.non_winner.n.toLocaleString()} apps</span>
+          </div>
+        </div>
+        <p className="section-intro">
+          As you can see, winning does not correlate with app cleanliness. In fact, the opposite tends to be true.
+          Most hackathons employ human judging, which rewards ideas, features, presentation, and the demo over durability.
+          Winning apps tend to ship more features, meaning more surfaces to misconfigure or get wrong, and human judges do not 
+          have time to judge quality over hundreds of apps.
         </p>
       </section>
 
@@ -197,14 +182,12 @@ export default function FindingsPage() {
         <h2 className="section-head">Events differ by more than threefold</h2>
         <p className="section-intro">
           Across the {events.length} events with {MIN_EVENT_N} or more graded apps, median slop runs
-          from {fmt(events[events.length - 1].median)} to {fmt(events[0].median)}, a spread of{" "}
-          {spread.toFixed(1)} times. Whatever an event does to its field, it is doing something, and
-          right now nobody measures it.
+          from {fmt(events[events.length - 1].median)} to {fmt(events[0].median)}, a {" "}
+          {spread.toFixed(1)}x difference. Hover over a bar for the event in question.
         </p>
-        <EventSpread />
+        <EventSpread events={events} minN={MIN_EVENT_N} />
         <p className="section-intro fineprint">
-          Events with fewer than {MIN_EVENT_N} graded apps are left out. A median over one or two apps
-          is not a comparison, and charting it would invent a difference.
+          *events with fewer than {MIN_EVENT_N} graded apps are left out.
         </p>
       </section>
 
