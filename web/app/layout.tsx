@@ -55,6 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <a href="/grades">your grades</a>
             <a href="/about">about</a>
             <a href="/checks">checks</a>
+            <a href="/findings">findings</a>
             <a href="/organizers">organizers</a>
             <a href="/methodology">methodology</a>
           </nav>
