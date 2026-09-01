@@ -131,17 +131,15 @@ export default function ClaimFlow({ initialEvent = "" }: { initialEvent?: string
             {c.status === "pending" ? (
               <>
                 <p className="section-intro">
-                  Add this link to your event&apos;s rules page on Devpost, with visible text such as{" "}
-                  <b>Grading policy</b>. It has to be a real link, since we read the page&apos;s links
-                  rather than its text.
+                  Add this link to your event&apos;s rules page on Devpost with visible text such as{" "}
+                  <b>Grading policy</b>.
                 </p>
                 <p className="token-link">
                   <code>{link}</code>
                 </p>
                 <p className="section-intro">
-                  The page it opens is the notice to your participants: it says what Sloptic checks and
-                  what an active grade sends, which is what makes entering the event an informed
-                  choice. <a href={link}>See what they will read</a>.
+                  This link will open a page informing participants that Sloptic will grade this app
+                  and what that entails.
                 </p>
                 <div className="cta-row">
                   <button className="button secondary" type="button" onClick={() => void recheck(c.id)}>
@@ -149,9 +147,10 @@ export default function ClaimFlow({ initialEvent = "" }: { initialEvent?: string
                   </button>
                 </div>
                 <p className="section-intro fineprint">
-                  We check on our own every few minutes, so you can close this page. Publish the link
-                  before your submission deadline if you want active grading: a notice shown after an
-                  event ends was shown to nobody.
+                  (We check on our own every few minutes, so no need to keep this page open.)
+                </p>
+                <p className="section-intro fineprint">
+                  Publish it before your submission deadline if you want active grading.
                 </p>
               </>
             ) : null}
