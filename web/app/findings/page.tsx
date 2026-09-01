@@ -251,27 +251,21 @@ export default function FindingsPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">A fast app is not a clean app</h2>
+        <h2 className="section-head">Fast != clean</h2>
         <p className="section-intro">
           Lighthouse performance barely predicts anything else. Measured against slop with the
           performance axis taken out, the correlation is {RHO.perf_vs_nonperf_slop_rho} across{" "}
           {RHO.n.toLocaleString()} apps, which is close enough to zero to call the two independent.
-          Knowing an app loads fast tells you almost nothing about whether it is secure or usable.
+          In other words, speed and durability don't have any relationship.
         </p>
         <ul className="stat-list numeric">
           <li>
             <span className="k"><b>{RHO.perf_vs_nonperf_slop_rho}</b></span>
             <span className="v">
-              Spearman correlation between Lighthouse performance and the rest of the slop. The
-              performance axis is excluded from that slop on purpose: leaving it in would correlate
-              Lighthouse with itself.
+              Spearman correlation between Lighthouse performance and the rest of the slop (without the performance component).
             </span>
           </li>
         </ul>
-        <p className="section-intro">
-          This is why one number can carry three axes. If speed predicted security, the grade would
-          be measuring one thing wearing three names.
-        </p>
       </section>
 
       <section className="section">
@@ -334,7 +328,7 @@ export default function FindingsPage() {
         </div>
         <p className="section-intro fineprint">
           Also excluded are {ACTIVE.by_stack_excluded.map((s) => `${s.apps} ${s.stack} apps`).join(", ")} since
-          Sloptic is unable to properly separate what the teams built from the platform.
+          Sloptic is currently unable to properly separate what the teams built from these platforms.
         </p>
       </section>
 
