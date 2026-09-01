@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { GradeView, Finding, Coverage, GradeProgress, CardEntry, Outcome } from "@/lib/types";
 import { AREA_LABELS, PASSIVE_BY_AREA, describeProbe, type Area } from "@/lib/checks";
 import { daysUntil } from "@/lib/retention";
+import { ordinal } from "@/lib/grades";
 import { forgetGrade } from "@/lib/history";
 
 const POLL_MS = 3000;
@@ -16,14 +17,6 @@ function fmtScore(v: number | string | null | undefined): string {
   const n = typeof v === "string" ? Number(v) : v;
   if (n === null || n === undefined || Number.isNaN(n)) return "-";
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
-}
-
-/** English ordinal suffix. The teens are the exception that catches naive implementations: 11th,
- *  12th and 13th, not 11st/12nd/13rd, and they recur at 111, 112, 113. */
-function ordinal(n: number): string {
-  const tens = n % 100;
-  if (tens >= 11 && tens <= 13) return `${n}th`;
-  return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
 }
 
 /** mm:ss for an elapsed duration. A long silence reads as a hang; a ticking clock reads as work. */

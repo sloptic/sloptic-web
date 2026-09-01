@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { forgetGrades, readHistory, rememberGrade } from "@/lib/history";
 import { ANON_REPORT_DAYS, daysUntil, reportExpiresAt } from "@/lib/retention";
-import type { GradeSummary } from "@/lib/grades";
+import { ordinal, type GradeSummary } from "@/lib/grades";
 
 const STATUS_TEXT: Record<GradeSummary["status"], string> = {
   queued: "waiting",
@@ -258,7 +258,7 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
                   <a href={`/grade/${g.id}`}>{g.origin.replace(/^https?:\/\//, "")}</a>
                 </th>
                 <td>{g.status === "done" ? fmtScore(g.slop_score) : STATUS_TEXT[g.status]}</td>
-                <td>{g.percentile === null ? "-" : Math.round(g.percentile)}</td>
+                <td>{g.cleaner_than_pct === null ? "-" : ordinal(Math.round(g.cleaner_than_pct))}</td>
                 <td>{fmtDate(g.submitted_at)}</td>
                 <td className="keep">{keepText(g)}</td>
                 <td>

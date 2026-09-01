@@ -2,7 +2,7 @@
 // report view has its own richer route; this is deliberately just enough to render a row.
 
 export const SUMMARY_SELECT =
-  "id, origin, submitted_url, status, submitted_at, finished_at, account_id, results(slop_score, percentile, percentile_band)";
+  "id, origin, submitted_url, status, submitted_at, finished_at, account_id, results(slop_score, percentile, percentile_band, ranking)";
 
 export type GradeSummary = {
   id: string;
@@ -15,7 +15,14 @@ export type GradeSummary = {
    *  who owns a grade is nobody else's business, and the id would leak it to any bearer of the URL. */
   claimed: boolean;
   slop_score: number | null;
+  /** The grader's own percentile: the share of apps BETTER than this one, so lower is better.
+   *  Kept because it is what the row stores, but never shown raw: "19" reads as the bottom fifth
+   *  when it means the top fifth. */
   percentile: number | null;
+  /** The share strictly worse, which is the direction every reader expects from a percentile and
+   *  the number the report page shows. Read from the stored ranking rather than derived, so the list
+   *  and the report cannot drift apart on ties. */
+  cleaner_than_pct: number | null;
   percentile_band: string | null;
 };
 
@@ -27,6 +34,15 @@ export function toSummary(row: Row): GradeSummary {
   const embedded = Array.isArray(row.results) ? row.results[0] : row.results;
   const r = (embedded ?? {}) as Record<string, unknown>;
   const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+  const ranking = (r.ranking ?? {}) as Record<string, unknown>;
+  // Fall back to the complement only for rows written before ranking was stored; the stored value is
+  // authoritative because the grader decides how ties count.
+  const cleaner =
+    ranking.cleaner_than_pct !== undefined && ranking.cleaner_than_pct !== null
+      ? Number(ranking.cleaner_than_pct)
+      : r.percentile === null || r.percentile === undefined
+        ? null
+        : 100 - Number(r.percentile);
   return {
     id: String(row.id),
     origin: String(row.origin ?? ""),
@@ -37,6 +53,7 @@ export function toSummary(row: Row): GradeSummary {
     claimed: row.account_id !== null && row.account_id !== undefined,
     slop_score: num(r.slop_score),
     percentile: num(r.percentile),
+    cleaner_than_pct: cleaner,
     percentile_band: (r.percentile_band as string) ?? null,
   };
 }
@@ -55,4 +72,14 @@ export function cleanIds(input: unknown): string[] {
     0,
     MAX_IDS
   );
+}
+
+
+/** English ordinal suffix, shared so the list and the report cannot disagree about "81st".
+ *  The teens are the exception that catches naive versions: 11th, 12th and 13th, not 11st/12nd/13rd,
+ *  and they recur at 111, 112, 113. */
+export function ordinal(n: number): string {
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return `${n}th`;
+  return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
 }
