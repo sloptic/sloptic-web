@@ -2,12 +2,15 @@
 // report view has its own richer route; this is deliberately just enough to render a row.
 
 export const SUMMARY_SELECT =
-  "id, origin, submitted_url, status, submitted_at, finished_at, account_id, results(slop_score, percentile, percentile_band, ranking)";
+  "id, origin, submitted_url, mode, status, submitted_at, finished_at, account_id, results(slop_score, percentile, percentile_band, ranking)";
 
 export type GradeSummary = {
   id: string;
   origin: string;
   submitted_url: string;
+  /** Which battery ran. The two rank on different frozen curves, so a list that mixes them without
+   *  saying which is which invites comparing numbers that are not comparable. */
+  mode: "passive" | "active";
   status: "queued" | "running" | "done" | "failed";
   submitted_at: string;
   finished_at: string | null;
@@ -47,6 +50,7 @@ export function toSummary(row: Row): GradeSummary {
     id: String(row.id),
     origin: String(row.origin ?? ""),
     submitted_url: String(row.submitted_url ?? ""),
+    mode: (row.mode as GradeSummary["mode"]) ?? "passive",
     status: row.status as GradeSummary["status"],
     submitted_at: String(row.submitted_at),
     finished_at: (row.finished_at as string) ?? null,

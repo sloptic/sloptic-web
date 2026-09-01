@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import AccountActions from "./AccountActions";
+import GradeList from "../grades/GradeList";
+import ClaimFlow from "../events/ClaimFlow";
 
 export const dynamic = "force-dynamic";
 
@@ -41,11 +43,79 @@ export default async function AccountPage() {
         <p className="page-lead">{user.email}</p>
       </div>
 
-      {/* There is nothing to edit here on purpose. Sign in is an emailed link, so the address is the
-          identity rather than a preference, and we ask for nothing else: no name, no avatar, no
-          settings. A profile form would be a form over an empty table. */}
+      {/* The apps and events sections render the SAME components /grades and /events do, rather
+          than a second implementation of each list. Two views of one dataset written twice is how
+          they end up disagreeing, which already happened once with the percentile direction. */}
       <section className="section attached">
-        <h2 className="section-head">What we hold</h2>
+        <h2 className="section-head">Apps you graded</h2>
+        <p className="section-intro">
+          Grades saved to this account, and any this browser ran that you have not saved yet. The
+          battery is named beside each score: a passive and an active grade are different
+          measurements ranked on different curves, so their numbers do not compare.
+        </p>
+        <GradeList signedIn />
+      </section>
+
+      <section className="section">
+        <h2 className="section-head">Events you grade for</h2>
+        {grants && grants.filter((g) => g.kind === "organizer_event").length > 0 ? (
+          <div className="table-scroll">
+            <table className="count-table">
+              <thead>
+                <tr>
+                  <th>event</th>
+                  <th>verified</th>
+                  <th>re-prove by</th>
+                </tr>
+              </thead>
+              <tbody>
+                {grants
+                  .filter((g) => g.kind === "organizer_event")
+                  .map((g) => (
+                    <tr key={g.scope}>
+                      <th scope="row">
+                        <a href={`https://${g.scope}.devpost.com`} rel="noopener noreferrer">
+                          {g.scope}.devpost.com
+                        </a>
+                      </th>
+                      <td>{when(g.granted_at)}</td>
+                      <td>{when(g.expires_at)}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+        <ClaimFlow />
+        <p className="section-intro fineprint">
+          Grading a whole field is not built yet. Verification is what it will be gated on, so proving
+          an event now means it is ready when ranking lands.
+        </p>
+      </section>
+
+      <section className="section">
+        <h2 className="section-head">Domains you own</h2>
+        {grants && grants.filter((g) => g.kind === "app_origin").length > 0 ? (
+          <ul className="stat-list">
+            {grants
+              .filter((g) => g.kind === "app_origin")
+              .map((g) => (
+                <li key={g.scope}>
+                  <span className="k">{g.scope}</span>
+                  <span className="v">Active grading until {when(g.expires_at)}.</span>
+                </li>
+              ))}
+          </ul>
+        ) : (
+          <p className="section-intro">
+            None yet. Proving you own a domain unlocks the checks that send real traffic, for that
+            origin and for this account only. <a href="/verify">What verifying involves</a>.
+          </p>
+        )}
+      </section>
+
+      <section className="section">
+        <h2 className="section-head">Sign in</h2>
         <ul className="stat-list">
           <li>
             <span className="k">email</span>
@@ -66,44 +136,6 @@ export default async function AccountPage() {
             </span>
           </li>
         </ul>
-      </section>
-
-      <section className="section">
-        <h2 className="section-head">What this account may grade</h2>
-        {grants && grants.length > 0 ? (
-          <div className="table-scroll">
-            <table className="count-table">
-              <thead>
-                <tr>
-                  <th>what</th>
-                  <th>proven</th>
-                  <th>until</th>
-                </tr>
-              </thead>
-              <tbody>
-                {grants.map((g) => (
-                  <tr key={`${g.kind}:${g.scope}`}>
-                    <th scope="row">
-                      {g.kind === "organizer_event" ? `${g.scope} (event)` : g.scope}
-                    </th>
-                    <td>{when(g.granted_at)}</td>
-                    <td>{when(g.expires_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="section-intro">
-            Nothing yet. Anyone can run the passive floor on any URL, so an account is only needed for
-            the checks that send real traffic. <a href="/events">Verify an event</a> or{" "}
-            <a href="/verify">verify a domain you own</a>.
-          </p>
-        )}
-        <p className="section-intro fineprint">
-          A grant says this account may grade that thing, never that the thing is open to everyone. It
-          is re-checked before each run and expires on the date shown.
-        </p>
       </section>
 
       <AccountActions email={user.email ?? ""} grantCount={grants?.length ?? 0} />

@@ -244,6 +244,7 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
           <thead>
             <tr>
               <th>app</th>
+              <th>graded</th>
               <th>slop</th>
               <th>percentile</th>
               <th>run</th>
@@ -257,6 +258,7 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
                 <th scope="row">
                   <a href={`/grade/${g.id}`}>{g.origin.replace(/^https?:\/\//, "")}</a>
                 </th>
+                <td className="grade-mode">{g.mode}</td>
                 <td>{g.status === "done" ? fmtScore(g.slop_score) : STATUS_TEXT[g.status]}</td>
                 <td>{g.cleaner_than_pct === null ? "-" : ordinal(Math.round(g.cleaner_than_pct))}</td>
                 <td>{fmtDate(g.submitted_at)}</td>

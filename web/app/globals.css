@@ -2333,3 +2333,10 @@ a.mast-user {
 a.mast-user:hover {
   color: var(--ink);
 }
+/* Which battery ran. Set in muted ink: it qualifies the score beside it rather than competing with
+   it, but it has to be visible, because a passive and an active number are not comparable. */
+.grade-table .grade-mode {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: left;
+}
