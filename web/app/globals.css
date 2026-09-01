@@ -2200,3 +2200,24 @@ code {
   font-size: 0.82rem;
   color: var(--muted);
 }
+
+.token-link {
+  margin: 0 0 1.5rem;
+  overflow-wrap: anywhere;
+}
+.token-link code {
+  font-size: 0.9rem;
+}
+.check-detail {
+  margin-top: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.check-detail summary {
+  cursor: pointer;
+}
+.check-detail p {
+  margin: 0.5rem 0 0;
+  overflow-wrap: anywhere;
+}

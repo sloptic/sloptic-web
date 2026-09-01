@@ -173,6 +173,40 @@ def _kill(run: _Running) -> None:
         print(f"[kill]  {run.job.id}: did not reap after SIGKILL", flush=True)
 
 
+def process_event_checks(conn) -> int:
+    """Settle any event claims due for a look. Returns how many were checked.
+
+    Runs inline rather than in a child process. A check is two HTTP GETs against one host, so it has
+    none of the wedge risk that put grading in its own process, and it finishes in seconds.
+    """
+    n = 0
+    while n < 5:                      # a few per pass, so a backlog drains without starving grading
+        claim = db.claim_event_check(conn)
+        if claim is None:
+            break
+        n += 1
+        out = verify_event.check(claim.slug, claim.token)
+        if out.verified:
+            result = db.verify_claim(conn, claim, out.detail, config.GRANT_DAYS)
+            if result == "granted":
+                print(f"[event] verified {claim.slug} for {claim.account_id}", flush=True)
+            else:
+                print(f"[event] {claim.slug}: link found, but the account has not accepted the "
+                      f"terms, so no grant was written", flush=True)
+            continue
+
+        # Not verified. How soon to look again depends on WHY, which is the whole reason the check
+        # reports three states instead of a boolean. A block is OUR problem and backs off hard; a
+        # page read cleanly with no link is the organizer's turn to act, so we idle rather than
+        # hammer Devpost while they edit their rules.
+        delay = {"blocked": 15 * 60, "not_found": 30 * 60, "ok": 5 * 60}.get(out.check_status, 900)
+        if out.check_status == "blocked":
+            delay = min(4 * 3600, delay * max(1, claim.attempts))
+        db.record_check(conn, claim.id, out.check_status, out.detail, delay)
+        print(f"[event] {claim.slug}: {out.check_status}, looking again in {delay // 60}m", flush=True)
+    return n
+
+
 def harvest(conn, rep: "_Reputation", running: list[_Running]) -> bool:
     """Reap finished children and kill any that blew the deadline. Returns whether anything changed."""
     changed = False
@@ -263,6 +297,10 @@ def main() -> None:
                     print(f"[reap]  failed {n} grade(s) nobody started within the queue window",
                           flush=True)
 
+                n = db.expire_stale_claims(conn, config.CLAIM_EXPIRY_DAYS)
+                if n:
+                    print(f"[event] failed {n} claim(s) whose link never appeared", flush=True)
+
                 # Retention: an unowned report is not kept forever (migration 0009).
                 dropped, forgotten = db.sweep_retention(conn)
                 if dropped or forgotten:
@@ -272,6 +310,10 @@ def main() -> None:
             # Reap what finished and kill what ran long, BEFORE claiming, so a freed slot is filled
             # on the same pass.
             worked = harvest(conn, rep, running)
+
+            # Event checks are seconds of HTTP while a grade runs for minutes, so they are settled
+            # every pass rather than waiting behind the grade queue.
+            worked = process_event_checks(conn) > 0 or worked
 
             # Say WHY we are idle, but only when the reason changes: this loop runs every 5s.
             halted = rep.blocked(conn)

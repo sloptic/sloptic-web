@@ -20,7 +20,9 @@ export default function EventForm({ initialEvent = "" }: { initialEvent?: string
       setNote("Not a Devpost event. It should look like your-event.devpost.com.");
       return;
     }
-    setNote(NOTE);
+    // Hand the address to the verification flow rather than validating it twice. That page is
+    // signed-in-only, and the sign-in it sends you to carries the address back here afterwards.
+    window.location.href = `/organizers/verify?event=${encodeURIComponent(eventUrl.trim())}`;
   }
 
   return (
@@ -34,7 +36,7 @@ export default function EventForm({ initialEvent = "" }: { initialEvent?: string
           onChange={(e) => setEventUrl(e.target.value)}
           aria-label="Devpost event URL"
         />
-        <button type="submit">rank it</button>
+        <button type="submit">verify my event</button>
       </form>
       {note && (
         <p className="rank-note" role="status">

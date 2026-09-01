@@ -59,8 +59,16 @@ alter table public.event_claims enable row level security;
 
 -- An account may read its own claims and nothing else. Writes are server side only: a claim that
 -- could set its own status to 'verified' would be the whole control undone.
-create policy event_claims_self_read on public.event_claims
-  for select using (auth.uid() = account_id);
+-- Guarded so the file is re-runnable like the rest of this directory; Postgres has no
+-- CREATE POLICY IF NOT EXISTS.
+do $$ begin
+  if not exists (select 1 from pg_policies
+                  where schemaname = 'public' and tablename = 'event_claims'
+                    and policyname = 'event_claims_self_read') then
+    create policy event_claims_self_read on public.event_claims
+      for select using (auth.uid() = account_id);
+  end if;
+end $$;
 
 -- Supabase does not auto-grant for objects created over a raw pooler connection (see 0001 and 0005).
 grant select, insert, update, delete on public.event_claims to service_role;

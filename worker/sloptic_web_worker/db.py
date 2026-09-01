@@ -225,3 +225,127 @@ def sweep_retention(conn: psycopg.Connection) -> tuple[int, int]:
     ips = conn.execute("SELECT public.forget_submitter_ips();").fetchone()
     first = lambda row: (list(row.values())[0] if isinstance(row, dict) else row[0]) if row else 0
     return first(reports), first(ips)
+
+
+# --- organizer event verification -----------------------------------------------------------------
+
+@dataclass
+class Claim:
+    id: str
+    account_id: str
+    slug: str
+    token: str
+    attempts: int
+
+
+def claim_event_check(conn: psycopg.Connection) -> Claim | None:
+    """Take one event claim that is due for a look, or None.
+
+    SKIP LOCKED for the same reason the grade queue uses it, and the due time is pushed out
+    immediately so a slow check cannot be picked up twice while it runs.
+    """
+    row = conn.execute(
+        """
+        UPDATE event_claims
+           SET attempts = attempts + 1,
+               check_due_at = now() + interval '5 minutes'
+         WHERE id = (
+               SELECT id FROM event_claims
+                WHERE status = 'pending' AND check_due_at <= now()
+                ORDER BY check_due_at
+                FOR UPDATE SKIP LOCKED
+                LIMIT 1
+         )
+     RETURNING id, account_id, slug, token, attempts;
+        """
+    ).fetchone()
+    if not row:
+        return None
+    return Claim(id=str(row["id"]), account_id=str(row["account_id"]), slug=row["slug"],
+                 token=row["token"], attempts=row["attempts"])
+
+
+def record_check(conn: psycopg.Connection, claim_id: str, check_status: str, detail: str,
+                 next_delay_seconds: float) -> None:
+    """Store what a check saw and when to look again. Never changes `status`: a claim that is not
+    verified yet is still pending, and a blocked check is not a failure to report to anyone."""
+    conn.execute(
+        """
+        UPDATE event_claims
+           SET check_status = %(cs)s, check_detail = left(%(d)s, 2000), checked_at = now(),
+               check_due_at = now() + make_interval(secs => %(delay)s)
+         WHERE id = %(id)s;
+        """,
+        {"cs": check_status, "d": detail, "delay": next_delay_seconds, "id": claim_id},
+    )
+
+
+def verify_claim(conn: psycopg.Connection, claim: "Claim", detail: str, grant_days: int) -> str:
+    """Mark a claim verified and write the grant it earns, in one transaction.
+
+    Returns 'granted', or 'blocked_on_terms' when the account has not accepted the terms. That gate is
+    from migration 0007 and it is enforced rather than worked around: the attestation is one of the
+    layers the active tier rests on, so a grant issued without it would be a grant nobody agreed to.
+    """
+    with conn.transaction():
+        accepted = conn.execute(
+            "SELECT terms_accepted_at FROM profiles WHERE id = %s;", (claim.account_id,)
+        ).fetchone()
+        if not accepted or accepted["terms_accepted_at"] is None:
+            conn.execute(
+                """
+                UPDATE event_claims
+                   SET check_status = 'ok', checked_at = now(),
+                       check_detail = left(%(d)s, 2000),
+                       check_due_at = now() + interval '1 hour'
+                 WHERE id = %(id)s;
+                """,
+                {"d": f"token found, but the account has not accepted the terms; {detail}",
+                 "id": claim.id},
+            )
+            return "blocked_on_terms"
+
+        conn.execute(
+            """
+            UPDATE event_claims
+               SET status = 'verified', check_status = 'ok', checked_at = now(),
+                   verified_at = now(), check_detail = left(%(d)s, 2000)
+             WHERE id = %(id)s;
+            """,
+            {"d": detail, "id": claim.id},
+        )
+        # One live grant per account per scope (0007's unique index), so a re-verification refreshes
+        # the window rather than stacking a second authorization nobody would ever revoke.
+        conn.execute(
+            """
+            INSERT INTO grants (account_id, kind, scope, evidence, expires_at)
+            VALUES (%(acct)s, 'organizer_event', %(scope)s, %(ev)s,
+                    now() + make_interval(days => %(days)s))
+            ON CONFLICT (account_id, kind, scope) WHERE revoked_at IS NULL
+            DO UPDATE SET granted_at = now(), evidence = EXCLUDED.evidence,
+                          expires_at = EXCLUDED.expires_at;
+            """,
+            {"acct": claim.account_id, "scope": claim.slug, "days": grant_days,
+             "ev": json.dumps({"proof": "devpost_event_link", "detail": detail[:2000]})},
+        )
+    return "granted"
+
+
+def expire_stale_claims(conn: psycopg.Connection, days: int) -> int:
+    """Fail claims whose token never appeared. Only ones we could actually READ: a claim that has only
+    ever been blocked is not evidence of anything, and failing it would blame an organizer for our
+    inability to reach Devpost."""
+    rows = conn.execute(
+        """
+        UPDATE event_claims
+           SET status = 'failed',
+               check_detail = left(coalesce(check_detail, '') ||
+                   ' | expired: the grading policy link was never found on the event pages', 2000)
+         WHERE status = 'pending'
+           AND check_status = 'ok'
+           AND issued_at < now() - make_interval(days => %(days)s)
+     RETURNING 1;
+        """,
+        {"days": days},
+    ).fetchall()
+    return len(rows or [])
