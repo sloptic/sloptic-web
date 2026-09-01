@@ -114,3 +114,17 @@ LIGHTHOUSE_SLOTS = os.environ.get("SLOPTIC_LIGHTHOUSE_SLOTS", "3")
 PASSIVE_CURVE_PATH = os.environ.get("PASSIVE_CURVE_PATH", "")
 # Where the grader's scripts/ live, for benchmark.rank (it sits outside the importable package).
 CURVE_SCRIPTS_DIR = os.environ.get("CURVE_SCRIPTS_DIR", "../sloptic-main/scripts")
+
+
+# --- organizer event verification -----------------------------------------------------------------
+# The origin an organizer's "Grading policy" link must point at. The token is read from the PATH of a
+# link whose host is this, so a wrong value here fails every check closed rather than open.
+SITE_ORIGIN = os.environ.get("SITE_ORIGIN", "https://sloptic.org")
+
+# How long an event grant lasts before it must be re-proven. Matches the owner tier: an event changes
+# hands, an organizer moves on, and a grant nobody re-checks is a standing authorization nobody owns.
+GRANT_DAYS = int(os.environ.get("GRANT_DAYS", "90"))
+
+# How long a claim keeps waiting for its token to appear before it is failed. Generous: an organizer
+# may verify days before they finish writing their rules page.
+CLAIM_EXPIRY_DAYS = int(os.environ.get("CLAIM_EXPIRY_DAYS", "14"))
