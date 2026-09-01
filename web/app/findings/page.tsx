@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { ACTIVE, comparableEvents, MIN_EVENT_N, fmt } from "@/lib/corpus";
 
 export const metadata: Metadata = {
-  title: "What 1,625 hackathon apps looked like",
+  title: "What hackathon apps looked like",
   description:
-    "The corpus study behind Sloptic: how deep the durability floor goes, why human judging misses it, and how much events differ.",
+    "The corpus study behind Sloptic, why human judging misses it, and how much events differ.",
 };
 
 const D = ACTIVE.distribution;
@@ -123,33 +123,34 @@ export default function FindingsPage() {
   return (
     <>
       <div className="page-head">
-        <h1>What 1,625 hackathon apps looked like</h1>
+        <h1>What hackathon apps look like</h1>
         <p className="page-lead">
-          Every app in {ACTIVE.provenance.n_events} hackathons, graded the same way, with no source
-          and no spec. This is the evidence that the durability floor is worth a prize of its own.
+          1,625 apps in {ACTIVE.provenance.n_events} hackathons graded the same way. This is evidence that functionality is worth its own prize.
         </p>
       </div>
 
       <section className="section attached">
         <h2 className="section-head">Almost nothing is clean</h2>
         <p className="section-intro">
-          One app out of {D.n.toLocaleString()} scored 0. The median scored {fmt(D.median)}, and a
-          quarter of the field scored above {fmt(D.q3)}. The floor is not a tail of bad apps, it is
-          where the field lives.
+          Only one app scored 0. The median is {fmt(D.median)}, and a
+          quarter scored above {fmt(D.q3)}. There is something wrong with almost every app.
         </p>
         <Histogram />
+        <h2 className="section-head">
+          More stats
+        </h2>
         <ul className="stat-list numeric">
           <li>
-            <span className="k">{A.clean_zero}</span>
-            <span className="v">app scored 0 out of {D.n.toLocaleString()} graded, so a clean grade is the exception, not the baseline.</span>
+            <span className="k"><b>{fmt(D.mean)}</b></span>
+            <span className="v">average slop.</span>
+          </li>
+          <li> 
+            <span className="k"><b>{fmt(D.stdev)}</b></span>
+            <span className="v">standard deviation.</span>
           </li>
           <li>
-            <span className="k">{fmt(D.median)}</span>
-            <span className="v">median slop, against a scale where a lower number is better and 0 means nothing was found.</span>
-          </li>
-          <li>
-            <span className="k">{fmt(D.max)}</span>
-            <span className="v">the worst app graded, roughly {(D.max / D.median).toFixed(0)} times the median.</span>
+            <span className="k"><b>{fmt(D.max)}</b></span>
+            <span className="v">the worst app.</span>
           </li>
         </ul>
       </section>
@@ -158,14 +159,11 @@ export default function FindingsPage() {
         <h2 className="section-head">Broken far more often than hackable</h2>
         <p className="section-intro">
           Sorting each app by its single worst finding gives three levels. They are cumulative, so
-          every acute app is also a significant one.
+          every acute finding is also significant.
         </p>
         <Levels />
         <p className="section-intro">
-          The middle band is the one that should bother a judge. Almost nothing in it has an excuse in
-          a hackathon that ran more than a day with an AI on hand: a dead control, a broken link, or a
-          page slow enough to notice is a couple of prompts to fix, and it ships because the demo never
-          exercised it.
+          The set of significant findings 
         </p>
       </section>
 
@@ -178,7 +176,7 @@ export default function FindingsPage() {
         </p>
         <div className="versus">
           <div className="versus-side" data-side="winner">
-            <span className="versus-num">{fmt(W.winner.median)}</span>
+            <span className="versus-num"><b>{fmt(W.winner.median)}</b></span>
             <span className="versus-cap">median slop, winners</span>
             <span className="versus-n">{W.winner.n} apps</span>
           </div>
