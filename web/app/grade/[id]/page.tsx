@@ -244,13 +244,17 @@ function Report({ view }: { view: GradeView }) {
         </span>
         {r.ranking?.cleaner_than_pct !== null && r.ranking?.cleaner_than_pct !== undefined && (
           <span className="rank-block">
-            {/* The grader's `percentile` counts apps BETTER than this one, so a low number is good.
-                Showing it raw reads as its own opposite: "p19" looks like the bottom fifth when it
-                means the top fifth. `cleaner_than_pct` is the share strictly worse, which is the
-                direction everyone already expects from a percentile. */}
-            <span className="rank-num">{ordinal(r.ranking.cleaner_than_pct)}</span>
-            <span className="score-cap">
-              <b>percentile compared to others</b>
+            {/* The grader's `percentile` counts apps BETTER than this one, so a low number is good and
+                showing it raw reads as its own opposite. `cleaner_than_pct` is the share strictly
+                worse. Said as "cleaner than", not as a percentile: a percentile makes the reader
+                supply the direction, and this exact ambiguity already shipped once, with the same row
+                reading 19 in one place and 81st in another. */}
+            <span className="score-cap rank-line">
+              <b>
+                cleaner than{" "}
+                <span className="rank-num">{Math.round(r.ranking.cleaner_than_pct)}%</span> of{" "}
+                {r.mode === "active" ? "actively" : "passively"} graded apps
+              </b>
             </span>
           </span>
         )}
@@ -281,6 +285,10 @@ function Report({ view }: { view: GradeView }) {
           failed / applied / available. {totalApplied} of {totalPossible} applied.
         </span>
       </p>
+
+      {r.ranking?.reference ? (
+        <p className="rank-reference">Compared against {r.ranking.reference}.</p>
+      ) : null}
 
       <p className="passive-note">
         This is a passive grade only, seeing only what a visitor sees. <a href="/verify">Verify the domain</a> for an active grade.

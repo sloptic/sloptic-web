@@ -2278,3 +2278,29 @@ code {
   background: color-mix(in srgb, var(--ink) 7%, transparent);
   color: var(--ink);
 }
+
+/* The population a percentile was measured against. Small, but it is what turns "cleaner than 81% of
+   apps" from a claim about the web into a claim about a named reference set. */
+.rank-reference {
+  margin: -0.5rem 0 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* The rank now reads as a sentence rather than a bare statistic, because a percentile makes the
+   reader supply its direction and "cleaner than" cannot be read backwards. The number keeps its
+   weight inline so the block still scans as a figure beside the slop score. */
+.rank-line {
+  max-width: 16rem;
+}
+.rank-line b {
+  font-size: 0.95rem;
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+.rank-line .rank-num {
+  font-size: 1.5rem;
+  color: var(--ink);
+  vertical-align: baseline;
+}
