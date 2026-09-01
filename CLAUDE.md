@@ -104,8 +104,16 @@ Prove control of the origin to be actively tested by serving a token we issue. T
 
 - **The grader is a dependency.** Pin `sloptic`; call it in `--passive-only` mode for unverified targets and
   the full run only for a verified origin. Do not copy or re-implement probe logic here. (`--passive-only` +
-  `sloptic/safety.py` shipped long ago; this repo just uses them. The two-curve tooling and the rank fix land
-  in the wheel at **2.1.1**, so pin that when moving off the editable clone.)
+  `sloptic/safety.py` shipped long ago; this repo just uses them. Pin **2.2.0** when moving off the editable
+  clone: it carries the two-curve tooling, the rank fix, the subprocess render deadline, and `sloptic.devpost`.
+  There is no 2.1.1; the tags stop at v2.1.0 and an earlier note here named a version that never shipped.)
+- **`sloptic.devpost` is the ONLY way to talk to Devpost.** Every fetch is tri-state, `ok` / `not_found` /
+  `blocked`, and only 404 and 410 mean absence. A WAF status, a 5xx, a transport error, an empty 200 body, a
+  challenge page, or a redirect off the pinned host are all `blocked`, which means COULD NOT CHECK. Mapping
+  `blocked` onto "not verified" is the bug the whole type exists to prevent. Use `pinned_host()` rather than
+  writing a `devpost.com` check anywhere, compare tokens with `compare_digest` against `event_links()` hrefs
+  (never a substring search, or a participant quoting the token in a comment could verify someone else), and
+  catch `Blocked` from `submissions()` rather than treating a partial gallery as the whole field.
 - **A passive grade is a DIFFERENT measurement from a full grade** (fewer probes apply). It ranks on
   `passive-2026.1` and is labelled "passive floor" in the UI. Never mix a passive grade onto the full-grade
   percentile, and never let a clean passive placement read as "secure": it means clean on what a visitor can

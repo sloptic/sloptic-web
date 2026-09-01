@@ -82,13 +82,18 @@ block as an absence.
 
 ## Build order
 
-1. **Passive event ranking, no verification at all.** Organizer pastes a Devpost URL, we pull the
-   gallery, grade the deployed entries passively, publish a board. Needs consent, which starting it
-   supplies, plus a per-team opt-out. This is most of the product value and it is buildable today.
-2. **Organizer verification** as above, which unlocks naming the event publicly and gates the tier
-   choice.
-3. **Per-app file token, collected at submission time**, unlocking the active tier for an event.
-   Chasing disbanded teams after an event does not work; it has to be a rules requirement up front.
+CORRECTED 2026-09-01. The order below originally started with an unverified passive event ranking,
+which the settled tier model further down contradicts: tier 3, an account with no event proof, may
+not grade an event at all, and there is deliberately no private-ranking tier. The tier model is the
+later decision and it wins. Verification comes FIRST, and the per-app token step is gone entirely,
+since tier 4 authorizes active probing through the organizer's consent chain.
+
+1. **Organizer verification.** Issue a token, the organizer publishes it as a "Grading policy" link
+   on their event's own Devpost pages, we read it back off the pinned host and write an
+   account-bound, event-scoped grant. Gates everything below.
+2. **Event ranking, passive.** Pull the gallery, grade the deployed entries, publish the board.
+3. **Event ranking, active**, for a verified event whose submission window had not closed when the
+   organizer verified, since a disclosure shown after the fact was shown to nobody.
 
 ## Open questions
 
