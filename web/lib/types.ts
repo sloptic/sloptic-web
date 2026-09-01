@@ -17,7 +17,18 @@ export interface Finding {
   probe_id: string;
   bundle: string;
   category: string;
+  /** What this fault is worth ON ITS OWN, before any damper. Prices, not addends: a list of these
+   *  does not sum to the score, which is the bug that made `contribution` necessary. */
   penalty: number;
+  /** What this finding actually ADDED to the score, after its variant group collapsed and its
+   *  category decayed. Rounded by largest remainder in the grader, so the column sums to slop_score
+   *  exactly as emitted. OPTIONAL because records written before sloptic 2.2.0 have no such key, and
+   *  every grade already stored here is one of those. */
+  contribution?: number;
+  /** Probes sharing one of these are the same logical flaw found different ways; only the dearest is
+   *  priced. Needed to tell "already counted elsewhere" apart from "decayed to nothing", which look
+   *  identical at 0.0 and mean different things to a reader. */
+  variant_group_id?: string | null;
   group?: string;
   reason?: string;
   target?: string;
