@@ -2221,3 +2221,60 @@ code {
   margin: 0.5rem 0 0;
   overflow-wrap: anywhere;
 }
+
+/* Masthead disclosure menu -------------------------------------------------- */
+
+.nav-menu {
+  position: relative;
+  display: flex;
+}
+.nav-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--muted);
+  cursor: pointer;
+}
+.nav-menu-trigger:hover,
+.nav-menu-trigger[aria-expanded="true"] {
+  color: var(--ink);
+}
+.nav-menu-caret {
+  font-size: 0.7em;
+  /* The caret turns to point at the panel, so the control says which state it is in without relying
+     on the colour change alone. */
+  transition: transform 120ms ease;
+}
+.nav-menu-trigger[aria-expanded="true"] .nav-menu-caret {
+  transform: rotate(180deg);
+}
+.nav-menu-panel {
+  position: absolute;
+  top: calc(100% + 0.65rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  padding: 0.4rem;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 16%, transparent);
+}
+.nav-menu-panel a {
+  padding: 0.5rem 0.6rem;
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.nav-menu-panel a:hover,
+.nav-menu-panel a:focus-visible {
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  color: var(--ink);
+}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import ThemeToggle from "./ThemeToggle";
+import NavMenu from "./NavMenu";
 import { currentUser } from "@/lib/auth";
 import "./globals.css";
 
@@ -53,11 +54,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <span className="masthead-spacer" />
           <nav className="mast-nav">
             <a href="/grades">your grades</a>
-            <a href="/about">about</a>
-            <a href="/checks">checks</a>
-            <a href="/findings">findings</a>
+            {/* The reference pages fold into one menu so the masthead stays scannable. /about is the
+                first item rather than the trigger, since a control that both navigates and opens a
+                menu does neither predictably. */}
+            <NavMenu
+              label="about"
+              items={[
+                { href: "/about", label: "About Sloptic" },
+                { href: "/methodology", label: "How grading works" },
+                { href: "/checks", label: "Every check" },
+                { href: "/findings", label: "The corpus study" },
+              ]}
+            />
             <a href="/organizers">organizers</a>
-            <a href="/methodology">methodology</a>
           </nav>
           {user ? (
             <form action="/auth/signout" method="post" className="mast-auth">
