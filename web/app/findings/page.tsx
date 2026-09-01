@@ -98,7 +98,10 @@ function Bands() {
                 </td>
                 <td>{t.findings.toLocaleString()}</td>
                 <td>{((t.findings / total) * 100).toFixed(1)}%</td>
-                <td>{t.apps.toLocaleString()}</td>
+                <td>
+                  {t.apps.toLocaleString()}{" "}
+                  <span className="band-pct">({t.pct_apps.toFixed(1)}%)</span>
+                </td>
               </tr>
             );
           })}
@@ -108,7 +111,7 @@ function Bands() {
             <td />
             <td>{total.toLocaleString()}</td>
             <td>100%</td>
-            <td className="band-note">overlapping, so these do not add up</td>
+            <td className="band-note">(these overlap)</td>
           </tr>
         </tbody>
       </table>
@@ -188,15 +191,20 @@ export default function FindingsPage() {
       <section className="section">
         <h2 className="section-head">What kinds of problems do apps have?</h2>
         <p className="section-intro">
-          Every finding is priced once, so it lands in exactly one band. Three quarters of everything
-          Sloptic found across the corpus sits in the mildest band, which is the shape of the problem:
-          chronic, not acute.
+          Findings have various different severities. While most are chronic, a nontrivial number
+          of apps have serious, severe, or even critical problems. The table below shows the 
+          number of findings of each kind as well as how many apps have at least one of them.
         </p>
         <Bands />
+        <br />
         <p className="section-intro">
-          Grading an app by its single worst finding gives the levels below. Each one contains the
+          Grading an app by its single worst finding gives the stats below. Each one contains the
           ones under it, so almost 3 in 5 projects carry a significant problem and virtually every app
-          overlooks some hygiene.
+          overlooks some hygiene. 
+        </p>
+        <p className="section-intro">
+          <em>(A significant problem has a penalty more than 20, and an acute problem
+          has a penalty of more than 40.)</em>
         </p>
         <Levels />
       </section>

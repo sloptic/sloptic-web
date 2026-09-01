@@ -2185,3 +2185,7 @@ code {
   font-size: 0.76rem;
   white-space: normal;
 }
+/* The share rides with its count, dimmer, so the column still scans as counts first. */
+.band-table .band-pct {
+  color: var(--muted);
+}
