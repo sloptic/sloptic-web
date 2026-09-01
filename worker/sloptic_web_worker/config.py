@@ -53,9 +53,14 @@ CHALLENGE_TRIP_STREAK = int(os.environ.get("CHALLENGE_TRIP_STREAK", "25"))
 # decay, not to dig (scripts/retry_blocked.py's circuit breaker makes the same call).
 CHALLENGE_BACKOFF_SECONDS = float(os.environ.get("CHALLENGE_BACKOFF_SECONDS", str(48 * 3600)))
 
-# A claimed job with no result after this long is presumed dead (the worker was killed mid-grade)
-# and is returned to the queue. Generous: a real grade with three Lighthouse runs takes ~7 minutes.
-STALE_JOB_SECONDS = float(os.environ.get("STALE_JOB_SECONDS", "1800"))
+# A claimed job with no result after this long is presumed dead (the supervisor was killed
+# mid-grade, taking the child with it before it could write a reason) and is returned to the queue.
+#
+# Derived from the deadline rather than guessed, and set below where GRADE_TIMEOUT_SECONDS is
+# defined. Nothing can legitimately be running past its own deadline, since the supervisor kills it
+# there, so anything still `running` well after that is a ghost row and waiting longer only leaves
+# someone watching a page poll. The old fixed 1800s predated the deadline and made a service restart
+# cost 30 minutes of false "grading".
 
 # A queued grade nobody has started within this long is failed rather than left spinning. Generous
 # against a real grade (~7 minutes) so an honest backlog is not mistaken for an outage; the read path
@@ -75,15 +80,25 @@ GRADE_TIMEOUT_SECONDS = float(os.environ.get("GRADE_TIMEOUT_SECONDS", "600"))
 # worker.
 MAX_CONCURRENT_GRADES = int(os.environ.get("MAX_CONCURRENT_GRADES", "4"))
 
-# Concurrent grades must NOT trace at the same time: Lighthouse measures LCP/TBT on this box, so two
-# traces sharing a CPU measure each other's contention and the perf axis stops being comparable to
-# the frozen curve. sloptic solves this with a counting semaphore over flock files
-# (pipeline._lighthouse_lock), which works across processes, which is why grades are processes here.
-# SLOTS=1 is the grader's default and means one clean trace at a time: full concurrency everywhere
-# else in the grade, a strict queue for the trace lane. Raise it only after MEASURING contention on
-# this box, never by guessing, since the number silently changes what the perf axis means.
+# Deadline + slack for the supervisor to notice, kill and reap. Overridable, but the default should
+# stay tied to the deadline.
+STALE_JOB_SECONDS = float(os.environ.get("STALE_JOB_SECONDS", str(GRADE_TIMEOUT_SECONDS + 120)))
+
+# Concurrent grades must not all trace at once: Lighthouse measures LCP/TBT on this box, so traces
+# sharing a CPU measure each other's contention. sloptic throttles the lane with a counting semaphore
+# over flock files (pipeline._lighthouse_lock), which works across processes, which is one of the two
+# reasons grades are processes here.
+#
+# 3, NOT the grader's default of 1, because the number has to match the CURVE. passive-2026.1 was
+# graded at 3 slots (that is what brought the corpus in at 35-40 hours instead of days), so 3 is the
+# condition those percentiles describe. A quieter lane would not be "more accurate", it would be a
+# different measurement from the one an app is being ranked against. Change this only by re-freezing
+# the curve, never to tune throughput.
+#
+# NB: setting this in a shell rc does NOT reach the worker. systemd never sources a bashrc; the unit
+# reads Environment= and EnvironmentFile=. It belongs in the repo-root .env.
 LIGHTHOUSE_LOCK_PATH = os.environ.get("SLOPTIC_LIGHTHOUSE_LOCK", "/tmp/sloptic-lighthouse.lock")
-LIGHTHOUSE_SLOTS = os.environ.get("SLOPTIC_LIGHTHOUSE_SLOTS", "1")
+LIGHTHOUSE_SLOTS = os.environ.get("SLOPTIC_LIGHTHOUSE_SLOTS", "3")
 
 
 # --- reference curve (percentile for anonymous passive grades) ---------------------------------
