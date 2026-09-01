@@ -398,13 +398,36 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
       </>
     );
   }
-  const sorted = [...findings].sort((a, b) => (b.penalty ?? 0) - (a.penalty ?? 0));
+  // One flaw, one row. The same probe firing on eight paths is eight findings in the data but one
+  // thing to fix, and listing it eight times was the single biggest reason this list looked like it
+  // summed to twice the score. The grader takes the same view when scoring: repeats inside a
+  // category decay hard, so the eighth instance is worth almost nothing.
+  const groups = new Map<string, { f: Finding; targets: string[] }>();
+  for (const f of findings) {
+    const key = `${f.probe_id}::${f.reason ?? ""}`;
+    const g = groups.get(key);
+    if (g) {
+      if (f.target) g.targets.push(f.target);
+      if ((f.penalty ?? 0) > (g.f.penalty ?? 0)) g.f = f;
+    } else {
+      groups.set(key, { f, targets: f.target ? [f.target] : [] });
+    }
+  }
+  const sorted = [...groups.values()].sort((a, b) => (b.f.penalty ?? 0) - (a.f.penalty ?? 0));
   return (
     <>
-      <h2>What failed ({findings.length})</h2>
-      <p className="section-intro">Open one for details</p>
+      <h2>What failed ({sorted.length})</h2>
+      {/* Said before the list, because the numbers beside each row are prices and a reader will
+          otherwise add them. They do not sum to the score: one flaw counts once however many places
+          it appears, and repeats within a category count less each time. The three axis subtotals
+          above ARE the decomposition, and those do sum exactly. */}
+      <p className="section-intro">
+        Each number is what that fault is worth on its own. They do not add up to the score: repeats
+        of one fault count less each time, so the axis totals above are the real split. Open one for
+        details.
+      </p>
       <div className="sample-findings">
-        {sorted.map((f, i) => {
+        {sorted.map(({ f, targets }, i) => {
           const entry = card[f.probe_id];
           const ev = evidencePairs(f.evidence as Record<string, unknown> | undefined);
           return (
@@ -415,10 +438,17 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
                   <span className="finding-cat">{f.category}</span>
                   {f.reason && <span className="finding-desc">{f.reason}</span>}
                   <span className="finding-meta">
-                    {[f.probe_id, f.target].filter(Boolean).join("  /  ")}
+                    {[
+                      f.probe_id,
+                      targets.length > 1 ? `${targets.length} paths` : f.target,
+                    ]
+                      .filter(Boolean)
+                      .join("  /  ")}
                   </span>
                 </span>
-                <span className="finding-pen">+{f.penalty}</span>
+                {/* No plus sign. It read as an addend and invited totting the column up to a number
+                    twice the score. */}
+                <span className="finding-pen">{f.penalty}</span>
               </summary>
               <div className="finding-expand">
                 {entry?.expected && (
