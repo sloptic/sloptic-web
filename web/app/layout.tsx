@@ -96,7 +96,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 sloptic
               </a>
               <p>
-                One number for how well a deployed web app holds up, on the same scale for every app.
+                Black box web app ranking for any app you own
               </p>
             </div>
 
