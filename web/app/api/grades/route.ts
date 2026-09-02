@@ -15,6 +15,11 @@ export async function GET() {
     .from("grades")
     .select(SUMMARY_SELECT)
     .eq("account_id", user.id)
+    // Grades you submitted, not every entry in an event you ran. Event grades carry the organizer's
+    // account so their reports never expire, which is deliberate, but it also made a 52 app field
+    // land in this list as though they were apps you had graded one by one. They belong on the
+    // event's board.
+    .is("event_run_id", null)
     .order("submitted_at", { ascending: false })
     .limit(200);
 
