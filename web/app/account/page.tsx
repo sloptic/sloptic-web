@@ -134,7 +134,7 @@ export default async function AccountPage() {
         </ul>
       </section>
 
-      <AccountActions email={user.email ?? ""} grantCount={grants?.length ?? 0} />
+      <AccountActions email={user.email ?? ""} />
     </>
   );
 }

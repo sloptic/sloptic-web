@@ -4,7 +4,7 @@ import { useState } from "react";
 
 /** Deleting an account is irreversible and reaches more than the account row, so the page says what
  *  goes and what does not before asking, and asks for the email rather than an OK button. */
-export default function AccountActions({ email, grantCount }: { email: string; grantCount: number }) {
+export default function AccountActions({ email }: { email: string }) {
   const [typed, setTyped] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,14 +28,11 @@ export default function AccountActions({ email, grantCount }: { email: string; g
     <div className="method" data-tone="limits">
       <h2>Delete this account</h2>
       <p>
-        Your sign in, your saved grades&apos; link to this account, and{" "}
-        {grantCount === 1 ? "your one verification" : `your ${grantCount} verifications`} go
-        immediately and cannot be restored.
+        You will lose your domain and event verifications upon deletion and they cannot be restored.
       </p>
       <p>
-        Reports you saved are not destroyed with the account. They lose their owner and become
-        ordinary anonymous grades, which means they are deleted 30 days after they ran. Delete any you
-        want gone now from <a href="/grades">your grades</a> first.
+        Note that reports you saved are not destroyed with the account. They are kept for 30 days. If
+        you want those deleted, <a href="/grades">do it here</a>.
       </p>
       <form className="delete-form" onSubmit={remove}>
         <label htmlFor="confirm-email">Type {email} to confirm</label>
