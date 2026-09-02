@@ -246,7 +246,7 @@ export default function FindingsPage() {
           As you can see, winning does not correlate with app cleanliness. In fact, the opposite tends to be true.
           Most hackathons employ human judging, which rewards ideas, features, presentation, and the demo over durability.
           Winning apps tend to ship more features, meaning more surfaces to misconfigure or get wrong, and human judges do not 
-          have time to judge quality over hundreds of apps.
+          have time to judge quality consistently over hundreds of apps.
         </p>
       </section>
 

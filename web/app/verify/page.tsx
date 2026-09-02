@@ -4,7 +4,7 @@ import { TOTALS } from "@/lib/checks";
 export const metadata: Metadata = {
   title: "Verifying your site",
   description:
-    `Why Sloptic runs ${TOTALS.passive} of its ${TOTALS.total} checks by default, and what proving you own a site unlocks.`,
+    `Why Sloptic runs ${TOTALS.passive} of its ${TOTALS.total} checks by default.`,
 };
 
 export default function VerifyPage() {
@@ -13,79 +13,61 @@ export default function VerifyPage() {
       <div className="page-head">
         <h1>Why only some checks run</h1>
         <p className="page-lead">
-          Sloptic has {TOTALS.total} checks. On a URL nobody has proven they own, it runs the{" "}
-          {TOTALS.passive} that only read what a visitor can already see. Here is why, and what changes
-          when you prove the site is yours.
+          Sloptic has {TOTALS.total} tests. On a URL nobody has proven they own, it runs the{" "}
+          {TOTALS.passive} checks that only read what a visitor can see. Why?
         </p>
       </div>
 
       <section className="section">
-        <h2 className="section-head">The two kinds of checks</h2>
+        <h2 className="section-head">The two kinds of tests</h2>
         <div className="rows">
           <div className="row2">
             <span className="term">
-              Look-only
+              Passive
               <span className="sub">{TOTALS.passive} checks</span>
             </span>
             <p className="desc">
-              These read what your app already shows every visitor: its settings, the page it serves,
-              how fast it loads, whether a screen reader can use it. Running them on a stranger&apos;s
-              site is no different from visiting it, so they run on any URL. They are also where most of
-              the score comes from.
+              These read what your app already shows to everyone. Running them on a stranger&apos;s
+              site is no different from visiting it, so they run on any URL. 
             </p>
           </div>
           <div className="row2">
             <span className="term">
-              Hands-on
+              Active
               <span className="sub">{TOTALS.active} checks</span>
             </span>
             <p className="desc">
-              These go looking for holes by sending real attack traffic: injection payloads, malformed
-              input, file uploads, repeated logins. That is useful on your own app and
-              not okay on someone else&apos;s, so they stay locked until we know who
-              is asking and that they own the target.
+              These poke the app in a myriad of ways, including submitting forms, sending large requests, uploading files
+              and attempting injection attacks. Doing this would be unauthorized testing on a site you do not own, which 
+              is why we have to verify you control the site before running them. 
             </p>
           </div>
         </div>
-        <p className="section-intro" style={{ marginTop: "1.75rem" }}>
-          This is not a paywall. Pointing attack traffic at a site you do not own is unauthorized
-          testing, whatever your intent.
-        </p>
       </section>
 
       <section className="section">
-        <h2 className="section-head">What proving ownership takes</h2>
+        <h2 className="section-head">How to verify</h2>
         <p className="section-intro">
-          Two things, because they answer two different questions, who is asking and whether they
-          control the site.
+          Two things are needed:
         </p>
-        <div className="rows">
-          <div className="row2">
-            <span className="term">An account</span>
-            <p className="desc">
-              Permission is attached to a person, not to a URL. It means a request to run the hands-on
-              checks is always traceable to someone who agreed to the terms.
+        <div className="card-grid">
+          <div className="card">
+            <h3>An account</h3>
+            <p>Permission attaches to a person, not to a site.</p>
+          </div>
+          <div className="card">
+            <h3>A file you serve</h3>
+            <p>
+              Publish the token we give you at{" "}
+              <code>/.well-known/sloptic-verification.txt</code>. Only whoever controls the deployment
+              can.
             </p>
           </div>
-          <div className="row2">
-            <span className="term">A token you serve</span>
-            <p className="desc">
-              We give you a random string. You publish it at a fixed path on the site:
-              <br />
-              <code>https://your-site.com/.well-known/sloptic-verification.txt</code>
-              <br />
-              We fetch that path and check it matches. Putting a file at a chosen path on a site is
-              something only whoever controls the deployment can do, which is exactly the thing being
-              proven.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">On a custom domain, a DNS record too</span>
-            <p className="desc">
-              A TXT record at <code>_sloptic.your-domain.com</code> holding the same token. The file
-              proves you control what the site serves, the DNS record proves you control the domain
-              itself. They are separate things, so someone who manages to plant a file still cannot
-              pass.
+          <div className="card">
+            <h3>A DNS record</h3>
+            <p>
+              The same token in a TXT record at <code>_sloptic.your-domain.com</code>. Serving a file
+              and editing a zone are different powers, so planting one is not enough.
             </p>
           </div>
         </div>

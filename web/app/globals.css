@@ -2389,3 +2389,7 @@ a.mast-user:hover {
 .claim-check {
   margin-bottom: 1.5rem;
 }
+/* A token path is long and unbreakable, so it needs permission to wrap inside a narrow card. */
+.card p code {
+  overflow-wrap: anywhere;
+}
