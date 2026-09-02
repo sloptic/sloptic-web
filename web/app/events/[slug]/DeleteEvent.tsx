@@ -58,8 +58,7 @@ export default function DeleteEvent({
                 onChange={() => setReports("keep")}
               />
               <span>
-                <b>Let them expire.</b> They lose their owner and become ordinary anonymous grades,
-                deleted 30 days after they ran, readable at their own links until then.
+                <b>Let them expire.</b> They become ordinary anonymous grades deleted 30 days after they ran.
               </span>
             </label>
             <label>
@@ -68,9 +67,7 @@ export default function DeleteEvent({
                 onChange={() => setReports("delete")}
               />
               <span>
-                <b>Delete them now.</b> The {graded} reports go immediately and their links stop
-                working. The scores stay counted against the daily grading budget, which is all that
-                is kept.
+                <b>Delete them now.</b> The {graded} reports are removed immediately.
               </span>
             </label>
           </div>
