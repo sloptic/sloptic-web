@@ -43,10 +43,10 @@ export default function DeleteEvent({
     <div className="method" data-tone="limits">
       <h2>Remove this event</h2>
       <p>
-        Your verification goes, and so do{" "}
+        Your verification goes and so do{" "}
         {runs === 1 ? "its run" : `its ${runs} runs`}
-        {graded > 0 ? ` and ${graded === 1 ? "board" : "boards"}` : ""}. The link you published on
-        Devpost stops meaning anything, so verifying again needs a new one.
+        {graded > 0 ? ` and ${graded === 1 ? "board" : "boards"}` : ""}. You need to reverify if you 
+        want to add this event again. This is permanent and cannot be undone.
       </p>
       {graded > 0 && (
         <>
