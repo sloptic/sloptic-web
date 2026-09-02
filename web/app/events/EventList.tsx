@@ -229,7 +229,7 @@ export default function EventList({
                                             </a>
                                           </th>
                                           <td className="band-note">
-                                            {e.skip_reason ? e.skip_reason
+                                            {e.skip_reason ? `skipped (${e.skip_reason})`
                                               : e.grade_id ? <a href={`/grade/${e.grade_id}`}>report</a>
                                               : "will be graded"}
                                           </td>

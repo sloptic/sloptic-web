@@ -38,7 +38,11 @@ class Field:
 
 
 def _pick_app_url(hrefs: list[str]) -> tuple[str | None, str | None]:
-    """The URL to grade from a submission's own links, or why none of them will do."""
+    """The URL to grade from a submission's own links, or why none of them will do.
+
+    The reason is a few words because it is rendered once per row in a table an organizer scans down
+    a field with. The link itself is on the row, so the reason does not repeat it.
+    """
     seen_offtarget: str | None = None
     for href in hrefs:
         if not href.lower().startswith(("http://", "https://")):
@@ -49,13 +53,11 @@ def _pick_app_url(hrefs: list[str]) -> tuple[str | None, str | None]:
             continue
         plat = platform_id._platform_by_suffix(platform_id._host_of(href))
         if plat in config.CANVAS_SHELL_PLATFORMS:
-            return None, (f"hosted on {plat}, where Sloptic cannot properly separate what the team "
-                          f"built from the platform")
+            return None, f"{plat} shell"
         return href, None
     if seen_offtarget:
-        # Rendered in the field table, so it follows the site's voice: state it and stop.
-        return None, f"points at {seen_offtarget}, someone else's product"
-    return None, "no live app link on the submission"
+        return None, "github only" if seen_offtarget == "github.com" else "third party link"
+    return None, "no links provided"
 
 
 def resolve(slug: str, limit: int = 1000) -> Field:
