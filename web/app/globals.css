@@ -2770,3 +2770,28 @@ a.mast-user:hover {
   color: var(--muted);
   cursor: pointer;
 }
+
+/* An entry's own progress, inline in its status cell. */
+.entry-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 11rem;
+}
+.entry-progress .progress-track {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  overflow: hidden;
+}
+.entry-progress .progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 400ms ease;
+}
+.entry-progress-label {
+  color: var(--muted);
+  font-size: 0.74rem;
+}

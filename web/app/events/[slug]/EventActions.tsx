@@ -9,8 +9,12 @@ type Claim = {
   check_status: "ok" | "not_found" | "blocked" | "error" | null;
   check_detail: string | null; checked_at: string | null;
 };
-type Entry = { project_url: string; app_url: string | null; skip_reason: string | null; grade_id: string | null;
-               grades?: { status: string; progress: { label?: string } | null } | { status: string; progress: { label?: string } | null }[] | null };
+type Progress = { done?: number; total?: number; label?: string } | null;
+type Grade = { status: string; progress: Progress };
+type Entry = {
+  project_url: string; app_url: string | null; skip_reason: string | null; grade_id: string | null;
+  grades?: Grade | Grade[] | null;
+};
 type Run = {
   id: string; slug: string; mode: "passive" | "active";
   status: "resolving" | "ready" | "grading" | "done" | "failed" | "cancelled";
@@ -173,6 +177,7 @@ export default function EventActions({
                         skip_reason: e.skip_reason,
                         grade_id: e.grade_id,
                         status: gradeOf(e)?.status ?? null,
+                        progress: gradeOf(e)?.progress ?? null,
                       }))}
                     />
                   )}
