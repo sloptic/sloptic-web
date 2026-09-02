@@ -114,7 +114,7 @@ export default async function BoardPage({ params }: { params: { runId: string } 
         </p>
         <h1>{run.slug}</h1>
         <p className="page-lead">
-          {ranked.length + gated.length} of {total} entries graded on the {run.mode} checks.
+          {ranked.length + gated.length} of {total} entries {run.mode}ly graded.
           {pending.length > 0 ? ` ${pending.length} still running.` : ""}
           {failed.length > 0 ? ` ${failed.length} could not be reached.` : ""}
         </p>
@@ -123,13 +123,12 @@ export default async function BoardPage({ params }: { params: { runId: string } 
       <section className="section attached">
         <h2 className="section-head">The board</h2>
         <p className="section-intro">
-          Sorted by slop score, lowest first. The percentile compares each app against the frozen
-          population for this battery, so it does not depend on who else entered this event.
+          Default is sorted by lowest slop score. Lower is better. 
         </p>
         <p className="section-intro">
-          Two apps can score the same and place differently. The exposure column is why: it is how
-          much slop the app was open to across the checks that applied, and surviving more of it ranks
-          higher at the same score. Each report shows the full breakdown.
+          Note that two apps can score the same and place differently, due to tiebreaks. Tiebreaks are
+          in this order: lowest slop score --&gt; whether a catastrophic finding was found --&gt; worst 
+          single finding --&gt; how much slop the app was exposed to --&gt; how many kinds of checks applied. 
         </p>
         {ranked.length === 0 ? (
           <p className="section-intro">Nothing has finished grading yet.</p>
@@ -171,8 +170,8 @@ export default async function BoardPage({ params }: { params: { runId: string } 
         <section className="section">
           <h2 className="section-head">Could not be reached</h2>
           <p className="section-intro">
-            These were live links when the team submitted them. The deployment has since stopped
-            answering, so there is nothing to grade.
+            Sloptic cannot access these domains as of grade time. Possible reasons include: expired domain, 
+            expired free tier, disabled build, WAF challenge on our end, etc.
           </p>
           <div className="table-scroll">
             <table className="count-table">
@@ -195,17 +194,7 @@ export default async function BoardPage({ params }: { params: { runId: string } 
         <h2>What this board covers</h2>
         <p>
           {total} entries were in the gallery and {skipped.length} could not be graded. Most events
-          lose entries to submissions that link only to a repository, which is worth a line in your
-          rules next time.
-        </p>
-        <p>
-          Every entry here ran the same {run.mode} battery, so the scores compare. A{" "}
-          {run.mode === "passive" ? "passive" : "full"} grade is its own measurement and does not
-          compare to the other one.
-          {run.override ? " This run skipped the ownership check, so it is not an authorized board." : ""}
-          {run.gallery_complete === false
-            ? " Devpost stopped answering while we read the gallery, so this is not the whole field."
-            : ""}
+          lose entries to submissions that link only to a repository which is worth mentioning.
         </p>
         <div className="cta-row">
           <a className="button secondary" href="/events">Back to events</a>
