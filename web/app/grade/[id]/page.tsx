@@ -420,30 +420,30 @@ function RankDetail({ r }: { r: GradeResult }) {
   const applicable = num(rep.probes_applicable);
   const cleanRate = num(rep.clean_rate);
   const untested = (rep.untested_families as string[] | undefined) ?? [];
+  const limited = rep.status === "limited_engagement";
 
   return (
     <>
       <h2>How this ranks</h2>
       <p className="section-intro">
-        Apps with the same score are separated in this order: whether a gating finding fired, then the
-        worst single finding, then how much slop the app was exposed to and avoided, then how many
-        kinds of check applied.
+        Apps with the same score are tiebroken in this order: whether a catastrophic finding was
+        found, then the worst single finding, then how much slop the app was exposed to, then how many
+        kinds of checks applied.
       </p>
       <ul className="stat-list numeric">
         <li>
           <span className="k">{fmtScore(worst)}</span>
           <span className="v">
-            the worst single finding. At equal scores the app whose worst fault is smaller ranks
-            higher, since one severe fault is worse than the same total spread thinly.
+            worst single finding. Apps with worse single findings tend to have significant issues that
+            degrade the user experience of the app, or allow bad actors easy unauthorized access.
           </span>
         </li>
         {potential !== null && (
           <li>
             <span className="k">{fmtScore(potential)}</span>
             <span className="v">
-              slop this app was exposed to across the checks that applied. It scored{" "}
-              {fmtScore(Number(r.slop_score))} of that, so it avoided{" "}
-              {fmtScore(Math.max(0, potential - Number(r.slop_score)))}. More exposure survived ranks
+              slop this app was exposed to. It scored {fmtScore(Number(r.slop_score))} of that, which
+              is {((Number(r.slop_score) / potential) * 100).toFixed(1)}%. More exposure survived ranks
               higher at the same score.
             </span>
           </li>
@@ -453,32 +453,31 @@ function RankDetail({ r }: { r: GradeResult }) {
             <span className="k">{applicable}</span>
             <span className="v">
               checks applied out of the {r.passive_probe_count ?? TOTALS.passive} in this battery.
-              {cleanRate !== null ? ` ${cleanRate}% of them found nothing.` : ""}
+              {limited ? "*" : ""}
             </span>
           </li>
         )}
         {num(rk.categories_applied) !== null && (
           <li>
             <span className="k">{rk.categories_applied}</span>
-            <span className="v">
-              kinds of fault were actually testable here. More coverage ranks higher at the same
-              score, since a number from a wider look is worth more.
-            </span>
+            <span className="v">different faults were actually testable.</span>
           </li>
         )}
         {rep.attack_surface_coverage ? (
           <li>
             <span className="k">{String(rep.attack_surface_coverage)}</span>
             <span className="v">
-              how much of the app&apos;s surface the checks could reach.
+              how much of the app&apos;s surface Sloptic could reach.
               {untested.length > 0 ? ` Nothing tested: ${untested.join(", ")}.` : ""}
             </span>
           </li>
         ) : null}
       </ul>
-      {Array.isArray(rep.why) && rep.why.length > 0 && (
+      {/* Only when it applies. A footnote explaining Limited Engagement under a grade that ran the
+          whole battery is a note about something that did not happen. */}
+      {limited && (
         <p className="section-intro fineprint">
-          Why the coverage is what it is: {(rep.why as string[]).join("; ")}.
+          *If fewer than 40 checks applied, the app is noted for &quot;Limited Engagement&quot;.
         </p>
       )}
     </>
