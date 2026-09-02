@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import FieldTable, { type FieldEntry } from "./FieldTable";
+import { estimateLabel } from "@/lib/timing";
 
 type Claim = {
   id: string; slug: string; token: string;
@@ -23,16 +24,6 @@ type Run = {
 };
 
 const POLL_MS = 4000;
-/** Roughly how long the rest of a field will take, from what the worker actually does: four at a
- *  time, about five minutes each. Stated in the open rather than as a promise about anyone's
- *  ceremony, which Devpost does not publish and we cannot know. */
-function eta(remaining: number): string {
-  const mins = Math.round((remaining * 5) / 4);
-  if (mins < 60) return `about ${Math.max(1, mins)} minutes`;
-  const h = mins / 60;
-  return `about ${h < 2 ? "an hour and a half" : `${Math.round(h)} hours`}`;
-}
-
 const gradeOf = (e: Entry) => (Array.isArray(e.grades) ? e.grades[0] : e.grades) ?? null;
 
 function checkLine(c: Claim): string {
@@ -170,7 +161,7 @@ export default function EventActions({
                   </p>
                   {(r.status === "ready" || r.status === "grading") && gradeable.length > finished && (
                     <p className="run-skips">
-                      {eta(gradeable.length - finished)} left at four at a time.
+                      {estimateLabel(gradeable.length - finished, r.mode)} left.
                       {r.priority === 0
                         ? " This event is judging now, so its grades go before other events."
                         : r.priority === 2

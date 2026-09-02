@@ -13,9 +13,9 @@ HERE="$(cd "$(dirname "$0")/.." && pwd)"
 REF="${1:-}"          # optional git ref in sloptic-main; default is its working tree
 status=0
 
-for set in active passive; do
-  vendored="$HERE/web/lib/corpus/corpus-figures-$set.json"
-  rel="validation/corpus-figures-$set.json"
+for rel in validation/corpus-figures-active.json validation/corpus-figures-passive.json validation/grade-timing.json; do
+  set="$(basename "$rel" .json)"
+  vendored="$HERE/web/lib/corpus/$(basename "$rel")"
   if [ -n "$REF" ]; then
     source_json="$(git -C "$MAIN" show "$REF:$rel" 2>/dev/null)" || { echo "MISSING  $set: $REF:$rel"; status=1; continue; }
   else
