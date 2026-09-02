@@ -18,11 +18,20 @@ type Run = {
 
 const POLL_MS = 4000;
 
+type Verified = { slug: string; granted_at: string; expires_at: string };
+
+function when(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? "-"
+    : d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
 export default function RunFlow({
-  slugs,
+  verified,
   canOverride,
 }: {
-  slugs: string[];
+  verified: Verified[];
   canOverride: boolean;
 }) {
   const [runs, setRuns] = useState<Run[] | null>(null);
@@ -92,24 +101,44 @@ export default function RunFlow({
 
   return (
     <>
-      {(slugs.length > 0 || canOverride) && (
-        <section className="section">
-          <h2 className="section-head">Grade an event</h2>
-          {slugs.length > 0 && (
-            <div className="cta-row">
-              {slugs.map((s) => (
-                <button
-                  key={s}
-                  className="button"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void startRun(s)}
-                >
-                  {s}
-                </button>
-              ))}
+      {(verified.length > 0 || canOverride) && (
+        <section className="section attached">
+          <h2 className="section-head">Verified events</h2>
+          {verified.length > 0 ? (
+            <div className="table-scroll">
+              <table className="count-table">
+                <thead>
+                  <tr>
+                    <th>event</th>
+                    <th>re-prove by</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {verified.map((v) => (
+                    <tr key={v.slug}>
+                      <th scope="row">
+                        <a href={`https://${v.slug}.devpost.com`} rel="noopener noreferrer">
+                          {v.slug}.devpost.com
+                        </a>
+                      </th>
+                      <td>{when(v.expires_at)}</td>
+                      <td>
+                        <button
+                          className="link-button"
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void startRun(v.slug)}
+                        >
+                          grade it
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
+          ) : null}
           {canOverride && (
             <>
               <p className="section-intro fineprint">

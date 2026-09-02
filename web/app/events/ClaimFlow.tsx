@@ -114,7 +114,7 @@ export default function ClaimFlow({ initialEvent = "" }: { initialEvent?: string
   return (
     <>
       <section className="section attached">
-        <h2 className="section-head">Your event</h2>
+        <h2 className="section-head">Verify an event</h2>
         <form className="grade-form" onSubmit={start}>
           <input
             type="text"
@@ -135,7 +135,9 @@ export default function ClaimFlow({ initialEvent = "" }: { initialEvent?: string
         ) : null}
       </section>
 
-      {(claims ?? []).map((c) => {
+      {/* Verified claims are not repeated here: they appear once, in the verified table, with their
+          action. A card, a row and a button for the same event was three views of one thing. */}
+      {(claims ?? []).filter((c) => c.status !== "verified").map((c) => {
         const link = `${origin}/e/${c.token}`;
         return (
           <section className="section" key={c.id}>

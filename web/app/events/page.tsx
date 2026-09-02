@@ -73,40 +73,12 @@ export default async function EventsPage({
         </p>
       </div>
 
-      {grants && grants.length > 0 ? (
-        <section className="section attached">
-          <h2 className="section-head">Verified</h2>
-          <div className="table-scroll">
-            <table className="count-table">
-              <thead>
-                <tr>
-                  <th>event</th>
-                  <th>verified</th>
-                  <th>re-prove by</th>
-                </tr>
-              </thead>
-              <tbody>
-                {grants.map((g) => (
-                  <tr key={g.scope}>
-                    <th scope="row">
-                      <a href={`https://${g.scope}.devpost.com`} rel="noopener noreferrer">
-                        {g.scope}.devpost.com
-                      </a>
-                    </th>
-                    <td>{when(g.granted_at)}</td>
-                    <td>{when(g.expires_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {/* Said plainly rather than shown as a disabled button. A greyed-out control implies the
-              feature exists and you are not allowed to use it, which would be false. */}
-        </section>
-      ) : null}
-
       <RunFlow
-        slugs={(grants ?? []).map((g) => g.scope)}
+        verified={(grants ?? []).map((g) => ({
+          slug: g.scope,
+          granted_at: g.granted_at,
+          expires_at: g.expires_at,
+        }))}
         canOverride={mayOverrideEvents(user.email)}
       />
 

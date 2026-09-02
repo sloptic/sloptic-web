@@ -1139,6 +1139,9 @@ section.report h2 {
 }
 .button {
   display: inline-block;
+  /* An <a class="button"> gets this from the browser; a real <button> does not, so every actual
+     button on the site was showing an arrow. */
+  cursor: pointer;
   font-family: var(--font-mono);
   font-size: 0.9rem;
   font-weight: 600;
@@ -1148,6 +1151,10 @@ section.report h2 {
   color: var(--on-accent);
   text-decoration: none;
   border: 2px solid var(--accent);
+}
+.button:disabled {
+  cursor: default;
+  opacity: 0.55;
 }
 .button.secondary {
   background: transparent;
