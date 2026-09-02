@@ -53,7 +53,8 @@ def _pick_app_url(hrefs: list[str]) -> tuple[str | None, str | None]:
                           f"built from the platform")
         return href, None
     if seen_offtarget:
-        return None, f"points at {seen_offtarget}, which is someone else's product rather than the team's app"
+        # Rendered in the field table, so it follows the site's voice: state it and stop.
+        return None, f"points at {seen_offtarget}, someone else's product"
     return None, "no live app link on the submission"
 
 
