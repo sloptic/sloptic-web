@@ -2864,7 +2864,8 @@ a.mast-user:hover {
   .dots::after { content: "..."; animation: none; }
 }
 
-/* Room under the actions before whatever reports back. */
+/* The verdict box sits above the buttons, so the gap belongs on both sides of the row. */
 .event-actions {
+  margin-top: 1.25rem;
   margin-bottom: 1.25rem;
 }
