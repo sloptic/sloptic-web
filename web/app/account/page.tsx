@@ -49,9 +49,7 @@ export default async function AccountPage() {
       <section className="section attached">
         <h2 className="section-head">Apps you graded</h2>
         <p className="section-intro">
-          Grades saved to this account, and any this browser ran that you have not saved yet. The
-          battery is named beside each score: a passive and an active grade are different
-          measurements ranked on different curves, so their numbers do not compare.
+          Grades saved to this account and any this browser ran but hasn't been saved yet.
         </p>
         <GradeList signedIn />
       </section>
