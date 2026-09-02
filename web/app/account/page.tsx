@@ -86,8 +86,7 @@ export default async function AccountPage() {
         ) : null}
         <ClaimFlow />
         <p className="section-intro fineprint">
-          Grading a whole field is not built yet. Verification is what it will be gated on, so proving
-          an event now means it is ready when ranking lands.
+          Grading a whole field is not ready yet.
         </p>
       </section>
 
@@ -106,8 +105,7 @@ export default async function AccountPage() {
           </ul>
         ) : (
           <p className="section-intro">
-            None yet. Proving you own a domain unlocks the checks that send real traffic, for that
-            origin and for this account only. <a href="/verify">What verifying involves</a>.
+            None yet. <a href="/verify">What verifying involves</a>.
           </p>
         )}
       </section>
@@ -118,7 +116,7 @@ export default async function AccountPage() {
           <li>
             <span className="k">email</span>
             <span className="v">
-              {user.email}. It is how you sign in, and the only personal detail we ask for.
+              {user.email}
             </span>
           </li>
           <li>
@@ -129,8 +127,8 @@ export default async function AccountPage() {
             <span className="k">terms</span>
             <span className="v">
               {profile?.terms_accepted_at
-                ? `Accepted ${when(profile.terms_accepted_at)}.`
-                : "Not recorded yet. Sign out and back in to accept the current terms, which the active tier needs."}
+                ? `Accepted ${when(profile.terms_accepted_at)}`
+                : "Not recorded yet. Sign out and back in to accept the current terms."}
             </span>
           </li>
         </ul>
