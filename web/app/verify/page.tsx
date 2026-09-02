@@ -66,47 +66,36 @@ export default function VerifyPage() {
           <div className="card">
             <h3>A DNS record</h3>
             <p>
-              The same token in a TXT record at <code>_sloptic.your-domain.com</code>. 
+              The same token in a TXT record at <code>_sloptic.your-domain.com</code>. If you do not have a custom
+              domain, you can attach one or enter a verified event.
             </p>
           </div>
         </div>
       </section>
 
       <section className="section">
-        <h2 className="section-head">The rules it follows</h2>
+        <h2 className="section-head">What verification implies</h2>
         <div className="rows">
           <div className="row2">
             <span className="term">It is yours</span>
             <p className="desc">
-              Verifying does not mark a site as open season. It records that your account may run the
-              hands-on checks on that site. Someone else pasting the same URL still gets the look-only set.
+              Verifying does not make a site globally available for active grading, only that YOU can grade it.
+              The rest still only get passive checks.
             </p>
           </div>
           <div className="row2">
             <span className="term">It covers that site only</span>
             <p className="desc">
-              Permission applies to the exact site you verified, and a redirect cannot carry it
-              somewhere else.
+              Permission applies to the exact site you verified.
             </p>
           </div>
           <div className="row2">
-            <span className="term">It expires, and is rechecked</span>
+            <span className="term">It expires and is rechecked</span>
             <p className="desc">
-              Permission lapses after a few months. A domain that changes hands does not inherit the
-              old owner&apos;s permission.
+              Permission lapses after a few months, after which you need to re-verify.
             </p>
           </div>
         </div>
-      </section>
-
-      <section className="section">
-        <h2 className="section-head">If your app is on a platform subdomain</h2>
-        <p className="section-intro">
-          On an address like <code>your-app.vercel.app</code>, the DNS record is not something you can
-          add, since the domain belongs to the platform. There are two ways forward. Attach a custom
-          domain, which you control fully, or enter an event, where the organizer&apos;s own
-          verification covers the entries and your team does nothing.
-        </p>
         <div className="cta-row">
           <a className="button" href="/">
             Run the free checks

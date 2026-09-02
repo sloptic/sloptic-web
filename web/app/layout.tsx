@@ -63,6 +63,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 { href: "/methodology", label: "How grading works" },
                 { href: "/checks", label: "Every check" },
                 { href: "/findings", label: "The corpus study" },
+                { href: "/verify", label: "Why only some checks run" },
               ]}
             />
             <a href="/organizers">organizers</a>
@@ -145,6 +146,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </li>
                 <li>
                   <a href="/methodology">How grading works</a>
+                </li>
+                <li>
+                  <a href="/findings">The corpus study</a>
                 </li>
               </ul>
             </div>
