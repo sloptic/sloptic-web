@@ -26,7 +26,7 @@ from urllib.parse import urlparse
 
 from . import config, db
 from .egress import EgressNotReady, guard_target, install as install_egress
-from .grader import Unreachable, run_passive_grade
+from .grader import Unreachable, run_active_grade, run_passive_grade
 
 def _host_of(origin: str) -> str:
     return (urlparse(origin).hostname or "").lower()
@@ -59,11 +59,23 @@ def main(argv: list[str]) -> int:
         return EXIT_FAILED
 
     try:
-        if job.mode != "passive":
-            raise ValueError(f"unsupported mode {job.mode!r} (v1 is passive only)")
+        if job.mode not in ("passive", "active"):
+            raise ValueError(f"unsupported mode {job.mode!r}")
 
         # P0 safety gate. Fails closed until the egress sandbox is enabled.
         guard_target(job.origin, _host_of(job.origin))
+
+        # The authorization, re-checked HERE, immediately before any payload is sent. It was checked
+        # when the job was queued, but a grant is time boxed and revocable and a large field waits
+        # hours for its turn, so the answer can have changed. Refusing is the safe outcome: a grade
+        # that does not run costs a report, where one that should not have run is unauthorized
+        # testing of someone's app.
+        if job.mode == "active":
+            ok, why = db.may_grade_actively(conn, job.id)
+            if not ok:
+                db.mark_failed(conn, job.id, f"not authorized to grade actively: {why}")
+                print(f"[deny]  {job.id}: {why}", flush=True)
+                return EXIT_FAILED
 
         # Throttle: on_progress fires twice per probe, so an unthrottled write would be ~90 UPDATEs a
         # grade for a field nothing queries. A PHASE change always gets through, since that is the
@@ -77,7 +89,8 @@ def main(argv: list[str]) -> int:
                 p["at"] = now
                 db.save_progress(conn, job.id, p)
 
-        result = run_passive_grade(job.origin, progress_cb=_progress)
+        run = run_active_grade if job.mode == "active" else run_passive_grade
+        result = run(job.origin, progress_cb=_progress)
         db.save_result(conn, job.id, result)
         print(f"[done]  {job.id} slop={result['slop_score']} axes={result['axis_slop']}", flush=True)
         return EXIT_ENTRY_CHALLENGE if result.get("challenge_stage") == "entry" else EXIT_OK

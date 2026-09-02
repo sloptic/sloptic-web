@@ -76,12 +76,11 @@ def _axis_potential(report) -> dict:
     return {bundle: compute_slop_score(outs) for bundle, outs in by_bundle.items()}
 
 
-def run_passive_grade(origin: str, progress_cb=None) -> dict:
-    """Grade `origin` with the passive battery. Raises Unreachable if the target cannot be reached.
+def _run_grade(origin: str, catalog, mode: str, progress_cb=None) -> dict:
+    """Grade `origin` with `catalog`. Raises Unreachable if the target cannot be reached.
 
-    render_routes turns on the browser so the passive a11y and Core Web Vitals probes can run.
+    render_routes turns on the browser so the a11y and Core Web Vitals probes can run.
     """
-    catalog = passive_catalog()
     try:
         # origin_scope pins every resolution in this grade to the submitted scheme+host+port, so a
         # redirect cannot carry the grade off the origin the submitter named -- not even to another
@@ -146,9 +145,16 @@ def run_passive_grade(origin: str, progress_cb=None) -> dict:
     # public API, so none of the scoring or wording is re-derived here.
     # Percentile against the frozen PASSIVE curve, if one is configured. Returns None otherwise, and
     # never raises: the score is the product, the rank is context.
-    rank = ranking.rank_passive(record, record["slop_score"])
+    # Percentile against the frozen curve FOR THIS BATTERY. The two are never interchangeable, and
+    # the grader's own guard refuses a cross-mode placement even if this picked the wrong one.
+    if mode == "active":
+        rank = ranking.rank_full(record, record["slop_score"])
+        curve = ranking.load_curve("full")
+    else:
+        rank = ranking.rank_passive(record, record["slop_score"])
+        curve = ranking.load_curve("passive")
     if rank is not None:
-        rank["curve_version"] = (ranking.load_curve() or {}).get("version")
+        rank["curve_version"] = (curve or {}).get("version")
 
     card = _build_card(record, origin)
     outcomes = [asdict(o) for o in report.outcomes]
@@ -165,7 +171,7 @@ def run_passive_grade(origin: str, progress_cb=None) -> dict:
         "outcomes": outcomes,
         "axis_potential": axis_potential,
         "ranking": rank,
-        "mode": "passive",
+        "mode": mode,
         "catalog_version": _catalog_version(),
         "passive_probe_count": len(catalog),
         "slop_score": record["slop_score"],
@@ -175,3 +181,18 @@ def run_passive_grade(origin: str, progress_cb=None) -> dict:
         "surface": record.get("observed_surface") or {},
         "findings": record.get("findings") or [],
     }
+
+
+def run_passive_grade(origin: str, progress_cb=None) -> dict:
+    """The 44 check floor any URL gets."""
+    return _run_grade(origin, passive_catalog(), "passive", progress_cb)
+
+
+def run_active_grade(origin: str, progress_cb=None) -> dict:
+    """The full battery, which SENDS ATTACK TRAFFIC.
+
+    Only ever called for a target the requesting account has proven it may test: the caller checks
+    that, and grade_child checks it again immediately before this runs. Nothing in this function
+    verifies authorization, so nothing should call it without having done so.
+    """
+    return _run_grade(origin, load_catalog(config.CATALOG_DIR), "active", progress_cb)

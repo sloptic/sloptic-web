@@ -488,3 +488,56 @@ def settle_finished_runs(conn: psycopg.Connection) -> int:
         """
     ).fetchall()
     return len(rows or [])
+
+
+def may_grade_actively(conn: psycopg.Connection, job_id: str) -> tuple[bool, str]:
+    """May this job send attack traffic, checked NOW rather than when it was queued?
+
+    Returns (allowed, why not). Re-checked here because a grant is time boxed and revocable, and a
+    field of 200 entries can sit in the queue for hours: the authorization that was live at confirm
+    time may have expired, been revoked, or had its event removed before this entry's turn came.
+    CLAUDE.md requires the check before each active grade, and this is the last place it can happen.
+
+    Two ways to be allowed, and both are ACCOUNT bound. An origin grant covers a domain the account
+    proved it owns. An event grant covers entries of an event the account proved it runs, and the
+    grade must actually belong to a run of that event, so a grant for one event cannot authorize an
+    unrelated URL.
+    """
+    row = conn.execute(
+        """
+        SELECT g.account_id, g.origin, r.slug AS event_slug
+          FROM grades g
+          LEFT JOIN event_runs r ON r.id = g.event_run_id
+         WHERE g.id = %s;
+        """,
+        (job_id,),
+    ).fetchone()
+    if not row:
+        return False, "the grade row is gone"
+    if not row["account_id"]:
+        return False, "no account owns this grade"
+
+    if row["event_slug"]:
+        live = conn.execute(
+            """
+            SELECT 1 FROM grants
+             WHERE account_id = %s AND kind = 'organizer_event' AND scope = %s
+               AND revoked_at IS NULL AND expires_at > now();
+            """,
+            (row["account_id"], row["event_slug"]),
+        ).fetchone()
+        if live:
+            return True, ""
+        return False, f"no live grant for event {row['event_slug']}"
+
+    live = conn.execute(
+        """
+        SELECT 1 FROM grants
+         WHERE account_id = %s AND kind = 'app_origin' AND scope = %s
+           AND revoked_at IS NULL AND expires_at > now();
+        """,
+        (row["account_id"], row["origin"]),
+    ).fetchone()
+    if live:
+        return True, ""
+    return False, f"no live grant for {row['origin']}"

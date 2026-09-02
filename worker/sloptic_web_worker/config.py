@@ -119,6 +119,10 @@ LIGHTHOUSE_SLOTS = os.environ.get("SLOPTIC_LIGHTHOUSE_SLOTS", "3")
 # tagged `probe_set: "passive"`; the grader's benchmark.rank refuses anything else, and
 # ranking.load_curve refuses it a second time here. No curve simply means no percentile.
 PASSIVE_CURVE_PATH = os.environ.get("PASSIVE_CURVE_PATH", "")
+
+# The full battery's curve, 2026.3. Separate variable rather than one path chosen at runtime: the two
+# must never be swapped by accident, and the loader checks the tag on whichever it opens.
+FULL_CURVE_PATH = os.environ.get("FULL_CURVE_PATH", "")
 # Where the grader's scripts/ live, for benchmark.rank (it sits outside the importable package).
 CURVE_SCRIPTS_DIR = os.environ.get("CURVE_SCRIPTS_DIR", "../sloptic-main/scripts")
 

@@ -24,8 +24,7 @@ from . import config
 # comparable to it, whatever the catalog happens to hold today.
 PASSIVE_BATTERY = 44
 
-_curve_cache: dict | None = None
-_curve_tried = False
+_curve_cache: dict[str, dict | None] = {}
 
 
 def _benchmark_module():
@@ -41,13 +40,13 @@ def _benchmark_module():
     return benchmark
 
 
-def load_curve() -> dict | None:
-    """The passive reference curve, or None when one is not configured/present yet."""
-    global _curve_cache, _curve_tried
-    if _curve_tried:
-        return _curve_cache
-    _curve_tried = True
-    path = (config.PASSIVE_CURVE_PATH or "").strip()
+def _load(path: str, want: str) -> dict | None:
+    """A frozen curve from `path`, but only if it was built from the battery named by `want`.
+
+    The tag check is the load-bearing part and it fails closed both ways. An untagged curve is the
+    FULL curve by the grader's own convention, so it is accepted only when the full one is wanted.
+    Ranking a passive grade on the full curve, or the reverse, compares two different rulers.
+    """
     if not path or not os.path.isfile(path):
         return None
     try:
@@ -55,20 +54,26 @@ def load_curve() -> dict | None:
             curve = json.load(fh)
     except (OSError, ValueError):
         return None
-    # Fail closed on the one thing that must never be wrong: ranking a passive grade on a full curve
-    # would compare two different rulers. An untagged curve is the FULL curve by the grader's own
-    # convention, so refuse it here rather than relying on the guard downstream.
-    if curve.get("probe_set") != "passive":
-        print(f"[rank]  ignoring {path}: probe_set={curve.get('probe_set') or '(untagged, i.e. full)'!r}, "
-              f"a passive grade may only rank on a passive curve", flush=True)
+    tag = curve.get("probe_set") or "full"
+    if tag != want:
+        print(f"[rank]  refusing {path}: it is the {tag!r} curve, wanted {want!r}", flush=True)
         return None
-    _curve_cache = curve
+    return curve
+
+
+def load_curve(battery: str = "passive") -> dict | None:
+    """The reference curve for a battery, or None when one is not configured yet."""
+    if battery in _curve_cache:
+        return _curve_cache[battery]
+    path = (config.PASSIVE_CURVE_PATH if battery == "passive" else config.FULL_CURVE_PATH) or ""
+    curve = _load(path.strip(), "passive" if battery == "passive" else "full")
+    _curve_cache[battery] = curve
     return curve
 
 
 def rank_passive(record: dict, score) -> dict | None:
     """Rank one passive grade, or None if it cannot be ranked. Never raises."""
-    curve = load_curve()
+    curve = load_curve(battery)
     if curve is None:
         return None
 
@@ -77,8 +82,8 @@ def rank_passive(record: dict, score) -> dict | None:
     # curve measured EXACTLY the 44-probe battery, so a record that ran a different number of probes
     # is a different measurement no matter how close the number looks.
     total = (record.get("coverage") or {}).get("probes_total")
-    if total is not None and total != PASSIVE_BATTERY:
-        print(f"[rank]  not ranked: this grade ran {total} probes, the curve measured {PASSIVE_BATTERY}",
+    if expect_probes is not None and total is not None and total != expect_probes:
+        print(f"[rank]  not ranked: this grade ran {total} probes, the curve measured {expect_probes}",
               flush=True)
         return None
     bench = _benchmark_module()
@@ -117,3 +122,19 @@ def rank_passive(record: dict, score) -> dict | None:
         except Exception:  # noqa: BLE001 - a flag is never worth losing a grade over
             pass
     return ranked
+
+
+def rank_passive(record: dict, score: float) -> dict | None:
+    """Place a passive grade on passive-2026.1."""
+    return _rank(record, score, "passive", PASSIVE_BATTERY)
+
+
+def rank_full(record: dict, score: float) -> dict | None:
+    """Place a full grade on 2026.3.
+
+    No probe-count guard, unlike the passive side. The full battery's applicable count varies with
+    what the app exposes, which is the whole point of coverage; the passive battery is a fixed 44, so
+    a different number there means a different measurement. The grader's own `_guard_mode` still
+    refuses a cross-mode placement either way.
+    """
+    return _rank(record, score, "full", None)
