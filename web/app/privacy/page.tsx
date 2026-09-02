@@ -57,7 +57,7 @@ export default function PrivacyPage() {
               </tr>
               <tr>
                 <th scope="row">a hash of your IP address</th>
-                <td>rate limiting and abuse, never the raw address</td>
+                <td>rate limiting and abuse</td>
                 <td>2 days</td>
               </tr>
               <tr>
@@ -118,8 +118,8 @@ export default function PrivacyPage() {
         <h2 className="section-head">If your app was graded and you did not ask</h2>
         <p className="section-intro">
           Anyone can run a passive grade on a public URL, so a report may exist about an app you built
-          without your involvement. It contains observations about the app, not personal data about
-          you. You can delete it yourself using its link, or write to{" "}
+          without your involvement. It contains observations about the app. You can delete it
+          yourself using its link, or write to{" "}
           <a href="mailto:hello@sloptic.org">hello@sloptic.org</a>. We will remove it, and you do not
           need an account or a reason.
         </p>

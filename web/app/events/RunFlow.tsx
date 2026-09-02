@@ -142,7 +142,7 @@ export default function RunFlow({
           {canOverride && (
             <>
               <p className="section-intro fineprint">
-                Override is on for this account: any event, passive only, not an authorized board.
+                Override is on for this account: any event, passive only.
               </p>
               <div className="add-report-row">
                 <input

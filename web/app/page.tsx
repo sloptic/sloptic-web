@@ -379,7 +379,7 @@ export default function Home() {
             <span className="term">Weighted by how much it matters</span>
             <p className="desc">
               A serious security hole adds more than a small nicety, and the same problem repeated
-              across ten pages counts once, not ten times.
+              across ten pages counts once.
             </p>
           </div>
           <div className="row2">

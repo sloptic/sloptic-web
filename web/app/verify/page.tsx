@@ -48,16 +48,12 @@ export default function VerifyPage() {
       <section className="section">
         <h2 className="section-head">How to verify</h2>
         <p className="section-intro">
-          Event verification is open now. Verifying a domain you own is not, so the active checks
-          currently run for event entries only.
-        </p>
-        <p className="section-intro">
           Three things are needed:
         </p>
         <div className="card-grid">
           <div className="card">
             <h3>An account</h3>
-            <p>Permission attaches to a person, not to a site.</p>
+            <p>Permission attaches to a person.</p>
           </div>
           <div className="card">
             <h3>A file you serve</h3>
@@ -80,7 +76,7 @@ export default function VerifyPage() {
         <h2 className="section-head">The rules it follows</h2>
         <div className="rows">
           <div className="row2">
-            <span className="term">It is yours, not the site&apos;s</span>
+            <span className="term">It is yours</span>
             <p className="desc">
               Verifying does not mark a site as open season. It records that your account may run the
               hands-on checks on that site. Someone else pasting the same URL still gets the look-only set.

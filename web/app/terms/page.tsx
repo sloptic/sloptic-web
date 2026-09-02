@@ -20,7 +20,7 @@ export default function TermsPage() {
         <p className="callout-label">draft</p>
         <p>
           This is a working draft, not reviewed by a lawyer. It describes what Sloptic actually does
-          today and is written for accuracy, not completeness. The sections on testing sites you
+          today and is written for accuracy. The sections on testing sites you
           do not own, and on liability, are the ones a lawyer should see before this is relied on.
         </p>
       </div>
@@ -100,8 +100,8 @@ export default function TermsPage() {
       <div className="method" data-tone="limits">
         <h2>What a grade does not claim</h2>
         <p>
-          <b>A grade is not a security certification.</b> A score of 0 means nothing was found, not
-          that nothing is there. Sloptic checks a fixed floor, it cannot see everything, and a clean
+          <b>A grade is not a security certification.</b> A score of 0 means nothing was found.
+          Sloptic checks a fixed floor, it cannot see everything, and a clean
           passive result in particular means only that nothing was visible from the outside, because
           the passive tier runs no security attacks at all. Treat any score as a minimum.
         </p>

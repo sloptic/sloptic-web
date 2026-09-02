@@ -26,7 +26,7 @@ function checkMessage(c: Claim): string {
   if (c.status === "failed") return "This claim expired. Start it again when the link is published.";
   if (!c.checked_at) return "Waiting for the first check.";
   if (c.check_status === "error")
-    return "Something went wrong on our side during the last check, not on Devpost's. We are looking into it and will keep trying.";
+    return "Something went wrong on our side during the last check. We are looking into it and will keep trying.";
   if (c.check_status === "blocked")
     return "Devpost did not answer our last check, so we could not look. We are trying again.";
   if (c.check_status === "not_found")
