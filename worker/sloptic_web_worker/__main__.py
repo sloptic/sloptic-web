@@ -195,6 +195,11 @@ def process_event_runs(conn) -> int:
     run = db.claim_event_run(conn)
     if run is None:
         return 0
+    # Urgency first: the state is one API call and it decides where this run's grades sit in the
+    # queue, so it has to be known before any of them are enqueued.
+    w = verify_event.window_state(run.slug)
+    db.set_run_priority(conn, run.id, verify_event.priority_of(w.state))
+
     try:
         # Report the count as it climbs, so a big gallery does not read as a stalled page.
         field = resolve_event.resolve(

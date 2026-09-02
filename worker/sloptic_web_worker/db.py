@@ -147,7 +147,13 @@ def claim_job(conn: psycopg.Connection, lanes: set[str] | None = None) -> Job | 
                 -- Without this a 400 app field takes the whole worker for most of a day and every
                 -- anonymous submission behind it ages out at the queue timeout, so the site would
                 -- look broken to everyone else for as long as one organizer's board took.
-                ORDER BY (event_run_id IS NOT NULL), submitted_at
+                -- A person waiting on ONE grade first, then events by urgency, then by age.
+                -- The subquery costs one lookup on a LIMIT 1 claim and keeps the priority in one
+                -- place; copying it onto every grade would let the two drift.
+                ORDER BY (event_run_id IS NOT NULL),
+                         COALESCE((SELECT r.priority FROM event_runs r
+                                    WHERE r.id = grades.event_run_id), 0),
+                         submitted_at
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
          )
@@ -426,6 +432,10 @@ def note_resolve_progress(conn: psycopg.Connection, run_id: str, found: int) -> 
         conn.execute("UPDATE event_runs SET entries_found = %s WHERE id = %s;", (found, run_id))
     except Exception:  # noqa: BLE001
         pass
+
+
+def set_run_priority(conn: psycopg.Connection, run_id: str, priority: int) -> None:
+    conn.execute("UPDATE event_runs SET priority = %s WHERE id = %s;", (priority, run_id))
 
 
 def save_field(conn: psycopg.Connection, run_id: str, entries: list, complete: bool,

@@ -116,7 +116,7 @@ function db_runs(accountId: string) {
   return supabaseAdmin()
     .from("event_runs")
     .select(
-      "id, slug, mode, status, override, entries_found, gallery_complete, detail, created_at, resolved_at, " +
+      "id, slug, mode, status, override, priority, entries_found, gallery_complete, detail, created_at, resolved_at, " +
         // The grade's own status and progress ride along, so the events page can show a field
         // filling in without asking per entry.
         "event_entries(project_url, app_url, skip_reason, grade_id, grades(status, progress))"

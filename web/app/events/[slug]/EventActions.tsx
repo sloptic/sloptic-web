@@ -18,11 +18,21 @@ type Entry = {
 type Run = {
   id: string; slug: string; mode: "passive" | "active";
   status: "resolving" | "ready" | "grading" | "done" | "failed" | "cancelled";
-  override: boolean; entries_found: number | null; gallery_complete: boolean | null;
+  override: boolean; priority: number | null; entries_found: number | null; gallery_complete: boolean | null;
   detail: string | null; created_at: string; event_entries: Entry[];
 };
 
 const POLL_MS = 4000;
+/** Roughly how long the rest of a field will take, from what the worker actually does: four at a
+ *  time, about five minutes each. Stated in the open rather than as a promise about anyone's
+ *  ceremony, which Devpost does not publish and we cannot know. */
+function eta(remaining: number): string {
+  const mins = Math.round((remaining * 5) / 4);
+  if (mins < 60) return `about ${Math.max(1, mins)} minutes`;
+  const h = mins / 60;
+  return `about ${h < 2 ? "an hour and a half" : `${Math.round(h)} hours`}`;
+}
+
 const gradeOf = (e: Entry) => (Array.isArray(e.grades) ? e.grades[0] : e.grades) ?? null;
 
 function checkLine(c: Claim): string {
@@ -158,6 +168,16 @@ export default function EventActions({
                     {r.status === "done" && `Done, ${graded} graded.`}
                     {r.status === "failed" && (r.detail ?? "Failed.")}
                   </p>
+                  {(r.status === "ready" || r.status === "grading") && gradeable.length > finished && (
+                    <p className="run-skips">
+                      {eta(gradeable.length - finished)} left at four at a time.
+                      {r.priority === 0
+                        ? " This event is judging now, so its grades go before other events."
+                        : r.priority === 2
+                          ? " Winners are already announced here, so it waits behind events still judging."
+                          : ""}
+                    </p>
+                  )}
                   {(r.status === "grading") && (
                     <span className="progress-track" aria-hidden>
                       <span className="progress-fill" style={{ width: `${pct}%` }} />

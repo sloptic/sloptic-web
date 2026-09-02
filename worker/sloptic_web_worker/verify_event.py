@@ -32,6 +32,20 @@ class Window:
     state: dict
 
 
+def priority_of(state: dict) -> int:
+    """Scheduling urgency from an event's own state. 0 sooner, 2 later.
+
+    Devpost publishes no award announcement time, so this reads the two facts it does publish. An
+    event whose submissions have closed but whose winners are not announced is being judged right
+    now, which is the only moment a board actually has to arrive by.
+    """
+    if state.get("winners_announced"):
+        return 2
+    if state.get("open_state") == "ended":
+        return 0
+    return 1
+
+
 def window_state(slug: str) -> Window:
     """Ask Devpost whether this event is still taking submissions.
 
