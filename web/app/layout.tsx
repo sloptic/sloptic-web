@@ -107,66 +107,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </p>
             </div>
 
-            <div className="colophon-col">
-              <h4>grade</h4>
-              <ul>
-                <li>
-                  <a href="/">Grade an app</a>
-                </li>
-                <li>
-                  <a href="/#checks">What it checks</a>
-                </li>
-                <li>
-                  <a href="/checks">Every check</a>
-                </li>
-                <li>
-                  <a href="/#sample">What you get back</a>
-                </li>
-                <li>
-                  <a href="/verify">Why only some run</a>
-                </li>
-              </ul>
-            </div>
-
-            <div className="colophon-col">
-              <h4>understand</h4>
-              <ul>
-                <li>
-                  <a href="/#what">What is Sloptic</a>
-                </li>
-                <li>
-                  <a href="/#score">The score</a>
-                </li>
-                <li>
-                  <a href="/methodology">How grading works</a>
-                </li>
-                <li>
-                  <a href="/findings">The corpus study</a>
-                </li>
-              </ul>
-            </div>
-
-            <div className="colophon-col">
-              <h4>use it</h4>
-              <ul>
-                <li>
-                  <a href="/about">About Sloptic</a>
-                </li>
-                <li>
-                  <a href="/organizers">For organizers</a>
-                </li>
-                <li>
-                  <a href="https://github.com/sloptic/sloptic-main">The grader</a>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="colophon-bar">
-            <div className="colophon-bar-inner">
-              <span>Sloptic 2026</span>
-              <span>Only test apps you own or are authorized to test.</span>
-            </div>
+            {/* Four links, and each is here because something depends on it.
+                The address is the takedown route /terms, /privacy and the participant notice all
+                tell people to write to, so it has to be findable from any page. The grader source is
+                evidence for the claim the whole product rests on, that the method is open and
+                checkable. Terms and privacy are where people look for them.
+                The page list that used to sit here is in the menus now. */}
+            <nav className="colophon-links" aria-label="Site">
+              <a href="https://github.com/sloptic/sloptic-main">The grader, in full</a>
+              <a href="/about">Who made it</a>
+            </nav>
           </div>
         </footer>
       </body>

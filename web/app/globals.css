@@ -147,18 +147,24 @@ a {
   max-width: 64rem;
   margin: 0 auto;
   padding: 2.75rem 1.75rem 1.5rem;
-  display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr 1fr;
-  gap: 2.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 2rem;
 }
-@media (max-width: 46rem) {
-  .colophon-inner {
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-  }
-  .colophon-brand {
-    grid-column: 1 / -1;
-  }
+.colophon-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+}
+.colophon-links a {
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+.colophon-links a:hover {
+  color: var(--ink);
 }
 .colophon-brand .wordmark {
   font-size: 1.1rem;
