@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
-import { ordinal } from "@/lib/grades";
+import BoardTable, { type BoardRow } from "./BoardTable";
+import BoardStats from "./BoardStats";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Event board", robots: { index: false, follow: false } };
@@ -16,6 +17,7 @@ type Row = {
   axes: Record<string, number> | null;
   cleaner: number | null;
   potential: number | null;
+  lighthouse: number | null;
   gated: boolean;
 };
 
@@ -50,8 +52,8 @@ export default async function BoardPage({ params }: { params: { runId: string } 
     ? await db.from("grades").select("id, status").in("id", ids)
     : { data: [] as { id: string; status: string }[] };
   const { data: results } = ids.length
-    ? await db.from("results").select("grade_id, slop_score, axis_slop, ranking").in("grade_id", ids)
-    : { data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; ranking: Record<string, unknown> }[] };
+    ? await db.from("results").select("grade_id, slop_score, axis_slop, ranking, lighthouse_score").in("grade_id", ids)
+    : { data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; ranking: Record<string, unknown>; lighthouse_score: number | null }[] };
 
   const gradeStatus = new Map((grades ?? []).map((g) => [g.id, g.status]));
   const byGrade = new Map((results ?? []).map((r) => [r.grade_id, r]));
@@ -70,6 +72,7 @@ export default async function BoardPage({ params }: { params: { runId: string } 
         axes: (r?.axis_slop as Record<string, number>) ?? null,
         cleaner: rk.cleaner_than_pct === undefined || rk.cleaner_than_pct === null ? null : Number(rk.cleaner_than_pct),
         potential: typeof rk.slop_potential === "number" ? rk.slop_potential : null,
+        lighthouse: r?.lighthouse_score ?? null,
         gated: rk.has_catastrophe === true,
       };
     });
@@ -81,17 +84,39 @@ export default async function BoardPage({ params }: { params: { runId: string } 
     .filter((r) => r.slop !== null && !r.gated)
     .sort((a, b) => (a.slop as number) - (b.slop as number));
   const gated = rows.filter((r) => r.gated);
-  const pending = rows.filter((r) => r.slop === null && !r.gated);
+  // A grade that failed is not still running. It has finished and produced nothing, usually because
+  // the deployment has since gone down, and calling it in progress leaves a board that never
+  // finishes from the reader's side.
+  const failed = rows.filter((r) => r.slop === null && !r.gated && r.status === "failed");
+  const pending = rows.filter(
+    (r) => r.slop === null && !r.gated && r.status !== "failed"
+  );
+  const boardRows: BoardRow[] = ranked.map((r) => ({
+    name: r.name,
+    project_url: r.project_url,
+    grade_id: r.grade_id,
+    slop: r.slop as number,
+    security: r.axes?.security ?? null,
+    qa: r.axes?.qa ?? null,
+    performance: r.axes?.performance ?? null,
+    lighthouse: r.lighthouse,
+    exposure: r.potential,
+    cleaner: r.cleaner,
+  }));
   const skipped = (entries ?? []).filter((e) => e.skip_reason);
   const total = (entries ?? []).length;
 
   return (
     <>
       <div className="page-head">
+        <p className="back-link">
+          <a href="/events">Back to events</a>
+        </p>
         <h1>{run.slug}</h1>
         <p className="page-lead">
           {ranked.length + gated.length} of {total} entries graded on the {run.mode} checks.
           {pending.length > 0 ? ` ${pending.length} still running.` : ""}
+          {failed.length > 0 ? ` ${failed.length} could not be reached.` : ""}
         </p>
       </div>
 
@@ -109,40 +134,10 @@ export default async function BoardPage({ params }: { params: { runId: string } 
         {ranked.length === 0 ? (
           <p className="section-intro">Nothing has finished grading yet.</p>
         ) : (
-          <div className="table-scroll">
-            <table className="count-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>submission</th>
-                  <th>slop</th>
-                  <th>security</th>
-                  <th>qa</th>
-                  <th>performance</th>
-                  <th>exposure</th>
-                  <th>percentile</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {ranked.map((r, i) => (
-                  <tr key={r.project_url}>
-                    <td>{i + 1}</td>
-                    <th scope="row">
-                      <a href={r.project_url} target="_blank" rel="noopener noreferrer">{r.name}</a>
-                    </th>
-                    <td>{fmt(r.slop)}</td>
-                    <td>{fmt(r.axes?.security ?? null)}</td>
-                    <td>{fmt(r.axes?.qa ?? null)}</td>
-                    <td>{fmt(r.axes?.performance ?? null)}</td>
-                    <td>{fmt(r.potential)}</td>
-                    <td>{r.cleaner === null ? "-" : ordinal(Math.round(r.cleaner))}</td>
-                    <td>{r.grade_id ? <a href={`/grade/${r.grade_id}`}>report</a> : null}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <BoardStats rows={boardRows} />
+            <BoardTable rows={boardRows} />
+          </>
         )}
       </section>
 
@@ -172,6 +167,30 @@ export default async function BoardPage({ params }: { params: { runId: string } 
         </section>
       )}
 
+      {failed.length > 0 && (
+        <section className="section">
+          <h2 className="section-head">Could not be reached</h2>
+          <p className="section-intro">
+            These were live links when the team submitted them. The deployment has since stopped
+            answering, so there is nothing to grade.
+          </p>
+          <div className="table-scroll">
+            <table className="count-table">
+              <thead><tr><th>submission</th></tr></thead>
+              <tbody>
+                {failed.map((r) => (
+                  <tr key={r.project_url}>
+                    <th scope="row">
+                      <a href={r.project_url} target="_blank" rel="noopener noreferrer">{r.name}</a>
+                    </th>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <div className="method" data-tone="limits">
         <h2>What this board covers</h2>
         <p>
@@ -189,7 +208,7 @@ export default async function BoardPage({ params }: { params: { runId: string } 
             : ""}
         </p>
         <div className="cta-row">
-          <a className="button secondary" href="/events">Your events</a>
+          <a className="button secondary" href="/events">Back to events</a>
         </div>
       </div>
     </>

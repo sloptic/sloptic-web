@@ -52,6 +52,20 @@ function when(iso: string | null): string {
 
 /** What is waiting on whom, said in the row so it does not need opening to find out. */
 function state(r: Row): { chip: string; line: string } {
+  // A run in flight outranks the claim's state: what someone wants to know about an event being
+  // graded right now is that it is being graded, not when its proof expires.
+  const live = r.runs.find((x) => x.status === "resolving" || x.status === "grading");
+  if (live) {
+    const done = (live.event_entries ?? []).filter((e) => e.grade_id).length;
+    return live.status === "resolving"
+      ? { chip: "resolving", line: "Reading the gallery." }
+      : { chip: "grading", line: `Grading, ${done} done so far.` };
+  }
+  const finished = r.runs.find((x) => x.status === "done");
+  if (finished) {
+    const n = (finished.event_entries ?? []).filter((e) => e.grade_id).length;
+    return { chip: "graded", line: `${n} entries graded.` };
+  }
   if (r.verified) return { chip: "verified", line: `Re-prove by ${when(r.verified.expires_at)}.` };
   const c = r.claim;
   if (!c) return { chip: "unknown", line: "" };
@@ -235,9 +249,7 @@ export default function EventList({
                                 : `${(r.event_entries ?? []).length} entries, ${gradeable.length} gradeable.`)}
                               {r.status === "grading" && `Grading ${graded}.`}
                               {r.status === "done" && `Done, ${graded} graded.`}
-                              {(r.status === "grading" || r.status === "done") && (
-                                <> <a href={`/events/${r.id}`}>See the board</a>.</>
-                              )}
+
                               {r.status === "failed" && (r.detail ?? "Failed.")}
                             </p>
                             {(r.status === "grading" || r.status === "done") && gradeable.length > 0 && (
@@ -263,6 +275,11 @@ export default function EventList({
                                     </p>
                                   );
                                 })}
+                              </div>
+                            )}
+                            {(r.status === "grading" || r.status === "done") && (
+                              <div className="cta-row claim-check">
+                                <a className="button" href={`/events/${r.id}`}>See the board</a>
                               </div>
                             )}
                             {reasons.length > 0 && (

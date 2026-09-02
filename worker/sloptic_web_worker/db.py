@@ -172,6 +172,18 @@ def get_job(conn: psycopg.Connection, job_id: str) -> Job | None:
     return Job(id=str(row["id"]), origin=row["origin"], submitted_url=row["submitted_url"], mode=row["mode"])
 
 
+def _lighthouse_score(outcomes) -> int | None:
+    """The Lighthouse performance score from perf-lighthouse-001, or None if it did not run."""
+    for o in outcomes or []:
+        if isinstance(o, dict) and o.get("probe_id") == "perf-lighthouse-001":
+            v = (o.get("evidence") or {}).get("performance")
+            if isinstance(v, (int, float)):
+                return int(v)
+            if isinstance(v, str) and v.isdigit():
+                return int(v)
+    return None
+
+
 def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
     """Persist a finished grade and flip the job to done, in one transaction."""
     with conn.transaction():
@@ -179,11 +191,11 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
             """
             INSERT INTO results (grade_id, mode, catalog_version, passive_probe_count, slop_score,
                                  axis_slop, coverage, platform, surface, findings,
-                                 card, outcomes, axis_potential,
+                                 card, outcomes, axis_potential, lighthouse_score,
                                  percentile, percentile_band, curve_version, ranking)
             VALUES (%(grade_id)s, %(mode)s, %(catalog_version)s, %(passive_probe_count)s, %(slop_score)s,
                     %(axis_slop)s, %(coverage)s, %(platform)s, %(surface)s, %(findings)s,
-                    %(card)s, %(outcomes)s, %(axis_potential)s,
+                    %(card)s, %(outcomes)s, %(axis_potential)s, %(lighthouse_score)s,
                     %(percentile)s, %(percentile_band)s, %(curve_version)s, %(ranking)s)
             ON CONFLICT (grade_id) DO UPDATE SET
                 slop_score = EXCLUDED.slop_score, axis_slop = EXCLUDED.axis_slop,
@@ -191,11 +203,15 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
                 surface = EXCLUDED.surface, findings = EXCLUDED.findings,
                 card = EXCLUDED.card, outcomes = EXCLUDED.outcomes,
                 axis_potential = EXCLUDED.axis_potential,
+                lighthouse_score = EXCLUDED.lighthouse_score,
                 percentile = EXCLUDED.percentile, percentile_band = EXCLUDED.percentile_band,
                 curve_version = EXCLUDED.curve_version, ranking = EXCLUDED.ranking;
             """,
             {
                 "grade_id": job_id,
+                # Lifted out of the outcomes blob at save time. Reading it back later would mean
+                # pulling ~150 probe records with their evidence per app, which a board cannot do.
+                "lighthouse_score": _lighthouse_score(result.get("outcomes")),
                 "mode": result["mode"],
                 "catalog_version": result["catalog_version"],
                 "passive_probe_count": result.get("passive_probe_count"),

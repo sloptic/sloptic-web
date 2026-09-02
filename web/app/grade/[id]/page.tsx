@@ -169,8 +169,15 @@ function Report({ view }: { view: GradeView }) {
     const appliedIds: string[] = (r.coverage?.applied as string[] | undefined) ?? [];
     const firedIds = new Set(findings.map((f) => f.probe_id));
 
+    // How many PROBES found something, not how many findings there were. One probe firing on eight
+    // paths is eight findings and one failed check, and counting findings made "failed" exceed
+    // "applied": a security axis read 51 of 15, and the passed segment took a negative width.
+    const failedProbes: Record<string, Set<string>> = {};
+    for (const f of findings) {
+      (failedProbes[f.bundle] ??= new Set()).add(f.probe_id);
+    }
     const failedBy: Record<string, number> = {};
-    for (const f of findings) failedBy[f.bundle] = (failedBy[f.bundle] ?? 0) + 1;
+    for (const [bundle, ids] of Object.entries(failedProbes)) failedBy[bundle] = ids.size;
 
     const appliedBy: Record<string, number> = {};
     for (const id of appliedIds) {
@@ -266,7 +273,7 @@ function Report({ view }: { view: GradeView }) {
             <span className="sample-axis-name">{row.label}</span>
             <span className="sample-axis-track">
               <span className="seg failed" style={{ flexGrow: row.failed }} />
-              <span className="seg clean" style={{ flexGrow: row.applied - row.failed }} />
+              <span className="seg clean" style={{ flexGrow: Math.max(0, row.applied - row.failed) }} />
               <span className="seg na" style={{ flexGrow: Math.max(0, row.possible - row.applied) }} />
             </span>
             <span className="sample-axis-val">
