@@ -196,7 +196,7 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
         <p className="section-intro">
           {loadFailed
             ? "Could not load your grades. Reload the page."
-            : "Nothing here yet. A grade you run shows up here, and stays at its own link."}
+            : "Nothing here yet. A grade you run shows up here and stays at its own link."}
         </p>
         {note ? <p className="section-intro">{note}</p> : null}
         {addForm}
