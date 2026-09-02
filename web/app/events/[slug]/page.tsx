@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import EventActions from "./EventActions";
+import DeleteEvent from "./DeleteEvent";
 import { mayOverrideEvents } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,14 @@ export default async function EventPage({ params }: { params: { slug: string } }
   // of theirs to show you.
   if (!grant && !claims && !runs) notFound();
 
+  // What removing it would actually take with it, counted so the warning can name numbers.
+  const { data: runRows } = await db.from("event_runs").select("id")
+    .eq("account_id", user.id).eq("slug", params.slug);
+  const runIds = (runRows ?? []).map((r) => r.id as string);
+  const { count: graded } = runIds.length
+    ? await db.from("grades").select("id", { count: "exact", head: true }).in("event_run_id", runIds)
+    : { count: 0 };
+
   const when = (iso: string) =>
     new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 
@@ -45,6 +54,8 @@ export default async function EventPage({ params }: { params: { slug: string } }
       </div>
 
       <EventActions slug={params.slug} verified={!!grant} canOverride={mayOverrideEvents(user.email)} />
+
+      <DeleteEvent slug={params.slug} runs={runIds.length} graded={graded ?? 0} />
     </>
   );
 }
