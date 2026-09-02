@@ -214,6 +214,9 @@ export default function EventList({
                                 : `${(r.event_entries ?? []).length} entries, ${gradeable.length} gradeable.`)}
                               {r.status === "grading" && `Grading ${graded}.`}
                               {r.status === "done" && `Done, ${graded} graded.`}
+                              {(r.status === "grading" || r.status === "done") && (
+                                <> <a href={`/events/${r.id}`}>See the board</a>.</>
+                              )}
                               {r.status === "failed" && (r.detail ?? "Failed.")}
                             </p>
                             {reasons.length > 0 && (

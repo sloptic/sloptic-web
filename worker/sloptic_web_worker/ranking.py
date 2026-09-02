@@ -85,7 +85,7 @@ def rank_passive(record: dict, score) -> dict | None:
     if bench is None:
         return None
     try:
-        return bench.rank(curve, score, record)
+        ranked = bench.rank(curve, score, record)
     except ValueError as e:
         # The grader's mode guard, or an ineligible record. Both mean "no percentile", not "no grade".
         print(f"[rank]  not ranked: {e}", flush=True)
@@ -93,3 +93,14 @@ def rank_passive(record: dict, score) -> dict | None:
     except Exception as e:  # noqa: BLE001 - a percentile is never worth losing a grade over
         print(f"[rank]  ranking failed: {type(e).__name__}: {e}", flush=True)
         return None
+
+    # Whether a gating finding fired, asked of the grader rather than decided here. An event board
+    # has to keep such an app out of its top rows however low the score is, and the category list
+    # that defines "gating" belongs to benchmark.py. Prefer a public name if one ever appears.
+    gate = getattr(bench, "has_catastrophe", None) or getattr(bench, "_has_catastrophe", None)
+    if ranked is not None and gate is not None:
+        try:
+            ranked["has_catastrophe"] = bool(gate(record))
+        except Exception:  # noqa: BLE001 - a flag is never worth losing a grade over
+            pass
+    return ranked
