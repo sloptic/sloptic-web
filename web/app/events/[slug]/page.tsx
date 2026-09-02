@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import EventActions from "./EventActions";
@@ -11,14 +11,21 @@ export default async function EventPage({ params }: { params: { slug: string } }
   const user = await currentUser();
   if (!user) redirect(`/signin?next=/events/${params.slug}`);
 
-  const { data: grant } = await supabaseAdmin()
-    .from("grants")
-    .select("granted_at, expires_at")
-    .eq("account_id", user.id)
-    .eq("kind", "organizer_event")
-    .eq("scope", params.slug)
-    .is("revoked_at", null)
-    .maybeSingle();
+  const db = supabaseAdmin();
+  const [{ data: grant }, { count: claims }, { count: runs }] = await Promise.all([
+    db.from("grants").select("granted_at, expires_at")
+      .eq("account_id", user.id).eq("kind", "organizer_event").eq("scope", params.slug)
+      .is("revoked_at", null).maybeSingle(),
+    db.from("event_claims").select("id", { count: "exact", head: true })
+      .eq("account_id", user.id).eq("slug", params.slug).neq("status", "revoked"),
+    db.from("event_runs").select("id", { count: "exact", head: true })
+      .eq("account_id", user.id).eq("slug", params.slug),
+  ]);
+
+  // An event this account has never touched is not a page. Scoped to the caller, so someone else's
+  // event is a 404 here whether or not it exists, which is also the honest answer: we have nothing
+  // of theirs to show you.
+  if (!grant && !claims && !runs) notFound();
 
   const when = (iso: string) =>
     new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
