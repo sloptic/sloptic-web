@@ -20,7 +20,7 @@ export default function TermsPage() {
         <p className="callout-label">draft</p>
         <p>
           This is a working draft, not reviewed by a lawyer. It describes what Sloptic actually does
-          today and is written to be accurate rather than complete. The sections on testing sites you
+          today and is written for accuracy, not completeness. The sections on testing sites you
           do not own, and on liability, are the ones a lawyer should see before this is relied on.
         </p>
       </div>
@@ -68,9 +68,8 @@ export default function TermsPage() {
         <p className="section-intro">
           Active grading of an event requires that the disclosure was published before the submission
           window closed. A notice shown after an event ended was shown to nobody. Entries are taken
-          from the addresses teams published themselves, and an entry that points at a third party
-          product rather than the team&apos;s own app is skipped, because a team cannot consent on
-          another company&apos;s behalf. A team may opt out of being graded.
+          from the addresses teams published themselves. An entry that points at a third party
+          product is skipped, because a team cannot consent on another company&apos;s behalf. A team may opt out of being graded.
         </p>
       </section>
 

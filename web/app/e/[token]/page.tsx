@@ -107,7 +107,7 @@ export default async function DisclosurePage({ params }: { params: { token: stri
         <p className="section-intro">
           The URL your team submitted, and nothing else. If your submission points at a third party
           product, a hosted notebook, a design tool, a storage bucket, it is skipped: probing it would
-          hit that company rather than you, and your team cannot agree to that on their behalf. If the
+          hit that company, and your team cannot agree to that on their behalf. If the
           app cannot be reached or the URL does not resolve, it is skipped too and recorded as a DNF.
         </p>
       </section>

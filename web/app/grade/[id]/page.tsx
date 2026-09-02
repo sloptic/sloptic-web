@@ -481,7 +481,7 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
                         (f.penalty ?? 0) === 0 ? (
                           <>
                             Nothing, and it never could. This check reports what it saw without pricing
-                            it, so it is here for information rather than as part of the score.
+                            it, so it is here for information only.
                           </>
                         ) : f.variant_group_id && pricedGroups.has(f.variant_group_id) ? (
                           <>

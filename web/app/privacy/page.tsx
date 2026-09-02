@@ -20,7 +20,7 @@ export default function PrivacyPage() {
         <p className="callout-label">draft</p>
         <p>
           A working draft, not reviewed by a lawyer. Every retention window below is the one the code
-          actually enforces rather than a number chosen to sound careful.
+          actually enforces.
         </p>
       </div>
 
@@ -29,8 +29,7 @@ export default function PrivacyPage() {
         <p className="section-intro">
           Worth saying first, because it is unusual. Sloptic runs no analytics, no advertising, and no
           third party scripts. There is no tracking pixel and no session recorder. Fonts are served
-          from our own domain rather than fetched from Google, so visiting the site makes no request to
-          anyone else. We do not sell or share personal data.
+          from our own domain, so visiting the site makes no request to anyone else. We do not sell or share personal data.
         </p>
       </section>
 
@@ -108,8 +107,8 @@ export default function PrivacyPage() {
           <li>
             <span className="k">our own hardware</span>
             <span className="v">
-              the grader runs on a machine we operate rather than in a cloud, so the traffic that
-              reaches a graded app comes from us.
+              the grader runs on a machine we operate, so the traffic that reaches a graded app
+              comes from us.
             </span>
           </li>
         </ul>
