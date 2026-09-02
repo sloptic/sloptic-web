@@ -66,10 +66,13 @@ def expire_queued_jobs(conn: psycopg.Connection) -> int:
            SET status = 'failed', finished_at = now(),
                error = 'not started within the queue window: no worker was available to run it'
          WHERE status = 'queued'
-           AND submitted_at < now() - make_interval(secs => %(timeout)s)
+           AND submitted_at < now() - make_interval(secs => CASE WHEN event_run_id IS NULL
+                                                                THEN %(timeout)s
+                                                                ELSE %(event_timeout)s END)
      RETURNING 1;
         """,
-        {"timeout": config.QUEUE_TIMEOUT_SECONDS},
+        {"timeout": config.QUEUE_TIMEOUT_SECONDS,
+         "event_timeout": config.EVENT_QUEUE_TIMEOUT_SECONDS},
     ).fetchall()
     return len(row or [])
 

@@ -144,3 +144,9 @@ CANVAS_SHELL_PLATFORMS = {
     for p in os.environ.get("CANVAS_SHELL_PLATFORMS", "streamlit").split(",")
     if p.strip()
 }
+
+
+# An event grade waits behind its whole field and behind every public submission, so the queue window
+# that suits one person's grade would fail the tail of any real event: 52 apps at 4 concurrent is
+# over an hour, and those grades are not stranded, they are queued behind work in progress.
+EVENT_QUEUE_TIMEOUT_SECONDS = float(os.environ.get("EVENT_QUEUE_TIMEOUT_SECONDS", str(12 * 3600)))

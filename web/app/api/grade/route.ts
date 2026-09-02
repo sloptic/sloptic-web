@@ -52,10 +52,14 @@ export async function POST(req: NextRequest) {
   // the refusal an hour later and dresses it as a failure. Counted after the rate limit so a burst
   // from one address is already gone by here.
   const db = supabaseAdmin();
+  // Public submissions only. An event's grades sit in their own lane and the worker always serves a
+  // person waiting on one grade first, so counting them here would let one 52 app field close the
+  // site to everyone, which is the thing the lane exists to prevent.
   const { count: waiting, error: depthErr } = await db
     .from("grades")
     .select("id", { count: "exact", head: true })
-    .eq("status", "queued");
+    .eq("status", "queued")
+    .is("event_run_id", null);
   // A failed count is not evidence of a full queue. Let it through: the queue timeout is the
   // backstop, and refusing on an unreadable count would close the site on a transient database blip.
   if (depthErr) console.error("queue depth unreadable:", depthErr.message);
