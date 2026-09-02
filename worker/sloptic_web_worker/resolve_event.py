@@ -15,7 +15,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sloptic import devpost, scope
+from sloptic import devpost, platform_id, scope
+
+from . import config
 
 
 @dataclass
@@ -45,6 +47,10 @@ def _pick_app_url(hrefs: list[str]) -> tuple[str | None, str | None]:
         if denied:
             seen_offtarget = seen_offtarget or denied
             continue
+        plat = platform_id._platform_by_suffix(platform_id._host_of(href))
+        if plat in config.CANVAS_SHELL_PLATFORMS:
+            return None, (f"hosted on {plat}, where Sloptic cannot properly separate what the team "
+                          f"built from the platform")
         return href, None
     if seen_offtarget:
         return None, f"points at {seen_offtarget}, which is someone else's product rather than the team's app"

@@ -128,3 +128,19 @@ GRANT_DAYS = int(os.environ.get("GRANT_DAYS", "90"))
 # How long a claim keeps waiting for its token to appear before it is failed. Generous: an organizer
 # may verify days before they finish writing their rules page.
 CLAIM_EXPIRY_DAYS = int(os.environ.get("CLAIM_EXPIRY_DAYS", "14"))
+
+
+# Platforms whose apps are hosted INSIDE a framework's own shell, where a grade measures the shell as
+# much as the team's work. Skipped in an event run for the same reason the corpus study excludes them
+# from its per stack comparison: Sloptic cannot properly separate what the team built from the
+# platform. On a chart that is a footnote; on a leaderboard it is an unfair row, because that team
+# would be ranked on somebody else's page.
+#
+# Source of truth is by_stack_excluded in the corpus figures (currently streamlit, 82 apps). Named by
+# PLATFORM rather than hostname, so sloptic.platform_id does the identifying and this stays a policy
+# list rather than a second host matcher.
+CANVAS_SHELL_PLATFORMS = {
+    p.strip().lower()
+    for p in os.environ.get("CANVAS_SHELL_PLATFORMS", "streamlit").split(",")
+    if p.strip()
+}
