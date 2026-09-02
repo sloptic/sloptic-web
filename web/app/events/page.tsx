@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
-import ClaimFlow from "./ClaimFlow";
-import RunFlow from "./RunFlow";
+import EventList from "./EventList";
 import { mayOverrideEvents } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
@@ -73,16 +72,15 @@ export default async function EventsPage({
         </p>
       </div>
 
-      <RunFlow
+      <EventList
         verified={(grants ?? []).map((g) => ({
           slug: g.scope,
           granted_at: g.granted_at,
           expires_at: g.expires_at,
         }))}
         canOverride={mayOverrideEvents(user.email)}
+        initialEvent={prefill}
       />
-
-      <ClaimFlow initialEvent={prefill} />
     </>
   );
 }

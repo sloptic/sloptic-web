@@ -4,7 +4,8 @@ import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import AccountActions from "./AccountActions";
 import GradeList from "../grades/GradeList";
-import ClaimFlow from "../events/ClaimFlow";
+import EventList from "../events/EventList";
+import { mayOverrideEvents } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
 
@@ -54,41 +55,12 @@ export default async function AccountPage() {
         <GradeList signedIn />
       </section>
 
-      <section className="section">
-        <h2 className="section-head">Events you grade for</h2>
-        {grants && grants.filter((g) => g.kind === "organizer_event").length > 0 ? (
-          <div className="table-scroll">
-            <table className="count-table">
-              <thead>
-                <tr>
-                  <th>event</th>
-                  <th>verified</th>
-                  <th>re-prove by</th>
-                </tr>
-              </thead>
-              <tbody>
-                {grants
-                  .filter((g) => g.kind === "organizer_event")
-                  .map((g) => (
-                    <tr key={g.scope}>
-                      <th scope="row">
-                        <a href={`https://${g.scope}.devpost.com`} rel="noopener noreferrer">
-                          {g.scope}.devpost.com
-                        </a>
-                      </th>
-                      <td>{when(g.granted_at)}</td>
-                      <td>{when(g.expires_at)}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-        <ClaimFlow />
-        <p className="section-intro fineprint">
-          Grading a whole field is not ready yet.
-        </p>
-      </section>
+      <EventList
+        verified={(grants ?? [])
+          .filter((g) => g.kind === "organizer_event")
+          .map((g) => ({ slug: g.scope, granted_at: g.granted_at, expires_at: g.expires_at }))}
+        canOverride={mayOverrideEvents(user.email)}
+      />
 
       <section className="section">
         <h2 className="section-head">Domains you own</h2>

@@ -2500,3 +2500,77 @@ a.mast-user:hover {
   margin: 0.35rem 0.6rem;
   background: var(--line);
 }
+
+/* One row per event, whatever state it is in ------------------------------- */
+
+.event-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.event-list > li {
+  border-bottom: 1px solid var(--line);
+}
+.event-list > li > details > summary {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.9rem 0.2rem;
+  cursor: pointer;
+  list-style: none;
+}
+.event-list > li > details > summary::-webkit-details-marker {
+  display: none;
+}
+/* A caret, so a row reads as openable without relying on the default marker the reset removes. */
+.event-list > li > details > summary::before {
+  content: "▸";
+  color: var(--muted);
+  font-size: 0.7rem;
+  margin-right: 0.4rem;
+}
+.event-list > li > details[open] > summary::before {
+  content: "▾";
+}
+.event-name {
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+/* The state is the point of the row, so it carries colour: verified reads settled, waiting reads
+   like something is owed, expired reads like it failed. */
+.tag[data-state="verified"] {
+  color: var(--performance);
+  border-color: var(--performance);
+}
+.tag[data-state="waiting"] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.tag[data-state="expired"] {
+  color: var(--security);
+  border-color: var(--security);
+}
+.event-line {
+  font-size: 0.85rem;
+  color: var(--muted);
+  flex: 1 1 14rem;
+}
+.event-body {
+  padding: 0.2rem 0.2rem 1.4rem;
+}
+.event-body .section-intro {
+  margin-bottom: 1rem;
+}
+.event-run {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.event-run-head {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
