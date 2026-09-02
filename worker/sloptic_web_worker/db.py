@@ -131,7 +131,11 @@ def claim_job(conn: psycopg.Connection) -> Job | None:
          WHERE id = (
                SELECT id FROM grades
                 WHERE status = 'queued'
-                ORDER BY submitted_at
+                -- A person waiting on ONE grade goes before an event grinding through hundreds.
+                -- Without this a 400 app field takes the whole worker for most of a day and every
+                -- anonymous submission behind it ages out at the queue timeout, so the site would
+                -- look broken to everyone else for as long as one organizer's board took.
+                ORDER BY (event_run_id IS NOT NULL), submitted_at
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
          )
@@ -415,3 +419,23 @@ def fail_run(conn: psycopg.Connection, run_id: str, detail: str) -> None:
         "UPDATE event_runs SET status = 'failed', detail = left(%s, 2000), finished_at = now() WHERE id = %s;",
         (detail, run_id),
     )
+
+
+def settle_finished_runs(conn: psycopg.Connection) -> int:
+    """Mark a run done once no grade of its own is still queued or running.
+
+    Counted from the grades rather than tracked as the run goes, so a worker restart or a reaped job
+    cannot leave a finished board reading as still grading.
+    """
+    rows = conn.execute(
+        """
+        UPDATE event_runs r
+           SET status = 'done', finished_at = now()
+         WHERE r.status = 'grading'
+           AND NOT EXISTS (
+                 SELECT 1 FROM grades g
+                  WHERE g.event_run_id = r.id AND g.status IN ('queued', 'running'))
+     RETURNING 1;
+        """
+    ).fetchall()
+    return len(rows or [])

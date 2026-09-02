@@ -335,6 +335,10 @@ def main() -> None:
                     print(f"[reap]  failed {n} grade(s) nobody started within the queue window",
                           flush=True)
 
+                n = db.settle_finished_runs(conn)
+                if n:
+                    print(f"[run]   {n} event run(s) finished", flush=True)
+
                 n = db.expire_stale_claims(conn, config.CLAIM_EXPIRY_DAYS)
                 if n:
                     print(f"[event] failed {n} claim(s) whose link never appeared", flush=True)

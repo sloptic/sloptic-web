@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import ClaimFlow from "./ClaimFlow";
+import RunFlow from "./RunFlow";
+import { mayOverrideEvents } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
 
@@ -100,12 +102,13 @@ export default async function EventsPage({
           </div>
           {/* Said plainly rather than shown as a disabled button. A greyed-out control implies the
               feature exists and you are not allowed to use it, which would be false. */}
-          <p className="section-intro fineprint">
-            Grading a whole field is not built yet. Verification is what it will be gated on, so
-            proving the event now means it is ready when ranking lands.
-          </p>
         </section>
       ) : null}
+
+      <RunFlow
+        slugs={(grants ?? []).map((g) => g.scope)}
+        canOverride={mayOverrideEvents(user.email)}
+      />
 
       <ClaimFlow initialEvent={prefill} />
     </>
