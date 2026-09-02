@@ -4,8 +4,6 @@ import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import AccountActions from "./AccountActions";
 import GradeList from "../grades/GradeList";
-import EventList from "../events/EventList";
-import { mayOverrideEvents } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
 
@@ -55,12 +53,15 @@ export default async function AccountPage() {
         <GradeList signedIn />
       </section>
 
-      <EventList
-        verified={(grants ?? [])
-          .filter((g) => g.kind === "organizer_event")
-          .map((g) => ({ slug: g.scope, granted_at: g.granted_at, expires_at: g.expires_at }))}
-        canOverride={mayOverrideEvents(user.email)}
-      />
+      <section className="section">
+        <h2 className="section-head">Events you grade for</h2>
+        <p className="section-intro">
+          Verified events, their runs and their boards live on their own pages.
+        </p>
+        <div className="cta-row">
+          <a className="button secondary" href="/events">Your events</a>
+        </div>
+      </section>
 
       <section className="section">
         <h2 className="section-head">Domains you own</h2>

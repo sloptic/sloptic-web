@@ -2708,3 +2708,52 @@ a.mast-user:hover {
   color: var(--muted);
   border-top: 1px solid var(--line-strong);
 }
+
+/* Event rows: one line, the whole line clickable ---------------------------- */
+.event-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.95rem 0.2rem;
+  text-decoration: none;
+  color: inherit;
+}
+.event-row:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.event-row .event-line {
+  flex: 1 1 12rem;
+}
+.event-go {
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.event-row:hover .event-go {
+  color: var(--accent);
+}
+
+.event-actions {
+  margin-top: 0;
+}
+.run-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.run-list > li {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.run-head {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+.run-skips {
+  margin: 0.4rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}

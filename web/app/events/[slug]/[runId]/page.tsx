@@ -32,9 +32,9 @@ function projectName(url: string): string {
   return url.replace(/\/+$/, "").split("/").pop() || url;
 }
 
-export default async function BoardPage({ params }: { params: { runId: string } }) {
+export default async function BoardPage({ params }: { params: { slug: string; runId: string } }) {
   const user = await currentUser();
-  if (!user) redirect(`/signin?next=/events/${params.runId}`);
+  if (!user) redirect(`/signin?next=/events/${params.slug}/${params.runId}`);
 
   const db = supabaseAdmin();
   const { data: run } = await db
@@ -136,7 +136,7 @@ export default async function BoardPage({ params }: { params: { runId: string } 
     <>
       <div className="page-head">
         <p className="back-link">
-          <a href="/events">Back to events</a>
+          <a href={`/events/${params.slug}`}>Back to {params.slug}</a>
         </p>
         <h1>{run.slug}</h1>
         <p className="page-lead">
