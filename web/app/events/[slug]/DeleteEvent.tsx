@@ -43,14 +43,12 @@ export default function DeleteEvent({
     <div className="method" data-tone="limits">
       <h2>Remove this event</h2>
       <p>
-        Your verification goes and so do{" "}
-        {runs === 1 ? "its run" : `its ${runs} runs`}
-        {graded > 0 ? ` and ${graded === 1 ? "board" : "boards"}` : ""}. You need to reverify if you 
-        want to add this event again. <b>This is permanent and cannot be undone.</b>
+        This will <b>permanently</b> remove the event and all its associated data. You need to reverify if you 
+        want to add this event again.
       </p>
       {graded > 0 && (
         <>
-          <p>What happens to the {graded} reports it already graded is your choice.</p>
+          <p>What should happen to the {graded} reports?</p>
           <div className="report-choice">
             <label>
               <input
