@@ -2757,3 +2757,16 @@ a.mast-user:hover {
   font-size: 0.78rem;
   color: var(--muted);
 }
+.field-block {
+  margin-top: 1rem;
+}
+.field-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.6rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: pointer;
+}

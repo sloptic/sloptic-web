@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import EventActions from "./EventActions";
+import { mayOverrideEvents } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Event", robots: { index: false, follow: false } };
@@ -43,7 +44,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
         </p>
       </div>
 
-      <EventActions slug={params.slug} verified={!!grant} />
+      <EventActions slug={params.slug} verified={!!grant} canOverride={mayOverrideEvents(user.email)} />
     </>
   );
 }

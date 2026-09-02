@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import FieldTable, { type FieldEntry } from "./FieldTable";
 
 type Claim = {
   id: string; slug: string; token: string;
@@ -30,7 +31,15 @@ function checkLine(c: Claim): string {
 
 /** Everything you can do to one event, in one place. The list page is a list; this is where an
  *  event's link, its runs and its actions live, so neither view has to be both. */
-export default function EventActions({ slug, verified }: { slug: string; verified: boolean }) {
+export default function EventActions({
+  slug,
+  verified,
+  canOverride,
+}: {
+  slug: string;
+  verified: boolean;
+  canOverride: boolean;
+}) {
   const [claim, setClaim] = useState<Claim | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
   const [busy, setBusy] = useState(false);
@@ -95,7 +104,7 @@ export default function EventActions({ slug, verified }: { slug: string; verifie
             Check now
           </button>
         )}
-        {(verified || !pending) && !live && (
+        {(verified || canOverride) && !live && (
           <button className="button" type="button" disabled={busy}
                   onClick={() => void act(async () => { await post("/api/events/run", { event: slug }); return null; })}>
             {runs.length > 0 ? "Grade it again" : "Grade this event"}
@@ -110,11 +119,7 @@ export default function EventActions({ slug, verified }: { slug: string; verifie
             Grade {live.event_entries.filter((e) => !e.skip_reason).length} entries
           </button>
         )}
-        {runs.some((r) => r.status === "grading" || r.status === "done") && (
-          <a className="button secondary" href={`/events/${slug}/${runs.find((r) => r.status === "grading" || r.status === "done")!.id}`}>
-            See the board
-          </a>
-        )}
+
       </div>
       {note && <p className="section-intro">{note}</p>}
 
@@ -157,7 +162,19 @@ export default function EventActions({ slug, verified }: { slug: string; verifie
                     <p className="run-skips">Incomplete gallery, so this is not the whole field.</p>
                   )}
                   {(r.status === "grading" || r.status === "done") && (
-                    <p className="run-skips"><a href={`/events/${slug}/${r.id}`}>Open the board</a></p>
+                    <div className="cta-row claim-check">
+                      <a className="button secondary" href={`/events/${slug}/${r.id}`}>See the board</a>
+                    </div>
+                  )}
+                  {entries.length > 0 && (
+                    <FieldTable
+                      entries={entries.map((e): FieldEntry => ({
+                        project_url: e.project_url,
+                        skip_reason: e.skip_reason,
+                        grade_id: e.grade_id,
+                        status: gradeOf(e)?.status ?? null,
+                      }))}
+                    />
                   )}
                 </li>
               );
