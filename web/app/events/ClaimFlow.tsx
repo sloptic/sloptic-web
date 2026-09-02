@@ -7,7 +7,7 @@ type Claim = {
   slug: string;
   token: string;
   status: "pending" | "verified" | "failed" | "revoked";
-  check_status: "ok" | "not_found" | "blocked" | null;
+  check_status: "ok" | "not_found" | "blocked" | "error" | null;
   check_detail: string | null;
   checked_at: string | null;
   verified_at: string | null;
@@ -25,6 +25,8 @@ function checkMessage(c: Claim): string {
   if (c.status === "verified") return "Verified. This account can now grade this event.";
   if (c.status === "failed") return "This claim expired. Start it again when the link is published.";
   if (!c.checked_at) return "Waiting for the first check.";
+  if (c.check_status === "error")
+    return "Something went wrong on our side during the last check, not on Devpost's. We are looking into it and will keep trying.";
   if (c.check_status === "blocked")
     return "Devpost did not answer our last check, so we could not look. We are trying again.";
   if (c.check_status === "not_found")

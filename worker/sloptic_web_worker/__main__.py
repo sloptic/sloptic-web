@@ -27,7 +27,7 @@ import traceback
 import time
 from dataclasses import dataclass
 
-from . import config, db
+from . import config, db, verify_event
 from .egress import install as install_egress
 from .grade_child import EXIT_ENTRY_CHALLENGE
 
@@ -196,7 +196,7 @@ def process_event_checks(conn) -> int:
             detail = f"worker error: {type(e).__name__}: {e}"
             traceback.print_exc()
             print(f"[event] {claim.slug}: {detail}", flush=True)
-            db.record_check(conn, claim.id, "blocked", detail, 15 * 60)
+            db.record_check(conn, claim.id, "error", detail, 15 * 60)
             continue
         if out.verified:
             # Captured at the moment of verification, because that is the question the participant
