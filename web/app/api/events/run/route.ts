@@ -117,7 +117,9 @@ function db_runs(accountId: string) {
     .from("event_runs")
     .select(
       "id, slug, mode, status, override, entries_found, gallery_complete, detail, created_at, resolved_at, " +
-        "event_entries(project_url, app_url, skip_reason, grade_id)"
+        // The grade's own status and progress ride along, so the events page can show a field
+        // filling in without asking per entry.
+        "event_entries(project_url, app_url, skip_reason, grade_id, grades(status, progress))"
     )
     .eq("account_id", accountId)
     .order("created_at", { ascending: false })

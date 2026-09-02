@@ -8,7 +8,18 @@ type Claim = {
   check_status: "ok" | "not_found" | "blocked" | "error" | null;
   check_detail: string | null; checked_at: string | null;
 };
-type Entry = { project_url: string; app_url: string | null; skip_reason: string | null; grade_id: string | null };
+type Grade = { status: string; progress: { phase?: string; done?: number; total?: number; label?: string } | null };
+type Entry = {
+  project_url: string; app_url: string | null; skip_reason: string | null; grade_id: string | null;
+  // PostgREST returns an embedded one-to-one as an object on some versions and a single-element
+  // array on others, which is invisible until every row renders as not started.
+  grades?: Grade | Grade[] | null;
+};
+
+function gradeOf(e: Entry): Grade | null {
+  const g = Array.isArray(e.grades) ? e.grades[0] : e.grades;
+  return g ?? null;
+}
 type Run = {
   id: string; slug: string; mode: "passive" | "active";
   status: "resolving" | "ready" | "grading" | "done" | "failed" | "cancelled";
@@ -202,6 +213,16 @@ export default function EventList({
                           if (e.skip_reason) why.set(e.skip_reason, (why.get(e.skip_reason) ?? 0) + 1);
                         }
                         const reasons = [...why.entries()].sort((a, b) => b[1] - a[1]);
+                        // Progress across the field, and within the one being graded now.
+                        const queued = gradeable.filter((e) => gradeOf(e)?.status === "queued").length;
+                        const active = gradeable.filter((e) => gradeOf(e)?.status === "running");
+                        const finished = gradeable.filter((e) => {
+                          const st = gradeOf(e)?.status;
+                          return st === "done" || st === "failed";
+                        }).length;
+                        const pct = gradeable.length
+                          ? Math.round((finished / gradeable.length) * 100)
+                          : 0;
                         return (
                           <div className="event-run" key={r.id}>
                             <p className="event-run-head">
@@ -219,6 +240,31 @@ export default function EventList({
                               )}
                               {r.status === "failed" && (r.detail ?? "Failed.")}
                             </p>
+                            {(r.status === "grading" || r.status === "done") && gradeable.length > 0 && (
+                              <div className="run-progress">
+                                <span className="progress-track" aria-hidden>
+                                  <span className="progress-fill" style={{ width: `${pct}%` }} />
+                                </span>
+                                <p className="run-progress-line">
+                                  {finished} of {gradeable.length} graded
+                                  {active.length > 0 ? `, ${active.length} running` : ""}
+                                  {queued > 0 ? `, ${queued} waiting` : ""}
+                                </p>
+                                {active.slice(0, 4).map((e) => {
+                                  const p = gradeOf(e)?.progress;
+                                  const label = p?.label
+                                    ? p.label
+                                    : p?.done !== undefined && p?.total
+                                      ? `${p.done} of ${p.total} checks`
+                                      : "starting";
+                                  return (
+                                    <p className="run-progress-now" key={e.project_url}>
+                                      {projectName(e.project_url)}: {label}
+                                    </p>
+                                  );
+                                })}
+                              </div>
+                            )}
                             {reasons.length > 0 && (
                               <p className="event-skips">
                                 {reasons.map(([reason, n]) => `${n} ${reason}`).join("  ·  ")}
@@ -266,6 +312,8 @@ export default function EventList({
                                             </th>
                                             <td className="band-note">
                                               {e.skip_reason ? `skipped (${e.skip_reason})`
+                                                : gradeOf(e)?.status === "running" ? "grading now"
+                                                : gradeOf(e)?.status === "queued" ? "waiting"
                                                 : e.grade_id ? <a href={`/grade/${e.grade_id}`}>report</a>
                                                 : "will be graded"}
                                             </td>

@@ -2590,3 +2590,32 @@ a.mast-user:hover {
   font-size: 0.78rem;
   color: var(--muted);
 }
+
+.run-progress {
+  margin: 0 0 0.75rem;
+}
+.run-progress .progress-track {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--ink) 9%, transparent);
+  overflow: hidden;
+}
+.run-progress .progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 400ms ease;
+}
+.run-progress-line {
+  margin: 0.45rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+.run-progress-now {
+  margin: 0.2rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--muted);
+}
