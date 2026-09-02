@@ -98,9 +98,22 @@ def rank_passive(record: dict, score) -> dict | None:
     # has to keep such an app out of its top rows however low the score is, and the category list
     # that defines "gating" belongs to benchmark.py. Prefer a public name if one ever appears.
     gate = getattr(bench, "has_catastrophe", None) or getattr(bench, "_has_catastrophe", None)
+    is_gate = getattr(bench, "is_gate", None) or getattr(bench, "_is_gate", None)
     if ranked is not None and gate is not None:
         try:
             ranked["has_catastrophe"] = bool(gate(record))
+            # The COUNT as well as the fact. An event board shows how many an entry carries, and one
+            # leaked key reads differently from four. Same predicate, applied per finding.
+            # The weakest-link tiebreak's input. A board that claims to break ties on the worst
+            # single finding needs the number, and deriving it from findings on the page would mean
+            # every board pulling every finding of every entry.
+            ranked["max_penalty"] = max(
+                (f.get("penalty") or 0 for f in (record.get("findings") or [])), default=0
+            )
+            if is_gate is not None:
+                ranked["catastrophe_findings"] = sum(
+                    1 for f in (record.get("findings") or []) if is_gate(f)
+                )
         except Exception:  # noqa: BLE001 - a flag is never worth losing a grade over
             pass
     return ranked

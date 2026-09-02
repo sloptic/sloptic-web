@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
-import BoardTable, { type BoardRow } from "./BoardTable";
+import BoardTable, { type BoardRow, type DnfRow } from "./BoardTable";
 import BoardStats from "./BoardStats";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +18,9 @@ type Row = {
   cleaner: number | null;
   potential: number | null;
   lighthouse: number | null;
+  catastrophic: number | null;
+  maxPenalty: number | null;
+  categories: number | null;
   gated: boolean;
 };
 
@@ -73,6 +76,18 @@ export default async function BoardPage({ params }: { params: { runId: string } 
         cleaner: rk.cleaner_than_pct === undefined || rk.cleaner_than_pct === null ? null : Number(rk.cleaner_than_pct),
         potential: typeof rk.slop_potential === "number" ? rk.slop_potential : null,
         lighthouse: r?.lighthouse_score ?? null,
+        // The count when the grade has it, the boolean's 0/1 when it only has that, and null for
+        // grades written before either, which must not read as a confident zero.
+        maxPenalty: typeof rk.max_penalty === "number" ? rk.max_penalty : null,
+        categories: typeof rk.categories_applied === "number" ? rk.categories_applied : null,
+        catastrophic:
+          typeof rk.catastrophe_findings === "number"
+            ? rk.catastrophe_findings
+            : rk.has_catastrophe === undefined
+              ? null
+              : rk.has_catastrophe === true
+                ? 1
+                : 0,
         gated: rk.has_catastrophe === true,
       };
     });
@@ -80,9 +95,19 @@ export default async function BoardPage({ params }: { params: { runId: string } 
   // Graded, in order. Lower slop is better, and a gating finding sinks an app whatever it scored:
   // a leaked key with a low score is not a good entry, and a board that puts it first would be
   // telling an organizer the opposite of what happened.
+  // The grader's own rank key, in the order the page claims: slop, then whether a gating finding
+  // fired, then the worst single finding, then exposure survived, then breadth of coverage. Sorting
+  // on slop alone would leave the explanation above describing something the table does not do.
   const ranked = rows
     .filter((r) => r.slop !== null && !r.gated)
-    .sort((a, b) => (a.slop as number) - (b.slop as number));
+    .sort(
+      (a, b) =>
+        (a.slop as number) - (b.slop as number) ||
+        (a.catastrophic ?? 0) - (b.catastrophic ?? 0) ||
+        (a.maxPenalty ?? 0) - (b.maxPenalty ?? 0) ||
+        (b.potential ?? 0) - (a.potential ?? 0) ||
+        (b.categories ?? 0) - (a.categories ?? 0)
+    );
   const gated = rows.filter((r) => r.gated);
   // A grade that failed is not still running. It has finished and produced nothing, usually because
   // the deployment has since gone down, and calling it in progress leaves a board that never
@@ -96,13 +121,14 @@ export default async function BoardPage({ params }: { params: { runId: string } 
     project_url: r.project_url,
     grade_id: r.grade_id,
     slop: r.slop as number,
-    security: r.axes?.security ?? null,
-    qa: r.axes?.qa ?? null,
-    performance: r.axes?.performance ?? null,
+    // What share of its exposed surface an app actually lost. A big app and a small one compare on
+    // this where they do not on the raw score.
+    ratio: r.potential ? ((r.slop as number) / r.potential) * 100 : null,
     lighthouse: r.lighthouse,
     exposure: r.potential,
-    cleaner: r.cleaner,
+    catastrophic: r.catastrophic,
   }));
+  const dnfRows: DnfRow[] = failed.map((r) => ({ name: r.name, project_url: r.project_url }));
   const skipped = (entries ?? []).filter((e) => e.skip_reason);
   const total = (entries ?? []).length;
 
@@ -135,7 +161,7 @@ export default async function BoardPage({ params }: { params: { runId: string } 
         ) : (
           <>
             <BoardStats rows={boardRows} />
-            <BoardTable rows={boardRows} />
+            <BoardTable rows={boardRows} dnf={dnfRows} />
           </>
         )}
       </section>
@@ -166,40 +192,6 @@ export default async function BoardPage({ params }: { params: { runId: string } 
         </section>
       )}
 
-      {failed.length > 0 && (
-        <section className="section">
-          <h2 className="section-head">Could not be reached</h2>
-          <p className="section-intro">
-            Sloptic cannot access these domains as of grade time. Possible reasons include: expired domain, 
-            expired free tier, disabled build, WAF challenge on our end, etc.
-          </p>
-          <div className="table-scroll">
-            <table className="count-table">
-              <thead><tr><th>submission</th></tr></thead>
-              <tbody>
-                {failed.map((r) => (
-                  <tr key={r.project_url}>
-                    <th scope="row">
-                      <a href={r.project_url} target="_blank" rel="noopener noreferrer">{r.name}</a>
-                    </th>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      <div className="method" data-tone="limits">
-        <h2>What this board covers</h2>
-        <p>
-          {total} entries were in the gallery and {skipped.length} could not be graded. Most events
-          lose entries to submissions that link only to a repository which is worth mentioning.
-        </p>
-        <div className="cta-row">
-          <a className="button secondary" href="/events">Back to events</a>
-        </div>
-      </div>
     </>
   );
 }

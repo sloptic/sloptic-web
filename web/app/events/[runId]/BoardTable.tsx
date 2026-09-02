@@ -1,22 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { ordinal } from "@/lib/grades";
 
 export type BoardRow = {
   name: string;
   project_url: string;
   grade_id: string | null;
   slop: number;
-  security: number | null;
-  qa: number | null;
-  performance: number | null;
+  /** slop as a share of what the app was exposed to, so a big app and a small one compare. */
+  ratio: number | null;
   lighthouse: number | null;
   exposure: number | null;
-  cleaner: number | null;
+  /** Findings that gate absolutely. Null when the grade predates the field. */
+  catastrophic: number | null;
 };
 
-type Key = "rank" | "name" | "slop" | "security" | "qa" | "performance" | "lighthouse" | "exposure" | "cleaner";
+/** Graded but unreachable. Kept in the table under everything else, because an organizer needs to
+ *  see WHICH entries produced nothing, and a separate section below the fold buries that. */
+export type DnfRow = { name: string; project_url: string };
+
+type Key = "rank" | "name" | "slop" | "ratio" | "lighthouse" | "exposure" | "catastrophic";
 
 const PAGE = 25;
 
@@ -32,15 +35,13 @@ const COLUMNS: { key: Key; label: string; asc: boolean }[] = [
   { key: "rank", label: "#", asc: true },
   { key: "name", label: "submission", asc: true },
   { key: "slop", label: "slop", asc: true },
-  { key: "security", label: "security", asc: true },
-  { key: "qa", label: "qa", asc: true },
-  { key: "performance", label: "performance", asc: true },
-  { key: "lighthouse", label: "lighthouse", asc: false },
+  { key: "ratio", label: "ratio", asc: true },
   { key: "exposure", label: "exposure", asc: false },
-  { key: "cleaner", label: "percentile", asc: false },
+  { key: "lighthouse", label: "lighthouse", asc: false },
+  { key: "catastrophic", label: "catastrophic", asc: true },
 ];
 
-export default function BoardTable({ rows }: { rows: BoardRow[] }) {
+export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRow[] }) {
   const [sort, setSort] = useState<{ key: Key; asc: boolean }>({ key: "rank", asc: true });
   const [page, setPage] = useState(0);
 
@@ -101,16 +102,28 @@ export default function BoardTable({ rows }: { rows: BoardRow[] }) {
                   <a href={r.project_url} target="_blank" rel="noopener noreferrer">{r.name}</a>
                 </th>
                 <td>{fmt(r.slop)}</td>
-                <td>{fmt(r.security)}</td>
-                <td>{fmt(r.qa)}</td>
-                <td>{fmt(r.performance)}</td>
-                <td>{r.lighthouse === null ? "-" : r.lighthouse}</td>
+                <td>{r.ratio === null ? "-" : `${r.ratio.toFixed(1)}%`}</td>
                 <td>{fmt(r.exposure)}</td>
-                <td>{r.cleaner === null ? "-" : ordinal(Math.round(r.cleaner))}</td>
+                <td>{r.lighthouse === null ? "-" : r.lighthouse}</td>
+                <td>{r.catastrophic === null ? "-" : r.catastrophic}</td>
                 <td>{r.grade_id ? <a href={`/grade/${r.grade_id}`}>report</a> : null}</td>
               </tr>
             ))}
           </tbody>
+          {dnf.length > 0 && page >= last && (
+            <tbody className="dnf-rows">
+              {dnf.map((d) => (
+                <tr key={d.project_url}>
+                  <td>-</td>
+                  <th scope="row">
+                    <a href={d.project_url} target="_blank" rel="noopener noreferrer">{d.name}</a>
+                  </th>
+                  <td colSpan={5}>DNF, the deployment did not respond</td>
+                  <td />
+                </tr>
+              ))}
+            </tbody>
+          )}
         </table>
       </div>
       {sorted.length > PAGE && (

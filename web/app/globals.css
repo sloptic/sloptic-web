@@ -2702,3 +2702,9 @@ a.mast-user:hover {
 .board-hist {
   margin-bottom: 0.5rem;
 }
+/* Graded but unreachable, under the field they were part of. */
+.dnf-rows td,
+.dnf-rows th {
+  color: var(--muted);
+  border-top: 1px solid var(--line-strong);
+}
