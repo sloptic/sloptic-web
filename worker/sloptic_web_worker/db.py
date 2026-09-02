@@ -352,3 +352,66 @@ def expire_stale_claims(conn: psycopg.Connection, days: int) -> int:
         {"days": days},
     ).fetchall()
     return len(rows or [])
+
+
+# --- event runs -----------------------------------------------------------------------------------
+
+@dataclass
+class Run:
+    id: str
+    slug: str
+    mode: str
+    override: bool
+
+
+def claim_event_run(conn: psycopg.Connection) -> Run | None:
+    """Take one run that needs its field resolved. Marked in progress by the same statement, so a
+    slow gallery pull cannot be picked up twice."""
+    row = conn.execute(
+        """
+        UPDATE event_runs SET started_at = coalesce(started_at, now())
+         WHERE id = (
+               SELECT id FROM event_runs
+                WHERE status = 'resolving' AND started_at IS NULL
+                ORDER BY created_at
+                FOR UPDATE SKIP LOCKED
+                LIMIT 1
+         )
+     RETURNING id, slug, mode, override;
+        """
+    ).fetchone()
+    if not row:
+        return None
+    return Run(id=str(row["id"]), slug=row["slug"], mode=row["mode"], override=row["override"])
+
+
+def save_field(conn: psycopg.Connection, run_id: str, entries: list, complete: bool,
+               detail: str) -> None:
+    """Store the resolved field and mark the run ready for the organizer to look at.
+
+    `gallery_complete` travels with it rather than being inferred from a count: a short list and a
+    short list we know about are different facts, and only one of them is safe to rank.
+    """
+    with conn.transaction():
+        conn.execute("DELETE FROM event_entries WHERE run_id = %s;", (run_id,))
+        for e in entries:
+            conn.execute(
+                """INSERT INTO event_entries (run_id, project_url, app_url, skip_reason)
+                   VALUES (%s, %s, %s, %s)
+                   ON CONFLICT (run_id, project_url) DO NOTHING;""",
+                (run_id, e.project_url, e.app_url, e.skip_reason),
+            )
+        conn.execute(
+            """UPDATE event_runs
+                  SET status = 'ready', entries_found = %(n)s, gallery_complete = %(c)s,
+                      detail = left(%(d)s, 2000), resolved_at = now()
+                WHERE id = %(id)s;""",
+            {"n": len(entries), "c": complete, "d": detail, "id": run_id},
+        )
+
+
+def fail_run(conn: psycopg.Connection, run_id: str, detail: str) -> None:
+    conn.execute(
+        "UPDATE event_runs SET status = 'failed', detail = left(%s, 2000), finished_at = now() WHERE id = %s;",
+        (detail, run_id),
+    )

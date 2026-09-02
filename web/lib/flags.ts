@@ -38,3 +38,28 @@ export function maxQueueDepth(): number {
 
 export const QUEUE_FULL_MESSAGE =
   "Too many grades are already waiting. Try again in a few minutes.";
+
+/**
+ * Accounts allowed to start an event run WITHOUT the organizer ownership check, by email.
+ *
+ * `SLOPTIC_EVENT_OVERRIDE=you@example.com,other@example.com`. Empty by default, so it is off unless
+ * someone deliberately sets it on the server. Never a query parameter or a client toggle: a debug
+ * switch a visitor can flip is not a debug switch.
+ *
+ * It exists to test the flow against a real gallery before any organizer has verified one. What it
+ * does NOT do is unlock active probing: an override run is passive, enforced here, in the route, and
+ * by a database constraint. Batch passive grading of public URLs is what the single URL form already
+ * does one at a time, so this buys convenience and no new capability. Firing attack payloads at a
+ * stranger's hackathon entries is the thing the tier model exists to prevent.
+ */
+export function eventOverrideAccounts(): string[] {
+  return (process.env.SLOPTIC_EVENT_OVERRIDE ?? "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export function mayOverrideEvents(email: string | null | undefined): boolean {
+  const list = eventOverrideAccounts();
+  return !!email && list.includes(email.toLowerCase());
+}

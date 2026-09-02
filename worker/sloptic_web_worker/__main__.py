@@ -27,7 +27,7 @@ import traceback
 import time
 from dataclasses import dataclass
 
-from . import config, db, verify_event
+from . import config, db, resolve_event, verify_event
 from .egress import install as install_egress
 from .grade_child import EXIT_ENTRY_CHALLENGE
 
@@ -172,6 +172,29 @@ def _kill(run: _Running) -> None:
         run.proc.wait(timeout=10)
     except subprocess.TimeoutExpired:
         print(f"[kill]  {run.job.id}: did not reap after SIGKILL", flush=True)
+
+
+def process_event_runs(conn) -> int:
+    """Resolve the field for one run that is waiting on it. Grades nothing.
+
+    Separate from grading on purpose: this is the step whose output the organizer approves, and it
+    has to finish before anything is probed.
+    """
+    run = db.claim_event_run(conn)
+    if run is None:
+        return 0
+    try:
+        field = resolve_event.resolve(run.slug)
+    except Exception as e:  # noqa: BLE001
+        traceback.print_exc()
+        db.fail_run(conn, run.id, f"worker error: {type(e).__name__}: {e}")
+        print(f"[run]   {run.slug}: failed to resolve", flush=True)
+        return 1
+    gradeable = sum(1 for e in field.entries if e.skip_reason is None)
+    db.save_field(conn, run.id, field.entries, field.complete, field.detail)
+    print(f"[run]   {run.slug}: {len(field.entries)} entries, {gradeable} gradeable, "
+          f"complete={field.complete}", flush=True)
+    return 1
 
 
 def process_event_checks(conn) -> int:
@@ -329,6 +352,7 @@ def main() -> None:
             # Event checks are seconds of HTTP while a grade runs for minutes, so they are settled
             # every pass rather than waiting behind the grade queue.
             worked = process_event_checks(conn) > 0 or worked
+            worked = process_event_runs(conn) > 0 or worked
 
             # Say WHY we are idle, but only when the reason changes: this loop runs every 5s.
             halted = rep.blocked(conn)
