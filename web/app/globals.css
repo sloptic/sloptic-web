@@ -2809,3 +2809,7 @@ a.mast-user:hover {
   gap: 0.4rem 1.25rem;
   margin: 0.6rem 0;
 }
+.tag[data-state="queued"] {
+  color: var(--muted);
+  border-color: var(--line-strong);
+}

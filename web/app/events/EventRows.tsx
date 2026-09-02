@@ -30,8 +30,15 @@ function state(v: Verified | undefined, c: Claim | undefined, runs: Run[]): { ch
   const live = runs.find((r) => r.status === "resolving" || r.status === "grading");
   if (live) {
     const done = live.event_entries?.filter((e) => e.grade_id).length ?? 0;
-    return live.status === "resolving"
-      ? { chip: "resolving", line: live.entries_found ? `${live.entries_found} entries found so far` : "reading the gallery" }
+    if (live.status === "resolving") {
+      return {
+        chip: "resolving",
+        line: live.entries_found ? `${live.entries_found} entries found so far` : "reading the gallery",
+      };
+    }
+    const running = live.event_entries?.some((e) => e.grade_id && !e.skip_reason) ?? false;
+    return done === 0 && !running
+      ? { chip: "queued", line: "waiting behind another run" }
       : { chip: "grading", line: `${done} graded so far` };
   }
   const ready = runs.find((r) => r.status === "ready");

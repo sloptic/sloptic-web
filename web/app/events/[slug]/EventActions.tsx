@@ -148,7 +148,13 @@ export default function EventActions({
                     {r.override ? <span className="tag">override</span> : null}{" "}
                     {r.status === "resolving" && (r.entries_found ? `Reading the gallery, ${r.entries_found} found so far.` : "Reading the gallery.")}
                     {r.status === "ready" && (entries.length === 0 ? "No submissions in the gallery yet." : `${entries.length} entries, ${gradeable.length} gradeable.`)}
-                    {r.status === "grading" && `Grading, ${finished} of ${gradeable.length} done.`}
+                    {r.status === "grading" &&
+                      // Events drain one after another, so a run confirmed while another is still
+                      // going sits at zero for hours. Saying it is queued is the difference between
+                      // waiting and looking broken.
+                      (finished === 0 && !gradeable.some((e) => gradeOf(e)?.status === "running")
+                        ? `Queued, ${gradeable.length} entries waiting. Another run is grading first.`
+                        : `Grading, ${finished} of ${gradeable.length} done.`)}
                     {r.status === "done" && `Done, ${graded} graded.`}
                     {r.status === "failed" && (r.detail ?? "Failed.")}
                   </p>
