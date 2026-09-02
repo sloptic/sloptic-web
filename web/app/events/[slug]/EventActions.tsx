@@ -163,9 +163,9 @@ export default function EventActions({
                     <p className="run-skips">
                       {estimateLabel(gradeable.length - finished, r.mode)} left.
                       {r.priority === 0
-                        ? " This event is judging now, so its grades go before other events."
+                        ? " Priority grading active (judging active and submissions closed)."
                         : r.priority === 2
-                          ? " Winners are already announced here, so it waits behind events still judging."
+                          ? "Standard grading active."
                           : ""}
                     </p>
                   )}
