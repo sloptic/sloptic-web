@@ -111,7 +111,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <nav className="colophon-links" aria-label="Site">
                 <a href="/terms">Terms of use</a>
                 <a href="/privacy">Privacy</a>
-                <a href="https://github.com/sloptic/sloptic-main">The grader, in full</a>
+                <a href="https://github.com/sloptic/sloptic-main">The grader in full</a>
                 <a href="/about">Who made it</a>
               </nav>
             </div>
