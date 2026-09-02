@@ -185,7 +185,11 @@ export default function RunFlow({
               <p>
                 {r.status === "resolving" && "Reading the gallery."}
                 {r.status === "ready" &&
-                  `${entries.length} entries, ${gradeable.length} gradeable, ${skipped.length} skipped.`}
+                  (entries.length === 0
+                    ? "No submissions in this event's gallery yet."
+                    : gradeable.length === 0
+                      ? `${entries.length} entries, none of them gradeable.`
+                      : `${entries.length} entries, ${gradeable.length} gradeable, ${skipped.length} skipped.`)}
                 {r.status === "grading" && `Grading ${graded} entries.`}
                 {r.status === "done" && `Done. ${graded} graded.`}
                 {r.status === "failed" && (r.detail ?? "Failed.")}
@@ -197,10 +201,13 @@ export default function RunFlow({
               )}
             </div>
 
-            {r.status === "ready" && (
+            {/* A field with nothing gradeable gets no button. Offering "Grade 0 entries" invites a
+                click that can only return an error, and the reason is the field above. */}
+            {r.status === "ready" && gradeable.length > 0 && (
               <div className="cta-row claim-check">
                 <button className="button" type="button" disabled={busy} onClick={() => void confirm(r.id)}>
-                  Grade {gradeable.length} entries
+                  Grade {gradeable.length}{" "}
+                  {gradeable.length === 1 ? "entry" : "entries"}
                 </button>
               </div>
             )}
