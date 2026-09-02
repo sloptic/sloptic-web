@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
 
-  let body: { slug?: string };
+  let body: { slug?: string; reports?: "keep" | "delete" };
   try {
     body = await req.json();
   } catch {
@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
   }
   const slug = (body.slug ?? "").trim().toLowerCase();
   if (!slug) return NextResponse.json({ error: "Which event?" }, { status: 400 });
+  const purge = body.reports === "delete";
 
   const db = supabaseAdmin();
   const { data: runs } = await db
@@ -35,18 +36,33 @@ export async function POST(req: NextRequest) {
   //    grades, which the 30 day sweep collects, the same thing that happens to a saved grade when an
   //    account is deleted. The reports stay readable at their own links until then.
   let detached = 0;
+  let purged = 0;
   if (runIds.length) {
-    const { data } = await db
+    const { data: gradeRows } = await db
       .from("grades")
       .update({ account_id: null })
       .in("event_run_id", runIds)
       .select("id");
-    detached = data?.length ?? 0;
-    // 2. Then the runs, which takes their entries with them.
+    detached = gradeRows?.length ?? 0;
+
+    // 2. Optionally take the reports now instead of in thirty days. Only the REPORTS: the grades
+    //    rows stay as anonymous stubs, which is what the retention sweep does too. Deleting them
+    //    outright would erase the record that the grading happened, and the daily budget is counted
+    //    from finished grades, so removing an event after using it would refund its own quota.
+    if (purge && gradeRows?.length) {
+      const { data: gone } = await db
+        .from("results")
+        .delete()
+        .in("grade_id", gradeRows.map((g) => g.id as string))
+        .select("grade_id");
+      purged = gone?.length ?? 0;
+    }
+
+    // 3. Then the runs, which takes their entries with them.
     await db.from("event_runs").delete().in("id", runIds);
   }
 
-  // 3. Revoke rather than delete: the grant is the record that this account once proved this event,
+  // 4. Revoke rather than delete: the grant is the record that this account once proved this event,
   //    and the partial unique index only counts live ones, so a later claim can still verify.
   await db
     .from("grants")
@@ -56,7 +72,7 @@ export async function POST(req: NextRequest) {
     .eq("scope", slug)
     .is("revoked_at", null);
 
-  // 4. The claim goes the same way, which also retires its token: a link already published on a
+  // 5. The claim goes the same way, which also retires its token: a link already published on a
   //    rules page stops meaning anything.
   await db
     .from("event_claims")
@@ -65,5 +81,5 @@ export async function POST(req: NextRequest) {
     .eq("slug", slug)
     .in("status", ["pending", "verified", "failed"]);
 
-  return NextResponse.json({ deleted: true, runs: runIds.length, detached });
+  return NextResponse.json({ deleted: true, runs: runIds.length, detached, purged });
 }

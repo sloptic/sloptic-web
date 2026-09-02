@@ -15,6 +15,7 @@ export default function DeleteEvent({
   graded: number;
 }) {
   const [typed, setTyped] = useState("");
+  const [reports, setReports] = useState<"keep" | "delete">("keep");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function DeleteEvent({
       const res = await fetch("/api/events/delete", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug }),
+        body: JSON.stringify({ slug, reports }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Could not remove it.");
@@ -48,11 +49,32 @@ export default function DeleteEvent({
         Devpost stops meaning anything, so verifying again needs a new one.
       </p>
       {graded > 0 && (
-        <p>
-          The {graded} reports already graded are not destroyed. They lose their owner and become
-          ordinary anonymous grades, which are deleted 30 days after they ran, and stay readable at
-          their own links until then.
-        </p>
+        <>
+          <p>What happens to the {graded} reports it already graded is your choice.</p>
+          <div className="report-choice">
+            <label>
+              <input
+                type="radio" name="reports" value="keep" checked={reports === "keep"}
+                onChange={() => setReports("keep")}
+              />
+              <span>
+                <b>Let them expire.</b> They lose their owner and become ordinary anonymous grades,
+                deleted 30 days after they ran, readable at their own links until then.
+              </span>
+            </label>
+            <label>
+              <input
+                type="radio" name="reports" value="delete" checked={reports === "delete"}
+                onChange={() => setReports("delete")}
+              />
+              <span>
+                <b>Delete them now.</b> The {graded} reports go immediately and their links stop
+                working. The scores stay counted against the daily grading budget, which is all that
+                is kept.
+              </span>
+            </label>
+          </div>
+        </>
       )}
       <form className="delete-form" onSubmit={remove}>
         <label htmlFor="confirm-slug">Type {slug} to confirm</label>
