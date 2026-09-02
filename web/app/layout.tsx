@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import ThemeToggle from "./ThemeToggle";
 import NavMenu from "./NavMenu";
+import MobileNav from "./MobileNav";
+import { ACCOUNT, REFERENCE } from "@/lib/nav";
 import { currentUser } from "@/lib/auth";
 import "./globals.css";
 
@@ -58,13 +60,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 menu does neither predictably. */}
             <NavMenu
               label="about"
-              items={[
-                { href: "/about", label: "About Sloptic" },
-                { href: "/methodology", label: "How grading works" },
-                { href: "/checks", label: "Every check" },
-                { href: "/findings", label: "The corpus study" },
-                { href: "/verify", label: "Why only some checks run" },
-              ]}
+              items={REFERENCE}
             />
             <a href="/organizers">organizers</a>
             {/* Signed OUT, the browser's own list is the only way back to a report, so it stays a
@@ -77,11 +73,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 label={user.email ?? "account"}
                 title={user.email ?? ""}
                 align="right"
-                items={[
-                  { href: "/account", label: "Account" },
-                  { href: "/grades", label: "Your grades" },
-                  { href: "/events", label: "Your events" },
-                ]}
+                items={ACCOUNT}
               >
                 <form action="/auth/signout" method="post" className="nav-menu-signout">
                   <button type="submit">Sign out</button>
@@ -94,6 +86,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </a>
           )}
           <ThemeToggle />
+          <MobileNav email={user?.email ?? null} />
         </header>
         <main className="sheet">{children}</main>
         <footer className="colophon">
