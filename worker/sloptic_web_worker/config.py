@@ -80,7 +80,14 @@ MAX_ATTEMPTS = int(os.environ.get("MAX_ATTEMPTS", "3"))
 # Playwright sync call on a CPU-spun renderer holds the GIL, so the child cannot time itself out and
 # no signal it might handle will land (sloptic's own corpus runners reached the same conclusion, see
 # scripts/run_batch.py). Counts from claim, so it includes any wait for the Lighthouse trace lane.
-GRADE_TIMEOUT_SECONDS = float(os.environ.get("GRADE_TIMEOUT_SECONDS", "600"))
+# 900s, matching the wall the corpus runs used, which is also what validation/grade-timing.json
+# measured under: at any other wall the vendored distribution is not quite ours.
+#
+# 600 was costing more than it saved. On the full battery p95 is 573s and p99 is 832s, so a 600s wall
+# kills something like 5% of grades that would have finished, and it kills them AFTER spending the
+# full 600s, so the slot is burned either way and the grade is lost as well. Passive barely notices
+# (p99 is 455s), but the wall has to suit the slower battery.
+GRADE_TIMEOUT_SECONDS = float(os.environ.get("GRADE_TIMEOUT_SECONDS", "900"))
 
 # How many grades may run at once. Each is its own process, so a wedge costs one slot rather than the
 # worker.
