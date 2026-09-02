@@ -23,6 +23,15 @@ type Verified = { slug: string; granted_at: string; expires_at: string };
 type Row = { slug: string; verified: Verified | null; claim: Claim | null; runs: Run[] };
 
 const POLL_MS = 4000;
+/** Rows per page of a field. A 52 entry event inside an expanded row is a wall otherwise. */
+const PAGE = 20;
+
+/** The submission's own name, from the end of its Devpost path. The organizer knows their entries by
+ *  these, and the submission page carries the app link anyway. */
+function projectName(url: string): string {
+  const seg = url.replace(/\/+$/, "").split("/").pop() ?? url;
+  return seg || url;
+}
 
 function when(iso: string | null): string {
   if (!iso) return "-";
@@ -58,6 +67,7 @@ export default function EventList({
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [origin, setOrigin] = useState("");
+  const [pages, setPages] = useState<Record<string, number>>({});
 
   useEffect(() => setOrigin(window.location.origin), []);
 
@@ -227,32 +237,62 @@ export default function EventList({
                                 </button>
                               </div>
                             )}
-                            {(r.event_entries ?? []).length > 0 && (
-                              <details className="check-detail">
-                                <summary>the field ({(r.event_entries ?? []).length})</summary>
-                                <div className="table-scroll">
-                                  <table className="count-table">
-                                    <thead><tr><th>app</th><th>status</th></tr></thead>
-                                    <tbody>
-                                      {(r.event_entries ?? []).map((e) => (
-                                        <tr key={e.project_url}>
-                                          <th scope="row">
-                                            <a href={e.app_url ?? e.project_url} target="_blank" rel="noopener noreferrer">
-                                              {(e.app_url ?? e.project_url).replace(/^https?:\/\//, "").slice(0, 44)}
-                                            </a>
-                                          </th>
-                                          <td className="band-note">
-                                            {e.skip_reason ? `skipped (${e.skip_reason})`
-                                              : e.grade_id ? <a href={`/grade/${e.grade_id}`}>report</a>
-                                              : "will be graded"}
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </details>
-                            )}
+                            {(() => {
+                              const all = r.event_entries ?? [];
+                              if (all.length === 0) return null;
+                              const page = pages[r.id] ?? 0;
+                              const last = Math.max(0, Math.ceil(all.length / PAGE) - 1);
+                              const from = page * PAGE;
+                              const shown = all.slice(from, from + PAGE);
+                              return (
+                                <details className="check-detail">
+                                  <summary>the field ({all.length})</summary>
+                                  <div className="table-scroll">
+                                    <table className="count-table">
+                                      <thead><tr><th>submission</th><th>status</th></tr></thead>
+                                      <tbody>
+                                        {shown.map((e) => (
+                                          <tr key={e.project_url}>
+                                            {/* Always the Devpost submission, even when we have the
+                                                app URL. That page is what an organizer recognises,
+                                                and it carries the app link already. */}
+                                            <th scope="row">
+                                              <a href={e.project_url} target="_blank" rel="noopener noreferrer">
+                                                {projectName(e.project_url)}
+                                              </a>
+                                            </th>
+                                            <td className="band-note">
+                                              {e.skip_reason ? `skipped (${e.skip_reason})`
+                                                : e.grade_id ? <a href={`/grade/${e.grade_id}`}>report</a>
+                                                : "will be graded"}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                  {all.length > PAGE && (
+                                    <div className="pager">
+                                      <button
+                                        className="link-button" type="button" disabled={page === 0}
+                                        onClick={() => setPages((p) => ({ ...p, [r.id]: page - 1 }))}
+                                      >
+                                        previous
+                                      </button>
+                                      <span>
+                                        {from + 1} to {Math.min(from + PAGE, all.length)} of {all.length}
+                                      </span>
+                                      <button
+                                        className="link-button" type="button" disabled={page >= last}
+                                        onClick={() => setPages((p) => ({ ...p, [r.id]: page + 1 }))}
+                                      >
+                                        next
+                                      </button>
+                                    </div>
+                                  )}
+                                </details>
+                              );
+                            })()}
                           </div>
                         );
                       })}

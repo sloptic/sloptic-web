@@ -2581,3 +2581,12 @@ a.mast-user:hover {
   font-size: 0.78rem;
   color: var(--muted);
 }
+.pager {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
