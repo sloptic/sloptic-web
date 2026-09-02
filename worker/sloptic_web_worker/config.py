@@ -150,3 +150,13 @@ CANVAS_SHELL_PLATFORMS = {
 # that suits one person's grade would fail the tail of any real event: 52 apps at 4 concurrent is
 # over an hour, and those grades are not stranded, they are queued behind work in progress.
 EVENT_QUEUE_TIMEOUT_SECONDS = float(os.environ.get("EVENT_QUEUE_TIMEOUT_SECONDS", str(12 * 3600)))
+
+
+# Events grade from their own daily allowance, so a field cannot spend the one the public tier runs
+# on. Sharing a single budget meant one 250 app event exhausted the day and the worker stopped
+# claiming ANYTHING, so an organizer doing exactly what the product invites them to do took the site
+# down for everyone until midnight.
+#
+# The two are separate ceilings, not a split of one: the box can do more than 300 grades a day, and
+# 300 is a brake on runaway cost rather than a hardware limit.
+DAILY_EVENT_BUDGET = int(os.environ.get("DAILY_EVENT_BUDGET", "500"))

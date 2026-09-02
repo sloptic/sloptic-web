@@ -126,18 +126,30 @@ class _Reputation:
         print(f"[breaker] tripped: {reason}. Not claiming for {hours:.0f}h so the flag can decay.",
               flush=True)
 
-    def blocked(self, conn) -> str:
-        """Why the worker may not claim right now, or '' if it may."""
+    def blocked(self, conn) -> dict[str, str]:
+        """Which lanes may not be claimed right now, and why. Empty means both are open.
+
+        Per lane, because the budgets are. A spent event allowance must not stop someone's single
+        grade, and the reverse: sharing one budget meant a large field took the whole site down for
+        the rest of the day. The challenge backoff is the exception and blocks both, since it is
+        about our IP and not about who is waiting.
+        """
         if time.time() < self.paused_until:
             left = (self.paused_until - time.time()) / 3600
-            return f"challenge backoff, {left:.1f}h left ({self.pause_reason})"
+            why = f"challenge backoff, {left:.1f}h left ({self.pause_reason})"
+            return {"public": why, "event": why}
         if self.paused_until:                       # the pause just expired
             print("[breaker] backoff elapsed; resuming.", flush=True)
             self.paused_until = 0.0
-        used = db.grades_in_last_day(conn)
-        if used >= config.DAILY_GRADE_BUDGET:
-            return f"daily budget spent ({used}/{config.DAILY_GRADE_BUDGET} in 24h)"
-        return ""
+
+        out: dict[str, str] = {}
+        pub = db.grades_in_last_day(conn, "public")
+        if pub >= config.DAILY_GRADE_BUDGET:
+            out["public"] = f"daily budget spent ({pub}/{config.DAILY_GRADE_BUDGET} in 24h)"
+        ev = db.grades_in_last_day(conn, "event")
+        if ev >= config.DAILY_EVENT_BUDGET:
+            out["event"] = f"event budget spent ({ev}/{config.DAILY_EVENT_BUDGET} in 24h)"
+        return out
 
 
 @dataclass
@@ -286,14 +298,14 @@ def harvest(conn, rep: "_Reputation", running: list[_Running]) -> bool:
     return changed
 
 
-def fill(conn, running: list[_Running]) -> bool:
-    """Claim up to the concurrency limit. Returns whether anything was started."""
+def fill(conn, running: list[_Running], lanes: set[str]) -> bool:
+    """Claim up to the concurrency limit, from the lanes still inside their allowance."""
     started = False
     # The budget was checked once for this pass, so a fill can overshoot it by at most
     # MAX_CONCURRENT_GRADES - 1. That is deliberate: re-reading it per claim would cost a query per
     # job to defend a soft daily cap against an overshoot of three.
     while len(running) < config.MAX_CONCURRENT_GRADES:
-        job = db.claim_job(conn)
+        job = db.claim_job(conn, lanes)
         if job is None:
             break
         print(f"[claim] {job.id} {job.origin} (mode={job.mode}, "
@@ -359,7 +371,9 @@ def main() -> None:
             worked = process_event_runs(conn) > 0 or worked
 
             # Say WHY we are idle, but only when the reason changes: this loop runs every 5s.
-            halted = rep.blocked(conn)
+            blocked = rep.blocked(conn)
+            lanes = {l for l in ("public", "event") if l not in blocked}
+            halted = "; ".join(f"{l}: {why}" for l, why in sorted(blocked.items()))
             if halted != last_halt:
                 if halted:
                     print(f"[hold]  not claiming: {halted}", flush=True)
@@ -368,7 +382,7 @@ def main() -> None:
             # The heartbeat thread does the writing on its own timer. Report the OLDEST in-flight
             # job, which is the one a stuck queue is stuck behind.
             oldest = max(running, key=lambda r: r.age()).job.id if running else None
-            if halted:
+            if not lanes:
                 beat.set("holding", halted, oldest)
             elif running:
                 beat.set("grading", f"{len(running)} of {config.MAX_CONCURRENT_GRADES} in flight",
@@ -376,8 +390,8 @@ def main() -> None:
             else:
                 beat.set("polling", "", None)
 
-            if not halted:
-                worked = fill(conn, running) or worked
+            if lanes:
+                worked = fill(conn, running, lanes) or worked
         except Exception as e:  # connection dropped, etc. — reconnect and keep going
             print(f"[loop] error: {e}; reconnecting", flush=True)
             time.sleep(config.POLL_INTERVAL_SECONDS)

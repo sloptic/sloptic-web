@@ -109,20 +109,25 @@ def reap_stale_jobs(conn: psycopg.Connection) -> int:
     return int(row["requeued"]) + int(row["abandoned"]) if row else 0
 
 
-def grades_in_last_day(conn: psycopg.Connection) -> int:
-    """Grades this worker actually completed in a rolling 24h. Counted in the DB rather than in
-    memory so a restart cannot reset the budget."""
+def grades_in_last_day(conn: psycopg.Connection, lane: str | None = None) -> int:
+    """Grades this worker completed in a rolling 24h, optionally for one lane only.
+
+    Counted in the DB so a restart cannot reset the budget. `lane` is "public" or "event"; the lanes
+    have separate allowances, because one field spending the public tier's budget was how a single
+    organizer could stop the site for the rest of the day.
+    """
+    where = {"public": " AND event_run_id IS NULL", "event": " AND event_run_id IS NOT NULL"}.get(lane, "")
     row = conn.execute(
-        """
+        f"""
         SELECT count(*) AS n FROM grades
          WHERE finished_at > now() - interval '24 hours'
-           AND status IN ('done', 'failed');
+           AND status IN ('done', 'failed'){where};
         """
     ).fetchone()
     return int(row["n"]) if row else 0
 
 
-def claim_job(conn: psycopg.Connection) -> Job | None:
+def claim_job(conn: psycopg.Connection, lanes: set[str] | None = None) -> Job | None:
     """Atomically take the oldest queued grade and mark it running. Returns None if the queue is empty.
 
     SKIP LOCKED lets many workers claim disjoint jobs without blocking each other.
@@ -134,6 +139,10 @@ def claim_job(conn: psycopg.Connection) -> Job | None:
          WHERE id = (
                SELECT id FROM grades
                 WHERE status = 'queued'
+                  -- Only the lanes still inside their daily allowance. A spent event budget must not
+                  -- stop a person's single grade, and the reverse.
+                  AND ((%(public)s AND event_run_id IS NULL)
+                       OR (%(event)s AND event_run_id IS NOT NULL))
                 -- A person waiting on ONE grade goes before an event grinding through hundreds.
                 -- Without this a 400 app field takes the whole worker for most of a day and every
                 -- anonymous submission behind it ages out at the queue timeout, so the site would
@@ -143,7 +152,9 @@ def claim_job(conn: psycopg.Connection) -> Job | None:
                 LIMIT 1
          )
      RETURNING id, origin, submitted_url, mode;
-        """
+        """,
+        {"public": lanes is None or "public" in lanes,
+         "event": lanes is None or "event" in lanes},
     ).fetchone()
     if not row:
         return None
