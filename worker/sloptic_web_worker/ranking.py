@@ -71,8 +71,8 @@ def load_curve(battery: str = "passive") -> dict | None:
     return curve
 
 
-def rank_passive(record: dict, score) -> dict | None:
-    """Rank one passive grade, or None if it cannot be ranked. Never raises."""
+def _rank(record: dict, score, battery: str, expect_probes: int | None) -> dict | None:
+    """Rank one grade against the curve for `battery`, or None if it cannot be ranked. Never raises."""
     curve = load_curve(battery)
     if curve is None:
         return None
