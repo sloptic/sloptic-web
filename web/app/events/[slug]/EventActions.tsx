@@ -153,7 +153,7 @@ export default function EventActions({
                       // going sits at zero for hours. Saying it is queued is the difference between
                       // waiting and looking broken.
                       (finished === 0 && !gradeable.some((e) => gradeOf(e)?.status === "running")
-                        ? `Queued, ${gradeable.length} entries waiting. Another run is grading first.`
+                        ? `Queued with ${gradeable.length} entries waiting (another run is grading first).`
                         : `Grading, ${finished} of ${gradeable.length} done.`)}
                     {r.status === "done" && `Done, ${graded} graded.`}
                     {r.status === "failed" && (r.detail ?? "Failed.")}
