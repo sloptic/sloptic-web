@@ -214,7 +214,7 @@ export default function EventActions({
                       {r.priority === 0
                         ? " Priority grading active (judging active and submissions closed)."
                         : r.priority === 2
-                          ? "Standard grading active."
+                          ? " Standard grading active."
                           : ""}
                     </p>
                   )}
