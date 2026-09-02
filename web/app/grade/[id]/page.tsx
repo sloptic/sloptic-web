@@ -435,7 +435,7 @@ function RankDetail({ r }: { r: GradeResult }) {
           <span className="k">{fmtScore(worst)}</span>
           <span className="v">
             worst single finding. Apps with worse single findings tend to have significant issues that
-            degrade the user experience of the app, or allow bad actors easy unauthorized access.
+            degrade the user experience or allow bad actors easy unauthorized access.
           </span>
         </li>
         {potential !== null && (
