@@ -41,10 +41,17 @@ function projectName(url: string): string {
  *  run over other people's apps. */
 export default function FieldTable({ entries }: { entries: FieldEntry[] }) {
   const [page, setPage] = useState(0);
-  const [skippedOnly, setSkippedOnly] = useState(false);
+  // Two boxes over one field, so they read as a union: tick nothing and you see everything, tick
+  // both and you also see everything, since eligible and skipped are the two halves. A pair of
+  // checkboxes that can select nothing at all would just be a way to empty the table.
+  const [showEligible, setShowEligible] = useState(false);
+  const [showSkipped, setShowSkipped] = useState(false);
   const [sort, setSort] = useState<{ key: "name" | "status"; asc: boolean }>({ key: "name", asc: true });
 
-  const filtered = skippedOnly ? entries.filter((e) => e.skip_reason) : entries;
+  const filtered =
+    showEligible === showSkipped
+      ? entries
+      : entries.filter((e) => (showSkipped ? e.skip_reason : !e.skip_reason));
   const rows = [...filtered].sort((a, b) => {
     const dir = sort.asc ? 1 : -1;
     if (sort.key === "name") return projectName(a.project_url).localeCompare(projectName(b.project_url)) * dir;
@@ -64,17 +71,30 @@ export default function FieldTable({ entries }: { entries: FieldEntry[] }) {
     <details className="check-detail field-block">
       <summary>the field ({entries.length})</summary>
 
-      <label className="field-filter">
-        <input
-          type="checkbox"
-          checked={skippedOnly}
-          onChange={(e) => {
-            setSkippedOnly(e.target.checked);
-            setPage(0);
-          }}
-        />
-        only what was skipped
-      </label>
+      <div className="field-filters">
+        <label className="field-filter">
+          <input
+            type="checkbox"
+            checked={showEligible}
+            onChange={(e) => {
+              setShowEligible(e.target.checked);
+              setPage(0);
+            }}
+          />
+          grading eligible ({entries.filter((e) => !e.skip_reason).length})
+        </label>
+        <label className="field-filter">
+          <input
+            type="checkbox"
+            checked={showSkipped}
+            onChange={(e) => {
+              setShowSkipped(e.target.checked);
+              setPage(0);
+            }}
+          />
+          skipped ({entries.filter((e) => e.skip_reason).length})
+        </label>
+      </div>
 
       <div className="table-scroll">
         <table className="count-table">

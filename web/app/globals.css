@@ -2803,3 +2803,9 @@ a.mast-user:hover {
   text-overflow: ellipsis;
   max-width: 13rem;
 }
+.field-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  margin: 0.6rem 0;
+}
