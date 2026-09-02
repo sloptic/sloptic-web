@@ -184,6 +184,14 @@ export default function EventList({
                       {row.runs.map((r) => {
                         const gradeable = (r.event_entries ?? []).filter((e) => !e.skip_reason);
                         const graded = (r.event_entries ?? []).filter((e) => e.grade_id).length;
+                        // Why the field is the size it is, without opening the table. On a real
+                        // event most of the gap is one cause, and it is the organizer's to fix:
+                        // 27 of BostonHacks' 52 linked only a repo.
+                        const why = new Map<string, number>();
+                        for (const e of r.event_entries ?? []) {
+                          if (e.skip_reason) why.set(e.skip_reason, (why.get(e.skip_reason) ?? 0) + 1);
+                        }
+                        const reasons = [...why.entries()].sort((a, b) => b[1] - a[1]);
                         return (
                           <div className="event-run" key={r.id}>
                             <p className="event-run-head">
@@ -198,6 +206,11 @@ export default function EventList({
                               {r.status === "done" && `Done, ${graded} graded.`}
                               {r.status === "failed" && (r.detail ?? "Failed.")}
                             </p>
+                            {reasons.length > 0 && (
+                              <p className="event-skips">
+                                {reasons.map(([reason, n]) => `${n} ${reason}`).join("  ·  ")}
+                              </p>
+                            )}
                             {r.gallery_complete === false && (
                               <p className="fineprint">Incomplete gallery, so this is not the whole field.</p>
                             )}

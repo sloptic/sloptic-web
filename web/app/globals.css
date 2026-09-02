@@ -2574,3 +2574,10 @@ a.mast-user:hover {
   font-size: 0.9rem;
   color: var(--ink-soft);
 }
+/* The shape of a field, on the run's own line. */
+.event-skips {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
