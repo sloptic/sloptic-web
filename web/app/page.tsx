@@ -358,13 +358,13 @@ export default function Home() {
       <section className="section" id="score">
         <h2 className="section-head">The score</h2>
         <p className="section-intro">
-          One number, so you can see how your app is doing at a glance and compare it to others.
+          One number so you can see how your app is doing at a glance and compare it to others.
         </p>
         <div className="rows">
           <div className="row2">
             <span className="term">Lower is better</span>
             <p className="desc">
-              Like golf. A 0 means nothing was found. There is no maximum. A messier app just scores
+              Like golf. A 0 means nothing was found. A messier app just scores
               higher.
             </p>
           </div>
@@ -378,7 +378,7 @@ export default function Home() {
           <div className="row2">
             <span className="term">Weighted by how much it matters</span>
             <p className="desc">
-              A serious security hole adds more than a small nicety, and the same problem repeated
+              A serious security hole adds more than a small nicety, yet the same problem repeated
               across ten pages counts once.
             </p>
           </div>
@@ -396,14 +396,14 @@ export default function Home() {
         <h2 className="section-head">Passive by default</h2>
         <p className="section-intro">
           Some checks would send real attack traffic at a site. Pointing those at a site you have not
-          shown you own would be wrong, so by default Sloptic never does.
+          shown you own would be wrong, therefore Sloptic never does by default.
         </p>
         <ol className="tier-grid">
           <li className="tier" data-step="1">
             <h3>Anyone</h3>
             <p className="tier-req">no account</p>
             <p className="tier-desc">
-              The look-only checks run on any URL. They read what your app already shows the public, so
+              The passive checks run on any URL. They read what your app already shows the public, so
               they are safe to point at anything, and they are most of what the score is made of.
             </p>
           </li>
