@@ -24,6 +24,8 @@ type Run = {
 };
 
 const POLL_MS = 4000;
+/** While a check is in flight, so the verdict lands within a second or two of the worker writing it. */
+const CHECK_POLL_MS = 1500;
 const gradeOf = (e: Entry) => (Array.isArray(e.grades) ? e.grades[0] : e.grades) ?? null;
 
 function checkLine(c: Claim): string {
@@ -49,6 +51,10 @@ export default function EventActions({
   const [runs, setRuns] = useState<Run[]>([]);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  // The checked_at we had when Check now was pressed. A check is finished when the row carries a
+  // newer one, which is the only signal that distinguishes "still looking" from "looked and found
+  // nothing", since both leave the claim pending.
+  const [checkingFrom, setCheckingFrom] = useState<string | null | undefined>(undefined);
   const [origin, setOrigin] = useState("");
 
   useEffect(() => setOrigin(window.location.origin), []);
@@ -63,13 +69,28 @@ export default function EventActions({
   }, [slug]);
 
   useEffect(() => { void load(); }, [load]);
+  const checking = checkingFrom !== undefined && claim?.checked_at === checkingFrom;
+
   useEffect(() => {
     const moving = runs.some((r) => r.status === "resolving" || r.status === "grading") ||
       claim?.status === "pending";
     if (!moving) return;
-    const t = setInterval(() => void load(), POLL_MS);
+    const t = setInterval(() => void load(), checking ? CHECK_POLL_MS : POLL_MS);
     return () => clearInterval(t);
-  }, [runs, claim, load]);
+  }, [runs, claim, load, checking]);
+
+  // Stop waiting after a while. The worker checks on its own timer regardless, so this only governs
+  // how long the page claims to be watching.
+  useEffect(() => {
+    if (!checking) return;
+    const t = setTimeout(() => setCheckingFrom(undefined), 90_000);
+    return () => clearTimeout(t);
+  }, [checking]);
+
+  // Once the row carries a newer check, the wait is over and the verdict below is that check's.
+  useEffect(() => {
+    if (checkingFrom !== undefined && claim?.checked_at !== checkingFrom) setCheckingFrom(undefined);
+  }, [claim, checkingFrom]);
 
   async function post(url: string, body: unknown) {
     const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -97,7 +118,31 @@ export default function EventActions({
             <b>Grading policy</b>.
           </p>
           <p className="token-link"><code>{`${origin}/e/${claim.token}`}</code></p>
-          <p className="section-intro">{checkLine(claim)}</p>
+
+          <div className="verdict" data-state={checking ? "checking" : claim.check_status ?? "none"}>
+            <p className="verdict-label">
+              {checking ? (
+                <>
+                  Checking<span className="dots" aria-hidden />
+                </>
+              ) : (
+                "last check"
+              )}
+            </p>
+            <p className="verdict-line">
+              {checking
+                ? `Reading ${slug}.devpost.com for your link.`
+                : checkLine(claim)}
+            </p>
+            {!checking && claim.checked_at && (
+              <p className="verdict-when">
+                {new Date(claim.checked_at).toLocaleTimeString(undefined, {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </p>
+            )}
+          </div>
         </section>
       )}
 
@@ -105,8 +150,12 @@ export default function EventActions({
       <div className="cta-row event-actions">
         {pending && (
           <button className="button secondary" type="button" disabled={busy}
-                  onClick={() => void act(async () => { await post("/api/events/recheck", { id: claim.id }); return "Checking now."; })}>
-            Check now
+                  onClick={() => void act(async () => {
+              setCheckingFrom(claim.checked_at ?? null);
+              await post("/api/events/recheck", { id: claim.id });
+              return null;
+            })}>
+            {checking ? "Checking" : "Check now"}
           </button>
         )}
         {(verified || canOverride) && !live && (
