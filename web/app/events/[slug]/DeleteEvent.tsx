@@ -46,7 +46,7 @@ export default function DeleteEvent({
         Your verification goes and so do{" "}
         {runs === 1 ? "its run" : `its ${runs} runs`}
         {graded > 0 ? ` and ${graded === 1 ? "board" : "boards"}` : ""}. You need to reverify if you 
-        want to add this event again. This is permanent and cannot be undone.
+        want to add this event again. <b>This is permanent and cannot be undone.</b>
       </p>
       {graded > 0 && (
         <>
