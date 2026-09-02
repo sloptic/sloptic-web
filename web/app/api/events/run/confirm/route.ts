@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { currentUser } from "@/lib/auth";
+import { randomUUID } from "node:crypto";
 import { normalizeTarget } from "@/lib/origin";
 
 export const runtime = "nodejs";
@@ -53,38 +54,54 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Nothing in this field can be graded." }, { status: 409 });
   }
 
-  let queued = 0;
-  for (const e of entries) {
-    let target;
+  // One insert for the whole field, with ids generated here so the entries can be linked without
+  // reading anything back. The previous version did two round trips per entry, which for a 52 app
+  // event is over a hundred, taking long enough that closing the tab could abort the handler partway
+  // and leave a field half queued.
+  const bad: string[] = [];
+  const rows = entries.flatMap((e) => {
     try {
-      target = normalizeTarget(e.app_url ?? "");
-    } catch {
-      // A link that survived the screen but will not normalize is the entry's problem, not the run's.
-      await db.from("event_entries").update({ skip_reason: "the app link is not a usable URL" }).eq("id", e.id);
-      continue;
-    }
-    const { data: grade } = await db
-      .from("grades")
-      .insert({
+      const target = normalizeTarget(e.app_url ?? "");
+      return [{
+        id: randomUUID(),
+        entry_id: e.id,
         origin: target.origin,
         submitted_url: e.app_url,
         mode: run.mode,
         status: "queued",
         account_id: user.id,
         event_run_id: run.id,
-      })
-      .select("id")
-      .single();
-    if (grade) {
-      await db.from("event_entries").update({ grade_id: grade.id }).eq("id", e.id);
-      queued += 1;
+      }];
+    } catch {
+      bad.push(e.id);
+      return [];
     }
+  });
+
+  if (rows.length === 0) {
+    return NextResponse.json({ error: "Nothing in this field can be graded." }, { status: 409 });
   }
 
-  await db
-    .from("event_runs")
-    .update({ status: "grading", started_at: new Date().toISOString() })
-    .eq("id", run.id);
+  const { error: insErr } = await db
+    .from("grades")
+    .insert(rows.map(({ entry_id, ...g }) => g));
+  if (insErr) {
+    console.error("event enqueue failed:", insErr.message);
+    return NextResponse.json({ error: "Could not queue the grades." }, { status: 500 });
+  }
+
+  // Link and flip in parallel. A link that survived the screen but will not normalize is that
+  // entry's problem, so it is marked and the rest proceed.
+  await Promise.all([
+    ...rows.map((g) => db.from("event_entries").update({ grade_id: g.id }).eq("id", g.entry_id)),
+    ...bad.map((id) =>
+      db.from("event_entries").update({ skip_reason: "unusable link" }).eq("id", id)
+    ),
+    db.from("event_runs")
+      .update({ status: "grading", started_at: new Date().toISOString() })
+      .eq("id", run.id),
+  ]);
+  const queued = rows.length;
 
   return NextResponse.json({ queued, mode: run.mode });
 }
