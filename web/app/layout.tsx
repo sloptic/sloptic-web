@@ -98,25 +98,23 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <p>
                 One number for how well a deployed web app holds up, on the same scale for every app.
               </p>
+            </div>
+
+            {/* One row, because four links stacked in a column beside the brand read as a leftover
+                nav. Each is here because something depends on it: the address is the takedown route
+                /terms, /privacy and the participant notice all point at, and the grader source is
+                the evidence for the claim the product rests on. The page list is in the menus. */}
+            <div className="colophon-bar">
               <a className="colophon-contact" href="mailto:hello@sloptic.org">
                 hello@sloptic.org
               </a>
-              <p className="colophon-legal">
-                <a href="/terms">Terms of use</a> <span aria-hidden>·</span>{" "}
+              <nav className="colophon-links" aria-label="Site">
+                <a href="/terms">Terms of use</a>
                 <a href="/privacy">Privacy</a>
-              </p>
+                <a href="https://github.com/sloptic/sloptic-main">The grader, in full</a>
+                <a href="/about">Who made it</a>
+              </nav>
             </div>
-
-            {/* Four links, and each is here because something depends on it.
-                The address is the takedown route /terms, /privacy and the participant notice all
-                tell people to write to, so it has to be findable from any page. The grader source is
-                evidence for the claim the whole product rests on, that the method is open and
-                checkable. Terms and privacy are where people look for them.
-                The page list that used to sit here is in the menus now. */}
-            <nav className="colophon-links" aria-label="Site">
-              <a href="https://github.com/sloptic/sloptic-main">The grader, in full</a>
-              <a href="/about">Who made it</a>
-            </nav>
           </div>
         </footer>
       </body>
