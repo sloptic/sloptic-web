@@ -58,7 +58,12 @@ function state(r: Row): { chip: string; line: string } {
   if (live) {
     const done = (live.event_entries ?? []).filter((e) => e.grade_id).length;
     return live.status === "resolving"
-      ? { chip: "resolving", line: "Reading the gallery." }
+      ? {
+          chip: "resolving",
+          line: live.entries_found
+            ? `Reading the gallery, ${live.entries_found} found so far.`
+            : "Reading the gallery.",
+        }
       : { chip: "grading", line: `Grading, ${done} done so far.` };
   }
   const finished = r.runs.find((x) => x.status === "done");
@@ -205,16 +210,19 @@ export default function EventList({
                         </>
                       )}
 
-                      {canGrade && (
-                        <div className="cta-row claim-check">
-                          <button
-                            className="button" type="button" disabled={busy}
-                            onClick={() => void act(async () => { await post("/api/events/run", { event: row.slug }); return null; })}
-                          >
-                            Grade this event
-                          </button>
-                        </div>
-                      )}
+                      {canGrade &&
+                        !row.runs.some((x) =>
+                          ["resolving", "ready", "grading"].includes(x.status)
+                        ) && (
+                          <div className="cta-row claim-check">
+                            <button
+                              className="button" type="button" disabled={busy}
+                              onClick={() => void act(async () => { await post("/api/events/run", { event: row.slug }); return null; })}
+                            >
+                              {row.runs.length > 0 ? "Grade it again" : "Grade this event"}
+                            </button>
+                          </div>
+                        )}
 
                       {row.runs.map((r) => {
                         const gradeable = (r.event_entries ?? []).filter((e) => !e.skip_reason);
@@ -241,9 +249,11 @@ export default function EventList({
                           <div className="event-run" key={r.id}>
                             <p className="event-run-head">
                               <span className="tag">{r.mode}</span>
-                              {r.override ? <span className="tag">override</span> : null}
-                              <span className="tag">{r.status}</span>{" "}
-                              {r.status === "resolving" && "Reading the gallery."}
+                              {r.override ? <span className="tag">override</span> : null}{" "}
+                              {r.status === "resolving" &&
+                                (r.entries_found
+                                  ? `Reading the gallery, ${r.entries_found} found so far.`
+                                  : "Reading the gallery.")}
                               {r.status === "ready" && ((r.event_entries ?? []).length === 0
                                 ? "No submissions in the gallery yet."
                                 : `${(r.event_entries ?? []).length} entries, ${gradeable.length} gradeable.`)}
@@ -365,7 +375,7 @@ export default function EventList({
                         );
                       })}
 
-                      {row.claim?.check_detail && (
+                      {row.claim?.check_detail && !row.verified && (
                         <details className="check-detail">
                           <summary>what our last check saw</summary>
                           <p>{row.claim.check_detail}</p>

@@ -60,7 +60,12 @@ def _pick_app_url(hrefs: list[str]) -> tuple[str | None, str | None]:
     return None, "no links provided"
 
 
-def resolve(slug: str, limit: int = 1000) -> Field:
+def resolve(slug: str, limit: int = 1000, on_progress=None) -> Field:
+    """`on_progress(n)` is called as entries accumulate.
+
+    A count, never a percentage: Devpost's gallery does not say how many submissions an event has
+    before you have paged through them, so a progress bar would be drawing a total we invented.
+    """
     entries: list[Entry] = []
     complete = True
     detail = "gallery read in full"
@@ -68,6 +73,8 @@ def resolve(slug: str, limit: int = 1000) -> Field:
         for project_url, hrefs in devpost.submissions(slug):
             app_url, why = _pick_app_url(list(hrefs))
             entries.append(Entry(project_url, app_url, why))
+            if on_progress is not None and len(entries) % 10 == 0:
+                on_progress(len(entries))
             if len(entries) >= limit:
                 complete = False
                 detail = f"stopped at {limit} entries"

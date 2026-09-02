@@ -196,7 +196,10 @@ def process_event_runs(conn) -> int:
     if run is None:
         return 0
     try:
-        field = resolve_event.resolve(run.slug)
+        # Report the count as it climbs, so a big gallery does not read as a stalled page.
+        field = resolve_event.resolve(
+            run.slug, on_progress=lambda n: db.note_resolve_progress(conn, run.id, n)
+        )
     except Exception as e:  # noqa: BLE001
         traceback.print_exc()
         db.fail_run(conn, run.id, f"worker error: {type(e).__name__}: {e}")

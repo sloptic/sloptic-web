@@ -419,6 +419,15 @@ def claim_event_run(conn: psycopg.Connection) -> Run | None:
     return Run(id=str(row["id"]), slug=row["slug"], mode=row["mode"], override=row["override"])
 
 
+def note_resolve_progress(conn: psycopg.Connection, run_id: str, found: int) -> None:
+    """How many entries the gallery has yielded so far. Fire and forget: a progress write must never
+    disturb a resolve that is otherwise going fine."""
+    try:
+        conn.execute("UPDATE event_runs SET entries_found = %s WHERE id = %s;", (found, run_id))
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def save_field(conn: psycopg.Connection, run_id: str, entries: list, complete: bool,
                detail: str) -> None:
     """Store the resolved field and mark the run ready for the organizer to look at.
