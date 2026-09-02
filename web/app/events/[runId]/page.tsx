@@ -15,6 +15,7 @@ type Row = {
   slop: number | null;
   axes: Record<string, number> | null;
   cleaner: number | null;
+  potential: number | null;
   gated: boolean;
 };
 
@@ -68,6 +69,7 @@ export default async function BoardPage({ params }: { params: { runId: string } 
         slop: r ? Number(r.slop_score) : null,
         axes: (r?.axis_slop as Record<string, number>) ?? null,
         cleaner: rk.cleaner_than_pct === undefined || rk.cleaner_than_pct === null ? null : Number(rk.cleaner_than_pct),
+        potential: typeof rk.slop_potential === "number" ? rk.slop_potential : null,
         gated: rk.has_catastrophe === true,
       };
     });
@@ -99,6 +101,11 @@ export default async function BoardPage({ params }: { params: { runId: string } 
           Sorted by slop score, lowest first. The percentile compares each app against the frozen
           population for this battery, so it does not depend on who else entered this event.
         </p>
+        <p className="section-intro">
+          Two apps can score the same and place differently. The exposure column is why: it is how
+          much slop the app was open to across the checks that applied, and surviving more of it ranks
+          higher at the same score. Each report shows the full breakdown.
+        </p>
         {ranked.length === 0 ? (
           <p className="section-intro">Nothing has finished grading yet.</p>
         ) : (
@@ -112,6 +119,7 @@ export default async function BoardPage({ params }: { params: { runId: string } 
                   <th>security</th>
                   <th>qa</th>
                   <th>performance</th>
+                  <th>exposure</th>
                   <th>percentile</th>
                   <th />
                 </tr>
@@ -127,6 +135,7 @@ export default async function BoardPage({ params }: { params: { runId: string } 
                     <td>{fmt(r.axes?.security ?? null)}</td>
                     <td>{fmt(r.axes?.qa ?? null)}</td>
                     <td>{fmt(r.axes?.performance ?? null)}</td>
+                    <td>{fmt(r.potential)}</td>
                     <td>{r.cleaner === null ? "-" : ordinal(Math.round(r.cleaner))}</td>
                     <td>{r.grade_id ? <a href={`/grade/${r.grade_id}`}>report</a> : null}</td>
                   </tr>

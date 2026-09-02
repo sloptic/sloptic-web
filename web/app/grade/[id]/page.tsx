@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { GradeView, Finding, Coverage, GradeProgress, CardEntry, Outcome } from "@/lib/types";
-import { AREA_LABELS, PASSIVE_BY_AREA, describeProbe, type Area } from "@/lib/checks";
+import type { GradeView, GradeResult, Finding, Coverage, GradeProgress, CardEntry, Outcome } from "@/lib/types";
+import { AREA_LABELS, PASSIVE_BY_AREA, TOTALS, describeProbe, type Area } from "@/lib/checks";
 import { daysUntil } from "@/lib/retention";
 import { ordinal } from "@/lib/grades";
 import { forgetGrade } from "@/lib/history";
@@ -290,6 +290,8 @@ function Report({ view }: { view: GradeView }) {
         <p className="rank-reference">Compared against {r.ranking.reference}.</p>
       ) : null}
 
+      <RankDetail r={r} />
+
       <p className="passive-note">
         This is a passive grade only, seeing only what a visitor sees. <a href="/verify">Verify the domain</a> for an active grade.
       </p>
@@ -370,23 +372,117 @@ function ReportKeep({ view }: { view: GradeView }) {
  *  pretending to a schema, and skip the internals a reader cannot act on. */
 const EVIDENCE_SKIP = new Set(["penalty_override", "na_reason"]);
 
+/** One evidence value as text, at any depth.
+ *
+ *  The old version called String() on nested values, so an object one level down rendered as
+ *  "[object Object]" and the reader was shown the word Object where a number should have been. Axe
+ *  evidence nests two deep (impacts inside an advisory block), which is exactly where it showed. */
+function fmtValue(v: unknown, depth = 0): string {
+  if (v === null || v === undefined) return "";
+  if (Array.isArray(v)) return v.map((x) => fmtValue(x, depth + 1)).filter(Boolean).join(", ");
+  if (typeof v === "object") {
+    const inner = Object.entries(v as Record<string, unknown>).filter(
+      ([, iv]) => iv !== null && iv !== undefined && iv !== ""
+    );
+    if (inner.length === 0) return "";
+    // Deep enough that a prose rendering stops helping; show the shape instead of losing it.
+    if (depth >= 2) return JSON.stringify(v);
+    return inner.map(([ik, iv]) => `${ik.replace(/_/g, " ")} ${fmtValue(iv, depth + 1)}`).join(", ");
+  }
+  return String(v);
+}
+
 function evidencePairs(ev?: Record<string, unknown>): [string, string][] {
   if (!ev) return [];
   const out: [string, string][] = [];
   for (const [k, v] of Object.entries(ev)) {
     if (EVIDENCE_SKIP.has(k) || v === null || v === undefined) continue;
-    if (Array.isArray(v)) {
-      if (v.length === 0) continue;
-      out.push([k, v.map(String).join(", ")]);
-    } else if (typeof v === "object") {
-      const inner = Object.entries(v as Record<string, unknown>);
-      if (inner.length === 0) continue;
-      out.push([k, inner.map(([ik, iv]) => `${ik}: ${String(iv)}`).join(", ")]);
-    } else {
-      out.push([k, String(v)]);
-    }
+    const text = fmtValue(v);
+    if (text === "") continue;
+    out.push([k, text]);
   }
   return out;
+}
+
+/** What the placement is made of.
+ *
+ *  Two apps can score the same and place differently, which looks like a bug until you can see what
+ *  separated them. The rank compares slop first, then whether a gating finding fired, then the worst
+ *  single finding, then how much slop the app was exposed to and survived, then how many kinds of
+ *  check applied. Every one of those is here. */
+function RankDetail({ r }: { r: GradeResult }) {
+  const rk = r.ranking;
+  if (!rk) return null;
+  const rep = (rk.reporting ?? {}) as Record<string, unknown>;
+  const worst = Math.max(0, ...(r.findings ?? []).map((f) => f.penalty ?? 0));
+  const num = (v: unknown) => (typeof v === "number" ? v : null);
+  const potential = num(rk.slop_potential);
+  const applicable = num(rep.probes_applicable);
+  const cleanRate = num(rep.clean_rate);
+  const untested = (rep.untested_families as string[] | undefined) ?? [];
+
+  return (
+    <>
+      <h2>How this ranks</h2>
+      <p className="section-intro">
+        Apps with the same score are separated in this order: whether a gating finding fired, then the
+        worst single finding, then how much slop the app was exposed to and avoided, then how many
+        kinds of check applied.
+      </p>
+      <ul className="stat-list numeric">
+        <li>
+          <span className="k">{fmtScore(worst)}</span>
+          <span className="v">
+            the worst single finding. At equal scores the app whose worst fault is smaller ranks
+            higher, since one severe fault is worse than the same total spread thinly.
+          </span>
+        </li>
+        {potential !== null && (
+          <li>
+            <span className="k">{fmtScore(potential)}</span>
+            <span className="v">
+              slop this app was exposed to across the checks that applied. It scored{" "}
+              {fmtScore(Number(r.slop_score))} of that, so it avoided{" "}
+              {fmtScore(Math.max(0, potential - Number(r.slop_score)))}. More exposure survived ranks
+              higher at the same score.
+            </span>
+          </li>
+        )}
+        {applicable !== null && (
+          <li>
+            <span className="k">{applicable}</span>
+            <span className="v">
+              checks applied out of the {r.passive_probe_count ?? TOTALS.passive} in this battery.
+              {cleanRate !== null ? ` ${cleanRate}% of them found nothing.` : ""}
+            </span>
+          </li>
+        )}
+        {num(rk.categories_applied) !== null && (
+          <li>
+            <span className="k">{rk.categories_applied}</span>
+            <span className="v">
+              kinds of fault were actually testable here. More coverage ranks higher at the same
+              score, since a number from a wider look is worth more.
+            </span>
+          </li>
+        )}
+        {rep.attack_surface_coverage ? (
+          <li>
+            <span className="k">{String(rep.attack_surface_coverage)}</span>
+            <span className="v">
+              how much of the app&apos;s surface the checks could reach.
+              {untested.length > 0 ? ` Nothing tested: ${untested.join(", ")}.` : ""}
+            </span>
+          </li>
+        ) : null}
+      </ul>
+      {Array.isArray(rep.why) && rep.why.length > 0 && (
+        <p className="section-intro fineprint">
+          Why the coverage is what it is: {(rep.why as string[]).join("; ")}.
+        </p>
+      )}
+    </>
+  );
 }
 
 function Findings({ findings, card }: { findings: Finding[]; card: Record<string, CardEntry> }) {

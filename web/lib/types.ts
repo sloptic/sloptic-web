@@ -79,6 +79,14 @@ export interface GradeResult {
     reference?: string;
     absolute_gates?: string[];
     axes?: Record<string, { applicable: boolean; percentile?: number; band?: string }>;
+    /** The tiebreak inputs, so a placement can show what separated it from an equal score. */
+    slop_potential?: number;
+    categories_applied?: number;
+    defended?: number;
+    /** Set by the worker from the grader's own gate predicate; absent on grades from before it. */
+    has_catastrophe?: boolean;
+    /** The grader's own account of how much it could see: coverage, clean rate, untested families. */
+    reporting?: Record<string, unknown>;
   } | null;
   /** sloptic.reportcard.build_card(): per finding, what was expected, what was seen, what it means,
    *  and the remediation. The thing a reader actually wants after a grade. */
