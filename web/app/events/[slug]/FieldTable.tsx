@@ -7,7 +7,30 @@ export type FieldEntry = {
   skip_reason: string | null;
   grade_id: string | null;
   status: string | null;
+  /** The running grade's live progress: how many checks have run of the battery. */
+  progress: { done?: number; total?: number; label?: string } | null;
 };
+
+/** The status cell for a grade that is running: a real progress bar (checks run of the battery) and
+ *  the count as a link into that grade's own page. Falls back to an indeterminate bar and "starting"
+ *  for the brief window before the first count arrives (discovery, before the probe loop). */
+function RunningCell({ gradeId, progress }: { gradeId: string | null; progress: FieldEntry["progress"] }) {
+  const done = progress?.done;
+  const total = progress?.total;
+  const known = typeof total === "number" && total > 0 && typeof done === "number";
+  const pct = known ? Math.min(100, Math.round((done! / total!) * 100)) : null;
+  const text = known ? `${done} of ${total}` : "starting";
+  return (
+    <span className="entry-progress">
+      <span className={known ? "progress-track" : "progress-track indeterminate"} aria-hidden>
+        <span className="progress-fill" style={known ? { width: `${pct}%` } : undefined} />
+      </span>
+      <span className="entry-progress-label">
+        {gradeId ? <a href={`/grade/${gradeId}`}>{text}</a> : text}
+      </span>
+    </span>
+  );
+}
 
 const PAGE = 20;
 
@@ -241,19 +264,7 @@ export default function FieldTable({
                   {e.skip_reason ? (
                     `skipped (${e.skip_reason})`
                   ) : e.status === "running" ? (
-                    // One line that does not change while the grade runs. The per probe count and
-                    // the phase name live on the grade's own page, which is what the link is for;
-                    // in a field of twenty they were twenty labels rewriting themselves every few
-                    // seconds, and a bar that slid backwards when a phase reset its count read as
-                    // trouble where there was none.
-                    <span className="entry-progress">
-                      <span className="progress-track indeterminate" aria-hidden>
-                        <span className="progress-fill" />
-                      </span>
-                      <span className="entry-progress-label">
-                        {e.grade_id ? <a href={`/grade/${e.grade_id}`}>in progress</a> : "in progress"}
-                      </span>
-                    </span>
+                    <RunningCell gradeId={e.grade_id} progress={e.progress} />
                   ) : e.status === "queued" ? (
                     "waiting"
                   ) : e.status === "failed" ? (

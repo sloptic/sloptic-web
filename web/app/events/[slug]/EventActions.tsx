@@ -292,6 +292,7 @@ export default function EventActions({
                         skip_reason: e.skip_reason,
                         grade_id: e.grade_id,
                         status: gradeOf(e)?.status ?? null,
+                        progress: gradeOf(e)?.progress ?? null,
                       }))}
                     />
                   )}

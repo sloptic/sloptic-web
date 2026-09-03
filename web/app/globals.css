@@ -1289,6 +1289,14 @@ code {
   font-weight: 600;
 }
 
+/* The field table's status column carries the progress bar, so give it room: the default lets the
+   submission column take everything and squeezes the bar to a stub. Scoped to the field so the
+   numeric count-table on /checks is unaffected. */
+.field-block .count-table td:last-child,
+.field-block .count-table th:last-child {
+  width: 14rem;
+}
+
 /* the swatch is reused outside the landing, so colour it by data-axis too */
 .measure-swatch[data-axis="security"] {
   background: var(--security);
@@ -2776,16 +2784,16 @@ a.mast-user:hover {
    label dropped underneath, making a grading row three times the height of a waiting one and the
    table jump as entries started and finished. Fixed width bar, label beside it, nothing wraps. */
 .entry-progress {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  max-width: 100%;
+  gap: 0.6rem;
+  width: 100%;
 }
 .entry-progress .progress-track {
-  flex: 0 0 3.5rem;
-  height: 4px;
-  border-radius: 2px;
+  flex: 1 1 auto;
+  min-width: 3rem;
+  height: 6px;
+  border-radius: 3px;
   background: color-mix(in srgb, var(--ink) 10%, transparent);
   overflow: hidden;
 }
@@ -2814,12 +2822,11 @@ a.mast-user:hover {
 }
 
 .entry-progress-label {
+  flex: 0 0 auto;
   color: var(--muted);
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 13rem;
+  font-variant-numeric: tabular-nums;
 }
 .field-filters {
   display: flex;
