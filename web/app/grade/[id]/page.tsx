@@ -631,7 +631,7 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
   if (findings.length === 0) {
     return (
       <>
-        <h2>What failed</h2>
+        <h2>Failures</h2>
         <p className="passive-note">Nothing failed :)</p>
       </>
     );
@@ -808,7 +808,7 @@ function Passed({ items }: { items: PassedItem[] }) {
   if (items.length === 0) return null;
   return (
     <>
-      <h2>What passed ({items.length})</h2>
+      <h2>Passes ({items.length})</h2>
       <p className="section-intro">Open one for what it measured.</p>
       <div className="sample-findings">
         {items.map((p) => {
