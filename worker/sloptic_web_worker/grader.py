@@ -247,7 +247,13 @@ def merge_retry(stored: dict, retry: dict, retried_ids: list) -> dict:
     from sloptic.schema import Outcome
 
     retried = set(retried_ids)
-    kept = [o for o in (stored.get("outcomes") or []) if o.get("probe_id") not in retried]
+    # Exclude every probe the retry actually re-ran, not just the ids we asked it to. The active
+    # retry runs exactly the blocked ids, but the passive retry re-runs the WHOLE battery, so keying
+    # only on `retried` would keep the stored copy of every non-blocked passive probe AND add the
+    # retry's, double counting each one into the score. Overlaying whatever the pass produced is
+    # correct for both.
+    reran = retried | {o.get("probe_id") for o in (retry.get("outcomes") or [])}
+    kept = [o for o in (stored.get("outcomes") or []) if o.get("probe_id") not in reran]
     merged_dicts = kept + list(retry.get("outcomes") or [])
 
     # Rehydrate for the grader's aggregates. A dict that will not become an Outcome is a shape we do
@@ -259,7 +265,10 @@ def merge_retry(stored: dict, retry: dict, retried_ids: list) -> dict:
         except TypeError as e:
             raise ValueError(f"cannot rehydrate outcome {d.get('probe_id')!r}: {e}") from e
 
-    still_blocked = sorted(set(retry.get("blocked_probes") or []) & retried)
+    # What is STILL blocked after this pass, straight from the retry: for the active lane its blocked
+    # set is a subset of what we retried; for the passive re-run it is whatever the fresh grade could
+    # not complete.
+    still_blocked = sorted(set(retry.get("blocked_probes") or []))
     merged = dict(stored)
     merged["outcomes"] = merged_dicts
     merged["slop_score"] = compute_slop_score(outs)
@@ -270,6 +279,36 @@ def merge_retry(stored: dict, retry: dict, retried_ids: list) -> dict:
     )
     # Findings are the fired outcomes, which the retry may have changed either way.
     merged["findings"] = [
-        f for f in (stored.get("findings") or []) if f.get("probe_id") not in retried
+        f for f in (stored.get("findings") or []) if f.get("probe_id") not in reran
     ] + list(retry.get("findings") or [])
+
+    # How many were blocked when recovery began, kept across passes, so the report can say "recovered
+    # P of M". On the first pass the stored blocked set IS that original count.
+    initial = stored.get("retry_blocked_initial")
+    if initial is None:
+        initial = len(stored.get("blocked_probes") or [])
+    merged["retry_blocked_initial"] = initial
+
+    # A grade a challenge withheld entirely carried no coverage. If the retry got through and measured
+    # the battery, adopt its coverage so the record stops reading as "nothing ran" (which is what
+    # keeps such a grade in the board's blocked bucket). For a grade that already had coverage, the
+    # retry ran only a slice, so its partial coverage would understate the field: keep the original.
+    if not (stored.get("coverage") or {}).get("probes_total") and (retry.get("coverage") or {}).get("probes_total"):
+        merged["coverage"] = retry.get("coverage")
+
+    # Re-rank the merged record. The recovered tail is the injection and upload families, exactly the
+    # probes that can raise the score, trip a catastrophe gate, or move the percentile, so a ranking
+    # left at the pre-recovery value is a placement that no longer matches the findings. Recomputed
+    # from the merged score and findings with the grader's own ranker; a missing curve drops the
+    # ranking to null (an honest absence) rather than leaving a stale one.
+    mode = stored.get("mode") or "passive"
+    if mode == "active":
+        new_rank = ranking.rank_full(merged, merged["slop_score"])
+        curve = ranking.load_curve("full")
+    else:
+        new_rank = ranking.rank_passive(merged, merged["slop_score"])
+        curve = ranking.load_curve("passive")
+    if new_rank is not None:
+        new_rank["curve_version"] = (curve or {}).get("version")
+    merged["ranking"] = new_rank
     return merged

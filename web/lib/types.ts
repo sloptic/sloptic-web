@@ -105,6 +105,9 @@ export interface GradeResult {
   incomplete_axes?: string[] | null;
   /** True when a WAF / bot challenge fired during the grade. */
   bot_challenge?: boolean | null;
+  /** The blocked-probe count when the first recovery pass ran, so partial recovery can be shown as
+   *  "recovered P of M". null before any pass. blocked_probes holds only what is still blocked. */
+  retry_blocked_initial?: number | null;
   /** "entry" = the first fetch was challenged, nothing graded, the score is not a measurement. A
    *  later value = some probes ran before the block. Empty/absent when no challenge fired. */
   challenge_stage?: string | null;

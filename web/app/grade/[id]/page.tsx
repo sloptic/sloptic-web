@@ -311,6 +311,7 @@ function Report({ view, now }: { view: GradeView; now: number }) {
         incomplete={r.incomplete_axes ?? []}
         retryDueAt={view.retry_due_at}
         retryPasses={view.retry_passes}
+        initial={r.retry_blocked_initial}
         now={now}
       />
 
@@ -400,24 +401,51 @@ function ChallengeNote({
   incomplete,
   retryDueAt,
   retryPasses,
+  initial,
   now,
 }: {
   blocked: string[];
   incomplete: string[];
   retryDueAt?: string | null;
   retryPasses?: number;
+  /** How many were blocked when recovery began, so a partial recovery reads as "recovered P of M". */
+  initial?: number | null;
   now: number;
 }) {
   if (!blocked || blocked.length === 0) return null;
   const retry = retryStatus(retryDueAt, retryPasses, blocked.length, now);
   const axes = incomplete.filter(Boolean);
+  const remaining = blocked.length;
+  const axesLine =
+    axes.length > 0 ? `, and ${axes.join(" and ")} ${axes.length === 1 ? "is" : "are"} incomplete` : "";
+
+  // A recovery pass has run: say how much of the blocked tail came back. The fineprint carries
+  // whether more passes are coming, so the body states only the current fact and makes no promise
+  // that would contradict an exhausted retry.
+  const attempted = (retryPasses ?? 0) > 0 && initial != null;
+  if (attempted) {
+    const recovered = Math.max(0, (initial as number) - remaining);
+    return (
+      <div className="challenge-note" role="status">
+        <p className="challenge-head">
+          {recovered > 0
+            ? `Recovered ${recovered} of ${initial} blocked checks.`
+            : `None of the ${initial} blocked checks recovered yet.`}
+        </p>
+        <p>
+          {remaining} still blocked{axesLine}.
+        </p>
+        {retry && <p className="fineprint">{retry}</p>}
+      </div>
+    );
+  }
   return (
     <div className="challenge-note" role="status">
       <p className="challenge-head">
         A challenge interrupted {blocked.length} {blocked.length === 1 ? "check" : "checks"}.
       </p>
       <p>
-        The app&apos;s protection blocked part of the run meaning Sloptic cannot run all its checks.
+        The app&apos;s protection blocked part of the run meaning Sloptic cannot run all its checks
         {axes.length > 0 ? `, and ${axes.join(" and ")} ${axes.length === 1 ? "is" : "are"} incomplete` : ""}.
         Sloptic will retry the blocked checks later and will update this page if they succeed.
       </p>
