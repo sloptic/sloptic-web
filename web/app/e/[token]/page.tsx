@@ -80,12 +80,19 @@ export default async function DisclosurePage({ params }: { params: { token: stri
               This event was verified before submissions closed, so entries face the full battery,
               passive and active.
             </p>
-            {/* One sentence, and it stays. /methodology says the same thing, but THIS page is the
-                notice the organizer's rules point at, so what a participant was told is what is
-                written here rather than a click away. */}
+            {/* THIS page is the notice the organizer's rules point at, so what a participant was
+                told is what is written here. The account and test-record sentence is not optional
+                detail: several checks sign up their own users and one has account A create an object
+                for account B to try to read, so a team will find data they did not make. Being
+                surprised by that after the fact is the complaint this page exists to prevent. */}
             <p className="section-intro">
               Active checks send real attack traffic at your app, including injection payloads and
-              malformed input, which may show up in your logs.
+              malformed input.
+            </p>
+            <p className="section-intro">
+              They also sign up throwaway accounts and create test records, since checks like broken
+              access control need two users to compare. Expect entries in your logs and data you did
+              not create.
             </p>
           </>
         ) : passiveOnly ? (

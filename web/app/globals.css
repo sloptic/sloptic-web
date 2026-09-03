@@ -2890,3 +2890,9 @@ a.mast-user:hover {
   font-size: 0.95rem;
   color: var(--ink-soft);
 }
+/* Said where the traffic is authorised, not in a doc nobody opens at that moment. */
+.timing-note {
+  flex-basis: 100%;
+  margin: 0 0 0.5rem;
+  max-width: 42rem;
+}

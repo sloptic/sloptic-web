@@ -164,6 +164,13 @@ export default function EventActions({
             {runs.length > 0 ? "Grade it again" : "Grade this event"}
           </button>
         )}
+        {live?.status === "ready" && live.mode === "active" && (
+          <p className="section-intro fineprint timing-note">
+            Do not run this during live demos. Active checks create accounts and test records on each
+            app and load it repeatedly, which a judge looking at the same deployment will see. After
+            submissions close and outside demo slots is the window.
+          </p>
+        )}
         {live?.status === "ready" && (
           <button className="button" type="button" disabled={busy}
                   onClick={() => void act(async () => {
