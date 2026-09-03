@@ -51,20 +51,38 @@ export default function FieldTable({
   canGrade?: boolean;
   onGraded?: () => void;
 }) {
-  const [queuing, setQueuing] = useState<string | null>(null);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [queuing, setQueuing] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
 
-  async function gradeOne(projectUrl: string) {
-    if (!runId) return;
-    setQueuing(projectUrl);
+  function toggle(url: string) {
+    setPicked((p) => {
+      const next = new Set(p);
+      if (next.has(url)) next.delete(url);
+      else next.add(url);
+      return next;
+    });
+  }
+
+  async function gradePicked(urls: string[]) {
+    if (!runId || urls.length === 0) return;
+    setQueuing(true);
+    setNote(null);
     try {
-      await fetch("/api/events/run/grade-one", {
+      const res = await fetch("/api/events/run/grade-one", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ runId, projectUrl }),
+        body: JSON.stringify({ runId, projectUrls: urls }),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not queue them.");
+      setNote(`Queued ${data.queued}.`);
+      setPicked(new Set());
       onGraded?.();
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : "Could not queue them.");
     } finally {
-      setQueuing(null);
+      setQueuing(false);
     }
   }
 
@@ -86,6 +104,15 @@ export default function FieldTable({
     return (statusKey(a) - statusKey(b)) * dir ||
       projectName(a.project_url).localeCompare(projectName(b.project_url));
   });
+
+  // Selection follows the FILTER, not the page: ticking "select all" after filtering to what is
+  // left ungraded should take all of it, and paging through 8 pages to tick each one is the tedium
+  // this is meant to remove.
+  const selectable = rows.filter((e) => !e.skip_reason && !e.grade_id && !e.status).map((e) => e.project_url);
+  // Ticks are re-read against the live field on every poll, so one that another organizer graded in
+  // the meantime stops counting instead of sitting in the total as a queue that will never happen.
+  const pickedNow = selectable.filter((u) => picked.has(u));
+  const allPicked = selectable.length > 0 && pickedNow.length === selectable.length;
 
   function click(key: "name" | "status") {
     setPage(0);
@@ -124,10 +151,33 @@ export default function FieldTable({
         </label>
       </div>
 
+      {canGrade && runId && selectable.length > 0 && (
+        <div className="field-actions">
+          <label className="field-filter">
+            <input
+              type="checkbox"
+              checked={allPicked}
+              onChange={(e) => setPicked(e.target.checked ? new Set(selectable) : new Set())}
+            />
+            select all {selectable.length} not yet graded
+          </label>
+          <button
+            className="button"
+            type="button"
+            disabled={queuing || pickedNow.length === 0}
+            onClick={() => void gradePicked(pickedNow)}
+          >
+            {queuing ? "queuing..." : `Grade ${pickedNow.length} selected`}
+          </button>
+          {note && <span className="field-note">{note}</span>}
+        </div>
+      )}
+
       <div className="table-scroll">
         <table className="count-table">
           <thead>
             <tr>
+              {canGrade && runId && selectable.length > 0 && <th className="pick-col" />}
               {(["name", "status"] as const).map((k) => (
                 <th key={k} aria-sort={sort.key === k ? (sort.asc ? "ascending" : "descending") : "none"}>
                   <button type="button" className="col-sort" onClick={() => click(k)}>
@@ -143,6 +193,18 @@ export default function FieldTable({
           <tbody>
             {shown.map((e) => (
               <tr key={e.project_url}>
+                {canGrade && runId && selectable.length > 0 && (
+                  <td className="pick-col">
+                    {!e.skip_reason && !e.grade_id && !e.status ? (
+                      <input
+                        type="checkbox"
+                        aria-label={`select ${projectName(e.project_url)}`}
+                        checked={picked.has(e.project_url)}
+                        onChange={() => toggle(e.project_url)}
+                      />
+                    ) : null}
+                  </td>
+                )}
                 <th scope="row">
                   <a href={e.project_url} target="_blank" rel="noopener noreferrer">
                     {projectName(e.project_url)}
@@ -180,15 +242,13 @@ export default function FieldTable({
                   ) : e.grade_id ? (
                     <a href={`/grade/${e.grade_id}`}>report</a>
                   ) : canGrade && runId ? (
-                    // The drip feed: grade this one now, which an organizer does as each team
-                    // finishes demoing so active traffic never lands on an app a judge is watching.
                     <button
                       className="link-button"
                       type="button"
-                      disabled={queuing === e.project_url}
-                      onClick={() => void gradeOne(e.project_url)}
+                      disabled={queuing}
+                      onClick={() => void gradePicked([e.project_url])}
                     >
-                      {queuing === e.project_url ? "queuing..." : "grade now"}
+                      grade now
                     </button>
                   ) : (
                     "will be graded"

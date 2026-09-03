@@ -2896,3 +2896,38 @@ a.mast-user:hover {
   margin: 0 0 0.5rem;
   max-width: 42rem;
 }
+
+.field-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin: 0.75rem 0;
+}
+.field-actions .button {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.8rem;
+}
+.field-note {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.pick-col {
+  width: 1.5rem;
+  text-align: left !important;
+  padding-right: 0 !important;
+}
+/* A checkbox is a shade taller than the row's text line box, so a tickable row came out taller than
+   a skipped one and the field looked ragged while scrolling it. Lifting it out of flow makes the
+   text set the row height, whichever rows happen to be tickable. */
+.pick-col {
+  position: relative;
+}
+.pick-col input {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  margin: 0;
+  transform: translateY(-50%);
+}
