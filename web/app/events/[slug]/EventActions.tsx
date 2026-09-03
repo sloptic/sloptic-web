@@ -19,7 +19,7 @@ type Entry = {
 type Run = {
   id: string; slug: string; mode: "passive" | "active";
   status: "resolving" | "ready" | "grading" | "done" | "failed" | "cancelled";
-  override: boolean; priority: number | null; entries_found: number | null; gallery_complete: boolean | null;
+  override: boolean; admin: boolean; priority: number | null; entries_found: number | null; gallery_complete: boolean | null;
   detail: string | null; created_at: string; event_entries: Entry[];
 };
 
@@ -222,7 +222,7 @@ export default function EventActions({
                 <li key={r.id}>
                   <p className="run-head">
                     <span className="tag">{r.mode}</span>
-                    {r.override ? <span className="tag">override</span> : null}{" "}
+                    {r.admin ? <span className="tag">admin</span> : r.override ? <span className="tag">override</span> : null}{" "}
                     {r.status === "resolving" && (r.entries_found ? `Reading the gallery, ${r.entries_found} found so far.` : "Reading the gallery.")}
                     {r.status === "ready" && (entries.length === 0 ? "No submissions in the gallery yet." : `${entries.length} entries, ${gradeable.length} gradeable.`)}
                     {r.status === "grading" &&

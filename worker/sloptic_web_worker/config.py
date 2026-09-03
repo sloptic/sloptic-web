@@ -185,6 +185,15 @@ DAILY_EVENT_BUDGET = int(os.environ.get("DAILY_EVENT_BUDGET", "500"))
 # account creation yet.
 ACTIVE_BROWSER_AUTH = os.environ.get("ACTIVE_BROWSER_AUTH", "1").strip().lower() in ("1", "true", "yes")
 
+# Operator admin accounts, by email, matching the web side's SLOPTIC_ADMIN_ACCOUNTS. This is the
+# ONLY thing that authorizes an active event run without an organizer grant, so the worker re-reads
+# it here and checks it at grade time (db.may_grade_actively), the same last-line re-check a grant
+# gets. Removing an email and restarting the worker stops that account's in-flight active runs at the
+# next entry. Empty by default: no admin unless the host sets it.
+ADMIN_ACCOUNTS = frozenset(
+    e.strip().lower() for e in os.environ.get("SLOPTIC_ADMIN_ACCOUNTS", "").split(",") if e.strip()
+)
+
 # The throwaway inbox the email-verification probes register with. BOTH are needed; with either
 # missing those probes read N/A, which is the CLI's behaviour too.
 EMAIL_DOMAIN = os.environ.get("SLOPTIC_EMAIL_DOMAIN", "")

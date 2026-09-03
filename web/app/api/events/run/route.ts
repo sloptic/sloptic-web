@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { currentUser } from "@/lib/auth";
 import { parseEventSlug, BadEvent } from "@/lib/devpost-slug";
-import { mayOverrideEvents } from "@/lib/flags";
+import { mayOverrideEvents, isAdmin } from "@/lib/flags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,7 +44,11 @@ export async function POST(req: NextRequest) {
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
 
-  const override = !grant && mayOverrideEvents(user.email);
+  // Operator admin outranks both. It skips the ownership check like the passive override, and it is
+  // additionally the only thing that lets an override run go active. Checked against the same email
+  // allowlist the worker re-reads at grade time.
+  const admin = !grant && isAdmin(user.email);
+  const override = !grant && (admin || mayOverrideEvents(user.email));
   if (!grant && !override) {
     return NextResponse.json(
       { error: "Verify that you run this event first." },
@@ -53,10 +57,12 @@ export async function POST(req: NextRequest) {
   }
 
   // Active needs the disclosure to have existed before entrants submitted, which is recorded on the
-  // claim at verification time. An override run is passive whatever was asked for.
+  // claim at verification time. A plain (non-admin) override run is passive whatever was asked for;
+  // admin is the exception, and it carries its own attestation as the operator, so it skips the
+  // window check that stands in for participant consent on the organizer path.
   let mode: "passive" | "active" = body.mode === "active" ? "active" : "passive";
-  if (override) mode = "passive";
-  if (mode === "active") {
+  if (override && !admin) mode = "passive";
+  if (mode === "active" && !admin) {
     const { data: claim } = await db
       .from("event_claims")
       .select("window_open_at_verification")
@@ -88,14 +94,17 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await db
     .from("event_runs")
-    .insert({ account_id: user.id, slug, mode, override })
-    .select("id, slug, mode, status, override")
+    .insert({ account_id: user.id, slug, mode, override, admin })
+    .select("id, slug, mode, status, override, admin")
     .single();
 
   if (error || !data) {
     return NextResponse.json({ error: "Could not start the run." }, { status: 500 });
   }
-  if (override) console.warn(`[override] ${user.email} started a passive run on ${slug}`);
+  // Logged either way: an override run is a thing done outside the ownership check, and an active
+  // admin run sends attack traffic under operator privilege. Both belong in the record.
+  if (admin) console.warn(`[admin] ${user.email} started a ${mode} run on ${slug}`);
+  else if (override) console.warn(`[override] ${user.email} started a passive run on ${slug}`);
   return NextResponse.json({ run: data, existing: false }, { status: 201 });
 }
 
@@ -116,7 +125,7 @@ function db_runs(accountId: string) {
   return supabaseAdmin()
     .from("event_runs")
     .select(
-      "id, slug, mode, status, override, priority, entries_found, gallery_complete, detail, created_at, resolved_at, " +
+      "id, slug, mode, status, override, admin, priority, entries_found, gallery_complete, detail, created_at, resolved_at, " +
         // The grade's own status and progress ride along, so the events page can show a field
         // filling in without asking per entry.
         "event_entries(project_url, app_url, skip_reason, grade_id, grades(status, progress))"

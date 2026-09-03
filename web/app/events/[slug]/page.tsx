@@ -4,7 +4,7 @@ import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import EventActions from "./EventActions";
 import DeleteEvent from "./DeleteEvent";
-import { mayOverrideEvents } from "@/lib/flags";
+import { mayOverrideEvents, isAdmin } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Event", robots: { index: false, follow: false } };
@@ -39,14 +39,18 @@ export default async function EventPage({ params }: { params: { slug: string } }
     ? await db.from("grades").select("id", { count: "exact", head: true }).in("event_run_id", runIds)
     : { count: 0 };
 
-  // Whether the active battery may even be offered for this event. Both halves are the route's own
-  // preconditions, asked here only so a button that would be refused is never drawn: a live grant
-  // this account holds for this slug, and a verification that happened while entrants could still
-  // read the disclosure. The route and the worker check both again; this decides nothing.
+  const admin = isAdmin(user.email);
+
+  // Whether the active battery may even be offered for this event. The route's own preconditions,
+  // asked here only so a button that would be refused is never drawn: a live grant this account
+  // holds for this slug AND a verification that happened while entrants could still read the
+  // disclosure, OR operator admin, which skips both. The route and the worker check again; this
+  // decides nothing.
   const canActive =
-    !!grant &&
-    new Date(grant.expires_at) > new Date() &&
-    (verified ?? []).some((c) => c.window_open_at_verification === true);
+    admin ||
+    (!!grant &&
+      new Date(grant.expires_at) > new Date() &&
+      (verified ?? []).some((c) => c.window_open_at_verification === true));
 
   const when = (iso: string) =>
     new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
@@ -68,7 +72,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
         slug={params.slug}
         verified={!!grant}
         canActive={canActive}
-        canOverride={mayOverrideEvents(user.email)}
+        canOverride={admin || mayOverrideEvents(user.email)}
       />
 
       <DeleteEvent slug={params.slug} runs={runIds.length} graded={graded ?? 0} />

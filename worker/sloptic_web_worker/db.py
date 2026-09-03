@@ -511,16 +511,21 @@ def may_grade_actively(conn: psycopg.Connection, job_id: str) -> tuple[bool, str
     time may have expired, been revoked, or had its event removed before this entry's turn came.
     CLAUDE.md requires the check before each active grade, and this is the last place it can happen.
 
-    Two ways to be allowed, and both are ACCOUNT bound. An origin grant covers a domain the account
-    proved it owns. An event grant covers entries of an event the account proved it runs, and the
-    grade must actually belong to a run of that event, so a grant for one event cannot authorize an
-    unrelated URL.
+    Three ways to be allowed, all ACCOUNT bound. An origin grant covers a domain the account proved
+    it owns. An event grant covers entries of an event the account proved it runs, and the grade must
+    actually belong to a run of that event, so a grant for one event cannot authorize an unrelated
+    URL. Operator admin covers an event run that was created under admin privilege, re-checked here
+    against the live allowlist: the run carrying admin=true is not enough on its own, because a
+    privilege removed while the field sat queued must stop the next entry, exactly as a revoked grant
+    does.
     """
     row = conn.execute(
         """
-        SELECT g.account_id, g.origin, r.slug AS event_slug
+        SELECT g.account_id, g.origin, p.email AS account_email,
+               r.slug AS event_slug, r.admin AS run_admin
           FROM grades g
           LEFT JOIN event_runs r ON r.id = g.event_run_id
+          LEFT JOIN profiles p ON p.id = g.account_id
          WHERE g.id = %s;
         """,
         (job_id,),
@@ -540,6 +545,12 @@ def may_grade_actively(conn: psycopg.Connection, job_id: str) -> tuple[bool, str
             (row["account_id"], row["event_slug"]),
         ).fetchone()
         if live:
+            return True, ""
+        # Admin is the exception to "an event run needs an organizer grant". The run must have been
+        # created as an admin run AND the account must still be on the allowlist now, both, so a flag
+        # left on a row cannot authorize by itself and neither can a bare membership.
+        email = (row["account_email"] or "").strip().lower()
+        if row["run_admin"] and email and email in config.ADMIN_ACCOUNTS:
             return True, ""
         return False, f"no live grant for event {row['event_slug']}"
 

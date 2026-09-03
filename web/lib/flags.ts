@@ -63,3 +63,28 @@ export function mayOverrideEvents(email: string | null | undefined): boolean {
   const list = eventOverrideAccounts();
   return !!email && list.includes(email.toLowerCase());
 }
+
+/**
+ * Accounts with operator admin privilege, by email, in `SLOPTIC_ADMIN_ACCOUNTS`.
+ *
+ * This is the ONLY thing that lets an override run send the active battery, so it is deliberately a
+ * separate switch from the passive override above: an account can hold that and still never reach
+ * active. Same shape for the same reasons: server-side only, never a query parameter or client
+ * toggle, empty by default so it is off unless someone sets it on the host. Account scoped by email,
+ * which is exactly what makes "it does not exist on my other accounts" a thing you can check by
+ * signing in as one.
+ *
+ * The worker re-reads the same list at grade time, so removing an email here (and restarting the
+ * worker) stops its in-flight active runs at the next entry, the way revoking a grant would.
+ */
+export function adminAccounts(): string[] {
+  return (process.env.SLOPTIC_ADMIN_ACCOUNTS ?? "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export function isAdmin(email: string | null | undefined): boolean {
+  const list = adminAccounts();
+  return !!email && list.includes(email.toLowerCase());
+}
