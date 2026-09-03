@@ -9,6 +9,8 @@ import { forgetGrade } from "@/lib/history";
 
 const POLL_MS = 3000;
 const MAX_POLL_FAILS = 8;   // ~1 minute of server errors before giving up on the page
+const RETRY_POLL_MS = 20000; // a finished grade with a blocked tail is re-checked at this cadence,
+//                              since the next recovery pass is minutes out, not seconds
 const AREA_ORDER: Area[] = ["security", "qa", "performance"];
 
 /** The score is a damped decimal, so 21.6 must read as 21.6 and 22 must not read as 22.0. Postgres
@@ -29,6 +31,28 @@ function elapsed(sinceIso: string, now: number): string {
  *  discover / discovered / lighthouse / lighthouse_done / probes. During probes the current check's
  *  own name is the most informative thing available, and it is how the accessibility pass (axe-core)
  *  announces itself without needing a phase of its own. */
+/** The blocked-tail recovery, in a reader's words. Returns null when there is nothing to say: no
+ *  tail was blocked, or it was recovered. Three states otherwise: a pass is due later (cooling down
+ *  while the block clears), a pass is due now, or the passes ran out and the tail stays unmeasured. */
+function retryStatus(
+  retryDueAt: string | null | undefined,
+  retryPasses: number | undefined,
+  blocked: number,
+  now: number,
+): string | null {
+  if (retryDueAt) {
+    const mins = Math.max(1, Math.round((Date.parse(retryDueAt) - now) / 60000));
+    if (Date.parse(retryDueAt) - now > 45000) {
+      return `Waiting for the block to clear, then the ${blocked} blocked ${blocked === 1 ? "check runs" : "checks run"} again. Next attempt in about ${mins} min.`;
+    }
+    return "The next attempt runs shortly.";
+  }
+  if ((retryPasses ?? 0) > 0 && blocked > 0) {
+    return `We tried again ${retryPasses} ${retryPasses === 1 ? "time" : "times"} and could not get past the block, so ${blocked === 1 ? "it stays" : "these stay"} unmeasured.`;
+  }
+  return null;
+}
+
 function runningLabel(p: GradeProgress | null | undefined, name: string | null): string {
   if (!p) return "reading the app and running the checks";
   if (p.phase === "lighthouse") {
@@ -86,6 +110,11 @@ export default function GradePage({ params }: { params: { id: string } }) {
         setView(data);
         if (data.status === "queued" || data.status === "running") {
           timer = setTimeout(poll, POLL_MS);
+        } else if (data.retry_due_at) {
+          // Done, but a blocked tail is booked for another pass. Keep polling, slowly, so the "next
+          // attempt in about N minutes" line moves and the report updates itself the moment the pass
+          // recovers the tail.
+          timer = setTimeout(poll, RETRY_POLL_MS);
         }
       } catch {
         if (active) timer = setTimeout(poll, POLL_MS * Math.min(++fails, 4));
@@ -146,7 +175,7 @@ export default function GradePage({ params }: { params: { id: string } }) {
     );
   }
 
-  return <Report view={view} />;
+  return <Report view={view} now={now} />;
 }
 
 type AreaRow = {
@@ -158,7 +187,7 @@ type AreaRow = {
   slop: number;
 };
 
-function Report({ view }: { view: GradeView }) {
+function Report({ view, now }: { view: GradeView; now: number }) {
   const r = view.result!;
 
   // Did the probe loop actually run? The grader writes coverage.probes_total only once it reaches
@@ -169,7 +198,7 @@ function Report({ view }: { view: GradeView }) {
   const ranAnything = (r.coverage?.probes_total ?? 0) > 0 || (r.outcomes?.length ?? 0) > 0;
   const withheld =
     !ranAnything && (blockedProbes.length > 0 || r.bot_challenge === true || r.challenge_stage === "entry");
-  if (withheld) return <Withheld view={view} blocked={blockedProbes.length} />;
+  if (withheld) return <Withheld view={view} blocked={blockedProbes.length} now={now} />;
 
   // Everything the bars need, derived from the record: what fired, what applied, and what this mode
   // could have run. `coverage.applied` lists the probes that applied by id, so what PASSED is what
@@ -277,7 +306,13 @@ function Report({ view }: { view: GradeView }) {
         )}
       </div>
 
-      <ChallengeNote blocked={r.blocked_probes ?? []} incomplete={r.incomplete_axes ?? []} />
+      <ChallengeNote
+        blocked={r.blocked_probes ?? []}
+        incomplete={r.incomplete_axes ?? []}
+        retryDueAt={view.retry_due_at}
+        retryPasses={view.retry_passes}
+        now={now}
+      />
 
       <div className="sample-axes">
         {rows.map((row) => (
@@ -332,7 +367,8 @@ function Report({ view }: { view: GradeView }) {
 /** A grade a bot challenge stopped before anything ran. The app answered, so it is not a DNF, but
  *  its protection blocked every check, so there is no measurement. The one thing this must not do is
  *  show the 0 as a score: a withheld grade read as a clean one is the whole failure. */
-function Withheld({ view, blocked }: { view: GradeView; blocked: number }) {
+function Withheld({ view, blocked, now }: { view: GradeView; blocked: number; now: number }) {
+  const retry = retryStatus(view.retry_due_at, view.retry_passes, blocked, now);
   return (
     <section className="report">
       <h1>
@@ -347,8 +383,8 @@ function Withheld({ view, blocked }: { view: GradeView; blocked: number }) {
           this is not a clean result and not a zero.
         </p>
         <p className="fineprint">
-          This is usually a protection sitting in front of the deployment. Grading again later, or
-          from an allowed network, may get through.
+          {retry ??
+            "This is usually a protection sitting in front of the deployment. Grading again later, or from an allowed network, may get through."}
         </p>
       </div>
       <ReportKeep view={view} />
@@ -359,8 +395,21 @@ function Withheld({ view, blocked }: { view: GradeView; blocked: number }) {
 /** A grade that DID run but had part of its tail blocked mid-way. The score stands for what ran; the
  *  note keeps a blocked axis from reading as a clean one and says a retry is coming. Renders nothing
  *  when no probe was blocked, which is the ordinary case. */
-function ChallengeNote({ blocked, incomplete }: { blocked: string[]; incomplete: string[] }) {
+function ChallengeNote({
+  blocked,
+  incomplete,
+  retryDueAt,
+  retryPasses,
+  now,
+}: {
+  blocked: string[];
+  incomplete: string[];
+  retryDueAt?: string | null;
+  retryPasses?: number;
+  now: number;
+}) {
   if (!blocked || blocked.length === 0) return null;
+  const retry = retryStatus(retryDueAt, retryPasses, blocked.length, now);
   const axes = incomplete.filter(Boolean);
   return (
     <div className="challenge-note" role="status">
@@ -373,6 +422,7 @@ function ChallengeNote({ blocked, incomplete }: { blocked: string[]; incomplete:
         {axes.length > 0 ? `, and ${axes.join(" and ")} ${axes.length === 1 ? "is" : "are"} incomplete` : ""}.
         The blocked checks are booked for another pass, which folds any new findings in.
       </p>
+      {retry && <p className="fineprint">{retry}</p>}
     </div>
   );
 }

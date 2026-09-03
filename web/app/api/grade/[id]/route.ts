@@ -33,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const CORE = "id, status, submitted_url, submitted_at, finished_at, error";
   let { data: grade, error } = await db
     .from("grades")
-    .select(`${CORE}, progress, account_id`)
+    .select(`${CORE}, progress, account_id, retry_due_at, retry_passes`)
     .eq("id", params.id)
     .maybeSingle();
 
@@ -106,6 +106,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       grade.status === "running"
         ? ((grade as { progress?: unknown }).progress as GradeView["progress"]) ?? null
         : null,
+    // The blocked-tail recovery, so the report can say a second pass is coming rather than present a
+    // truncated grade as finished. On a database without these columns the fallback select above
+    // drops them and they read as "no retry", which is correct there.
+    retry_due_at: (grade as { retry_due_at?: string | null }).retry_due_at ?? null,
+    retry_passes: (grade as { retry_passes?: number }).retry_passes ?? 0,
     ...retention(grade as { account_id?: unknown; finished_at?: string | null }),
   };
   return NextResponse.json(view);

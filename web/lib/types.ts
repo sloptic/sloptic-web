@@ -168,4 +168,9 @@ export interface GradeView {
   /** When the report is deleted, or null once an account keeps it. */
   expires_at?: string | null;
   retain_days?: number;
+  /** When the WAF-blocked probe tail is due for another pass, null when none is pending (either
+   *  nothing was blocked, the tail was recovered, or the passes ran out). */
+  retry_due_at?: string | null;
+  /** How many recovery passes have already run. */
+  retry_passes?: number;
 }
