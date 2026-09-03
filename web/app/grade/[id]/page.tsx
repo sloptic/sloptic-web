@@ -417,10 +417,9 @@ function ChallengeNote({
         A challenge interrupted {blocked.length} {blocked.length === 1 ? "check" : "checks"}.
       </p>
       <p>
-        The app&apos;s protection blocked part of the run, so what those checks would have found is
-        not in this score
+        The app&apos;s protection blocked part of the run meaning Sloptic cannot run all its checks.
         {axes.length > 0 ? `, and ${axes.join(" and ")} ${axes.length === 1 ? "is" : "are"} incomplete` : ""}.
-        The blocked checks are booked for another pass, which folds any new findings in.
+        Sloptic will retry the blocked checks later and will update this page if they succeed.
       </p>
       {retry && <p className="fineprint">{retry}</p>}
     </div>
@@ -433,7 +432,7 @@ function ReportKeep({ view }: { view: GradeView }) {
   const [err, setErr] = useState<string | null>(null);
 
   async function remove() {
-    if (!window.confirm("Delete this report? The link stops working and this cannot be undone.")) return;
+    if (!window.confirm("Delete this report? This cannot be undone.")) return;
     setBusy(true);
     setErr(null);
     try {
@@ -464,7 +463,7 @@ function ReportKeep({ view }: { view: GradeView }) {
 
   return (
     <p className="report-keep">
-      {known && view.claimed ? "Saved to your account, so this report is kept." : null}
+      {known && view.claimed ? "Saved to your account." : null}
       {known && !view.claimed && days !== null
         ? days === 0
           ? "This report is deleted today unless you sign in and save it."
