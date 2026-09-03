@@ -27,7 +27,10 @@ export default async function DisclosurePage({ params }: { params: { token: stri
     .eq("token", params.token)
     .maybeSingle();
 
-  if (!claim) notFound();
+  // A revoked claim is a retired token: the event was deleted (or the claim withdrawn), so the link
+  // published on a rules page must stop meaning anything. The delete route revokes the claim for
+  // exactly this, and without the check here the disclosure kept rendering for a deleted event.
+  if (!claim || claim.status === "revoked") notFound();
 
   const host = `${claim.slug}.devpost.com`;
   const verified = claim.status === "verified";
