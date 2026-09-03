@@ -13,6 +13,8 @@ in the grader (`scope.off_target`), so this asks rather than re-deciding.
 
 from __future__ import annotations
 
+import pathlib
+
 from dataclasses import dataclass
 
 from sloptic import devpost, platform_id, scope
@@ -60,6 +62,25 @@ def _pick_app_url(hrefs: list[str]) -> tuple[str | None, str | None]:
     return None, "no links provided"
 
 
+class _FieldCache(devpost.IngestCache):
+    """Persist each submission's own links across runs, but never the gallery enumeration.
+
+    A submission's app links do not change once published, so re-fetching all of them on every
+    regrade is the waste an organizer sees as "Reading the gallery" all over again. The gallery
+    PAGES are the opposite: a run started later must still discover a team that submitted in
+    between, so `page:` keys are neither read nor written and the listing is always fetched fresh.
+    A submission whose links were edited after we cached keeps the old links, the deliberate cost of
+    caching what is, near a deadline, a moving target.
+    """
+
+    def has(self, key):
+        return False if str(key).startswith("page:") else super().has(key)
+
+    def put(self, key, val):
+        if not str(key).startswith("page:"):
+            super().put(key, val)
+
+
 def resolve(slug: str, limit: int = 1000, on_progress=None) -> Field:
     """`on_progress(n)` is called as entries accumulate.
 
@@ -69,8 +90,15 @@ def resolve(slug: str, limit: int = 1000, on_progress=None) -> Field:
     entries: list[Entry] = []
     complete = True
     detail = "gallery read in full"
+    # The cache turns a regrade's resolve from "re-fetch every submission" into "list the gallery,
+    # fetch only the submissions we have not seen". Optional: a cache that cannot be opened must
+    # never stop a resolve, so fall back to no cache.
     try:
-        for project_url, hrefs in devpost.submissions(slug):
+        cache = _FieldCache(pathlib.Path(config.DEVPOST_CACHE_DIR) / f"{slug}.jsonl")
+    except Exception:  # noqa: BLE001
+        cache = None
+    try:
+        for project_url, hrefs in devpost.submissions(slug, cache=cache):
             app_url, why = _pick_app_url(list(hrefs))
             entries.append(Entry(project_url, app_url, why))
             if on_progress is not None and len(entries) % 10 == 0:

@@ -23,3 +23,4 @@ worker/ms-playwright/
 
 # OS / editor
 .DS_Store
+worker/.devpost-cache/

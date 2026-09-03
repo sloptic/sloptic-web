@@ -24,6 +24,11 @@ def _require(name: str) -> str:
 
 DATABASE_URL = _require("DATABASE_URL")
 CATALOG_DIR = os.environ.get("CATALOG_DIR", "../../sloptic-main/catalog")
+
+# Where the Devpost ingest cache lives, so re-resolving a gallery reuses each submission's already
+# fetched links instead of re-crawling the whole field every time an organizer grades again. Keyed
+# per slug. See resolve_event._FieldCache for why the gallery pages themselves are never cached.
+DEVPOST_CACHE_DIR = os.environ.get("DEVPOST_CACHE_DIR", str(_ROOT / "worker" / ".devpost-cache"))
 POLL_INTERVAL_SECONDS = float(os.environ.get("POLL_INTERVAL_SECONDS", "5"))
 
 # P0 safety gate: refuses real grading unless the egress sandbox is deployed AND its self-test
