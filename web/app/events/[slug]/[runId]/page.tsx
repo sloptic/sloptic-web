@@ -162,7 +162,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
           {ranked.length + gated.length} of {total} entries {run.mode}ly graded.
           {pending.length > 0 ? ` ${pending.length} still running.` : ""}
           {failed.length > 0 ? ` ${failed.length} could not be reached.` : ""}
-          {withheld.length > 0 ? ` ${withheld.length} blocked before any check ran.` : ""}
+          {withheld.length > 0 ? ` ${withheld.length} could not be scored.` : ""}
         </p>
       </div>
 

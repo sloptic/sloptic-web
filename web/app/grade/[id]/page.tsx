@@ -378,7 +378,7 @@ function Withheld({ view, blocked, now }: { view: GradeView; blocked: number; no
       <div className="challenge-note withheld" role="status">
         <p className="challenge-head">No score (withheld grade)</p>
         <p>
-          A bot challenge blocked every check before it ran.
+          A bot challenge stopped the grade before enough checks ran to score it.
         </p>
         <p className="fineprint">
           {retry ??
