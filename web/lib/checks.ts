@@ -3,7 +3,7 @@
 
 import {
   CATEGORY_FACTS,
-  PASSIVE_PROBE_INDEX,
+  PROBE_INDEX,
   TOTALS,
   type Area,
   type Access,
@@ -59,10 +59,12 @@ export function sampleFor(area: Area, n = 6): Category[] {
   return categoriesFor(area).slice(0, n);
 }
 
-/** What a probe id was, for naming a check that passed. The grade record only names the ones that
- *  fired, so a passing check would otherwise be an opaque id. */
+/** What a probe id was, for naming a check that passed or one running now. The grade record only
+ *  names the ones that fired, so a check would otherwise be an opaque id. Every probe is indexed,
+ *  active included, so the live progress line can name an active check instead of falling back to a
+ *  bare "running the checks". */
 export function describeProbe(id: string): { area: Area; name: string } | null {
-  const hit = PASSIVE_PROBE_INDEX[id];
+  const hit = PROBE_INDEX[id];
   if (!hit) return null;
   const [area, slug] = hit;
   return { area, name: LABELS[slug]?.name ?? slug };

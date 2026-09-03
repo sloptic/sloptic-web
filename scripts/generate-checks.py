@@ -61,12 +61,14 @@ def main() -> int:
         access = "open" if npass == n else "gated" if npass == 0 else "mixed"
         rows.append({"slug": slug, "area": area, "probes": n, "passive": npass, "access": access})
 
-    # probe id -> its area and kind. The grade record names the area only for probes that FIRED,
-    # so without this the report cannot say which axis a passing check belonged to.
+    # probe id -> its area and kind, for EVERY probe. The grade record names the area only for probes
+    # that FIRED, so without this the report cannot say which axis a passing check belonged to, and
+    # the live progress line cannot name the check it is running. It was passive-only while active
+    # probes never ran on a graded target; now that a verified owner or event runs the full battery,
+    # an unnamed active probe is what makes the active phase read as a stalled "running the checks".
     index = ",\n".join(
         f'  "{p.id}": ["{p.bundle}", "{p.category}"]'
         for p in sorted(probes, key=lambda x: x.id)
-        if safety.is_passive(p.id)
     )
 
     passive = len(safety.PASSIVE_PROBES)
@@ -98,9 +100,10 @@ export const CATEGORY_FACTS: CategoryFact[] = [
 
 export const TOTALS = {{ total: {len(probes)}, passive: {passive}, active: {len(probes) - passive} }};
 
-/** Passive probe id -> [area, kind]. Lets a report name the checks that passed, which the grade
- *  record lists by id only. Passive-only: the active ones never run on a graded target here. */
-export const PASSIVE_PROBE_INDEX: Record<string, [Area, string]> = {{
+/** Probe id -> [area, kind], for every probe in the catalog. Lets a report name the checks that
+ *  passed (the grade record lists them by id only) and the live progress line name the check it is
+ *  running, active probes included. */
+export const PROBE_INDEX: Record<string, [Area, string]> = {{
 {index},
 }};
 ''')
