@@ -39,12 +39,12 @@ function retryStatus(
   if (retryDueAt) {
     const mins = Math.max(1, Math.round((Date.parse(retryDueAt) - now) / 60000));
     if (Date.parse(retryDueAt) - now > 45000) {
-      return `Waiting for the block to clear. Next attempt in about ${mins} min.`;
+      return `Next attempt in about ${mins} min.`;
     }
     return "Next attempt runs shortly.";
   }
   if ((retryPasses ?? 0) > 0 && blocked > 0) {
-    return `Still blocked after ${retryPasses} more ${retryPasses === 1 ? "try" : "tries"}. ${blocked === 1 ? "It stays" : "These stay"} unmeasured.`;
+    return `Still blocked after ${retryPasses} more ${retryPasses === 1 ? "try" : "tries"}.`;
   }
   return null;
 }
@@ -57,7 +57,7 @@ function runningLabel(p: GradeProgress | null | undefined, name: string | null):
   if (!p) return "reading the app";
   if (p.phase === "lighthouse") {
     // The worker counts the runs, so this reads "performance run 2 of 3" once measuring starts.
-    return p.label || "measuring performance, a few minutes";
+    return p.label || "measuring performance";
   }
   if (p.phase === "discover") return "mapping the app's surface";
   if (p.phase === "discovered") return p.label || "mapped the surface";
@@ -146,7 +146,7 @@ export default function GradePage({ params }: { params: { id: string } }) {
           {view.status === "running"
             ? runningLabel(view.progress, view.progress?.probe ? (describeProbe(view.progress.probe)?.name ?? null) : null)
             : stalled
-              ? "waiting, but nothing is running"
+              ? "nothing is running"
               : q && q.ahead > 0
                 ? `queued, ${q.ahead} ${q.ahead === 1 ? "grade" : "grades"} ahead`
                 : "queued, starting shortly"}
@@ -308,7 +308,6 @@ function Report({ view, now }: { view: GradeView; now: number }) {
 
       <ChallengeNote
         blocked={r.blocked_probes ?? []}
-        incomplete={r.incomplete_axes ?? []}
         retryDueAt={view.retry_due_at}
         retryPasses={view.retry_passes}
         initial={r.retry_blocked_initial}
@@ -379,13 +378,11 @@ function Withheld({ view, blocked, now }: { view: GradeView; blocked: number; no
       <div className="challenge-note withheld" role="status">
         <p className="challenge-head">No score: the grade was withheld.</p>
         <p>
-          The app answered. A bot challenge blocked every check before it ran
-          {blocked > 0 ? ` (all ${blocked})` : ""}. Nothing was measured: not a clean result, not a
-          zero.
+          A bot challenge blocked every check before it ran. Not a clean result, not a zero.
         </p>
         <p className="fineprint">
           {retry ??
-            "Usually a protection in front of the deployment. Grading again later may get through."}
+            "Grading again later may get through."}
         </p>
       </div>
       <ReportKeep view={view} />
@@ -398,14 +395,12 @@ function Withheld({ view, blocked, now }: { view: GradeView; blocked: number; no
  *  when no probe was blocked, which is the ordinary case. */
 function ChallengeNote({
   blocked,
-  incomplete,
   retryDueAt,
   retryPasses,
   initial,
   now,
 }: {
   blocked: string[];
-  incomplete: string[];
   retryDueAt?: string | null;
   retryPasses?: number;
   /** How many were blocked when recovery began, so a partial recovery reads as "recovered P of M". */
@@ -414,13 +409,10 @@ function ChallengeNote({
 }) {
   if (!blocked || blocked.length === 0) return null;
   const retry = retryStatus(retryDueAt, retryPasses, blocked.length, now);
-  const axes = incomplete.filter(Boolean);
   const remaining = blocked.length;
-  const axesLine = axes.length > 0 ? `, ${axes.join(", ")} incomplete` : "";
 
-  // A recovery pass has run: say how much of the blocked tail came back. The fineprint carries
-  // whether more passes are coming, so the body states only the current fact and makes no promise
-  // that would contradict an exhausted retry.
+  // After a pass, the head says how much came back and the fineprint says what happens next: the
+  // count and the timing are the whole message, no explanatory second clause.
   const attempted = (retryPasses ?? 0) > 0 && initial != null;
   if (attempted) {
     const recovered = Math.max(0, (initial as number) - remaining);
@@ -431,9 +423,6 @@ function ChallengeNote({
             ? `Recovered ${recovered} of ${initial} blocked checks.`
             : `None of the ${initial} blocked checks recovered yet.`}
         </p>
-        <p>
-          {remaining} still blocked{axesLine}.
-        </p>
         {retry && <p className="fineprint">{retry}</p>}
       </div>
     );
@@ -441,12 +430,9 @@ function ChallengeNote({
   return (
     <div className="challenge-note" role="status">
       <p className="challenge-head">
-        A challenge interrupted {blocked.length} {blocked.length === 1 ? "check" : "checks"}.
+        A challenge interrupted {remaining} {remaining === 1 ? "check" : "checks"}.
       </p>
-      <p>
-        The app&apos;s protection blocked part of the run meaning Sloptic cannot run all its checks
-        {axesLine}. Sloptic will retry the blocked checks later. This page updates if they succeed.
-      </p>
+      <p>The app&apos;s protection blocked part of the run.</p>
       {retry && <p className="fineprint">{retry}</p>}
     </div>
   );
