@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { GradeView, GradeResult, Finding, Coverage, GradeProgress, CardEntry, Outcome } from "@/lib/types";
-import { AREA_LABELS, AREAS, PASSIVE_BY_AREA, TOTALS, describeProbe, type Area } from "@/lib/checks";
+import { AREA_LABELS, AREAS, PASSIVE_BY_AREA, TOTALS, categoryName, describeCategory, describeProbe, type Area } from "@/lib/checks";
 import { daysUntil } from "@/lib/retention";
 import { ordinal } from "@/lib/grades";
 import { forgetGrade } from "@/lib/history";
@@ -19,6 +19,23 @@ function fmtScore(v: number | string | null | undefined): string {
   const n = typeof v === "string" ? Number(v) : v;
   if (n === null || n === undefined || Number.isNaN(n)) return "-";
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
+/** The categories behind a set of blocked probe ids, most-blocked first: "sql injection (4), file
+ *  upload (2)". Unknown ids (catalog drift) drop out rather than show a bare slug. */
+function blockedCategories(blocked: string[]): string {
+  const counts = new Map<string, { name: string; n: number }>();
+  for (const id of blocked) {
+    const d = describeCategory(id);
+    if (!d) continue;
+    const cur = counts.get(d.slug);
+    if (cur) cur.n += 1;
+    else counts.set(d.slug, { name: d.name, n: 1 });
+  }
+  return [...counts.values()]
+    .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name))
+    .map((c) => (c.n > 1 ? `${c.name} (${c.n})` : c.name))
+    .join(", ");
 }
 
 /** mm:ss for an elapsed duration. A long silence reads as a hang; a ticking clock reads as work. */
@@ -213,7 +230,7 @@ function Report({ view, now }: { view: GradeView; now: number }) {
   const ranAnything = (r.coverage?.probes_total ?? 0) > 0 || (r.outcomes?.length ?? 0) > 0;
   const withheld =
     !ranAnything && (blockedProbes.length > 0 || r.bot_challenge === true || r.challenge_stage === "entry");
-  if (withheld) return <Withheld view={view} blocked={blockedProbes.length} now={now} />;
+  if (withheld) return <Withheld view={view} blocked={blockedProbes} now={now} />;
   // r.challenge_onset_index: how far the grade got before the challenge, for the withheld note.
 
   // Everything the bars need, derived from the record: what fired, what applied, and what this mode
@@ -276,7 +293,7 @@ function Report({ view, now }: { view: GradeView; now: number }) {
     const passed = passedIds
       .map((id) => ({
         id,
-        ...(describeProbe(id) ?? { area: "security" as Area, name: id }),
+        ...(describeCategory(id) ?? { area: "security" as Area, slug: id, name: id }),
         evidence: cleanByProbe.get(id)?.evidence ?? {},
         targets: cleanByProbe.get(id)?.targets ?? [],
       }))
@@ -391,8 +408,8 @@ function Report({ view, now }: { view: GradeView; now: number }) {
 /** A grade a bot challenge stopped before anything ran. The app answered, so it is not a DNF, but
  *  its protection blocked every check, so there is no measurement. The one thing this must not do is
  *  show the 0 as a score: a withheld grade read as a clean one is the whole failure. */
-function Withheld({ view, blocked, now }: { view: GradeView; blocked: number; now: number }) {
-  const retry = retryStatus(view.retry_due_at, view.retry_passes, blocked, now);
+function Withheld({ view, blocked, now }: { view: GradeView; blocked: string[]; now: number }) {
+  const retry = retryStatus(view.retry_due_at, view.retry_passes, blocked.length, now);
   // How far the grade got before the challenge tripped. The grader withholds anything whose onset
   // landed before 60% of the battery, so "nothing ran" would be a lie for a grade cut down at, say,
   // check 47 of 102. The mode decides which battery size is honest.
@@ -412,6 +429,9 @@ function Withheld({ view, blocked, now }: { view: GradeView; blocked: number; no
             ? `A bot challenge stopped the grade at check ${onset} of ${battery}.`
             : "A bot challenge stopped the grade before enough checks ran to score it."}
         </p>
+        {blockedCategories(blocked) && (
+          <p className="fineprint">Untested: {blockedCategories(blocked)}.</p>
+        )}
         <p className="fineprint">
           {retry ??
             "Grading again later may get through."}
@@ -454,12 +474,14 @@ function ChallengeNote({
   }
   const retry = retryStatus(retryDueAt, retryPasses, blocked.length, now);
   const remaining = blocked.length;
+  const cats = blockedCategories(blocked);
 
   // After a pass, the head says how much came back and the fineprint says what happens next: the
   // count and the timing are the whole message, no explanatory second clause.
   const attempted = (retryPasses ?? 0) > 0 && initial != null;
   if (attempted) {
     const recovered = Math.max(0, (initial as number) - remaining);
+    const cats = blockedCategories(blocked);
     return (
       <div className="challenge-note" role="status">
         <p className="challenge-head">
@@ -467,6 +489,7 @@ function ChallengeNote({
             ? `Recovered ${recovered} of ${initial} blocked checks.`
             : `None of the ${initial} blocked checks recovered yet.`}
         </p>
+        {cats && <p className="fineprint">Still blocked: {cats}.</p>}
         {retry && <p className="fineprint">{retry}</p>}
       </div>
     );
@@ -476,7 +499,7 @@ function ChallengeNote({
       <p className="challenge-head">
         A challenge interrupted {remaining} {remaining === 1 ? "check" : "checks"}.
       </p>
-      <p>The app&apos;s protection blocked part of the run.</p>
+      {cats ? <p>Blocked: {cats}.</p> : <p>The app&apos;s protection blocked part of the run.</p>}
       {retry && <p className="fineprint">{retry}</p>}
     </div>
   );
@@ -700,6 +723,25 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
   const sorted = [...groups.values()].sort((a, b) =>
     scored ? b.contribution - a.contribution : (b.f.penalty ?? 0) - (a.f.penalty ?? 0)
   );
+
+  // One group per category, heaviest first; rows keep their order inside each group. No category
+  // subtotal: repeats decay WITHIN a category, so a subtotal would invite summing that does not
+  // hold, and the axis bars above remain the only honest decomposition.
+  const cats: { slug: string; name: string; area: Area; items: typeof sorted; total: number }[] = [];
+  const byCat = new Map<string, number>();
+  for (const g of sorted) {
+    const slug = g.f.category;
+    const area = g.f.bundle as Area;
+    let idx = byCat.get(slug);
+    if (idx === undefined) {
+      idx = cats.length;
+      byCat.set(slug, idx);
+      cats.push({ slug, name: categoryName(slug), area, items: [], total: 0 });
+    }
+    cats[idx].items.push(g);
+    cats[idx].total += scored ? g.contribution : (g.f.penalty ?? 0);
+  }
+  cats.sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
   return (
     <>
       <h2>What failed ({sorted.length})</h2>
@@ -713,113 +755,120 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
           : "Each number is what that fault is worth on its own. They do not add up to the score: repeats of one fault count less each time, so the axis totals above are the real split. Open one for details."}
       </p>
       <div className="sample-findings">
-        {sorted.map(({ f, targets, contribution }, i) => {
-          const entry = card[f.probe_id];
-          const ev = evidencePairs(f.evidence as Record<string, unknown> | undefined);
-          return (
-            <details className="finding-detail" data-axis={f.bundle} key={`${f.probe_id}-${i}`}>
-              <summary className="finding-row">
-                <span className="finding-dot" />
-                <span className="finding-body">
-                  <span className="finding-cat">{f.category}</span>
-                  {f.reason && <span className="finding-desc">{f.reason}</span>}
-                  <span className="finding-meta">
-                    {[
-                      f.probe_id,
-                      targets.length > 1 ? `${targets.length} paths` : f.target,
-                    ]
-                      .filter(Boolean)
-                      .join("  /  ")}
-                  </span>
-                </span>
-                {/* The CONTRIBUTION, not the price, so the column is an honest addition. The two
-                    are never shown side by side: four defense in depth probes are re-priced upward
-                    when a vulnerability they would have contained also fires, so a row can
-                    legitimately contribute more than its penalty, which reads as a bug next to it.
-                    The price and the reason they differ live in the expanded detail instead. */}
-                <span className="finding-pen">{scored ? contribution.toFixed(1) : f.penalty}</span>
-              </summary>
-              <div className="finding-expand">
-                {scored && (
-                  <div className="row2">
-                    <span className="term">What it added</span>
-                    <p className="desc">
-                      {contribution === 0 ? (
-                        (f.penalty ?? 0) === 0 ? (
-                          <>
-                            Nothing, and it never could. This check reports what it saw without pricing
-                            it, so it is here for information only.
-                          </>
-                        ) : f.variant_group_id && pricedGroups.has(f.variant_group_id) ? (
-                          <>
-                            Nothing. The same underlying fault is already priced on another row, and one
-                            fault counts once however many ways it shows up.
-                          </>
-                        ) : (
-                          <>
-                            Nothing, though the fault is worth {f.penalty} on its own. This category
-                            already carries heavier findings, and each further repeat in a category
-                            counts less than the one before, so by this one there is nothing left.
-                          </>
-                        )
-                      ) : (
-                        <>
-                          {contribution.toFixed(1)} of the score, where the fault is worth{" "}
-                          {f.penalty} on its own
-                          {targets.length > 1 ? ` and was found on ${targets.length} paths` : ""}.{" "}
-                          {contribution > (f.penalty ?? 0)
-                            ? "It counts for more than its own price because a vulnerability it would have contained also fired, so the defense being missing is worth more here than in the abstract."
-                            : contribution < (f.penalty ?? 0)
-                              ? "It counts for less than its price because repeats within one category decay: the worst counts in full and each further one counts less."
-                              : "Nothing damped it, so it counts in full."}
-                        </>
+        {cats.map((cat) => (
+          <div className="cat-group" data-axis={cat.area} key={cat.slug}>
+            <p className="cat-head">
+              {cat.name} <span className="cat-count">{cat.items.length}</span>
+            </p>
+            {cat.items.map(({ f, targets, contribution }) => {
+                const entry = card[f.probe_id];
+                const ev = evidencePairs(f.evidence as Record<string, unknown> | undefined);
+                return (
+                  <details className="finding-detail" data-axis={f.bundle} key={`${f.probe_id}::${f.reason ?? ""}`}>
+                    <summary className="finding-row">
+                      <span className="finding-dot" />
+                      <span className="finding-body">
+                        <span className="finding-cat">{f.category}</span>
+                        {f.reason && <span className="finding-desc">{f.reason}</span>}
+                        <span className="finding-meta">
+                          {[
+                            f.probe_id,
+                            targets.length > 1 ? `${targets.length} paths` : f.target,
+                          ]
+                            .filter(Boolean)
+                            .join("  /  ")}
+                        </span>
+                      </span>
+                      {/* The CONTRIBUTION, not the price, so the column is an honest addition. The two
+                          are never shown side by side: four defense in depth probes are re-priced upward
+                          when a vulnerability they would have contained also fires, so a row can
+                          legitimately contribute more than its penalty, which reads as a bug next to it.
+                          The price and the reason they differ live in the expanded detail instead. */}
+                      <span className="finding-pen">{scored ? contribution.toFixed(1) : f.penalty}</span>
+                    </summary>
+                    <div className="finding-expand">
+                      {scored && (
+                        <div className="row2">
+                          <span className="term">What it added</span>
+                          <p className="desc">
+                            {contribution === 0 ? (
+                              (f.penalty ?? 0) === 0 ? (
+                                <>
+                                  Nothing, and it never could. This check reports what it saw without pricing
+                                  it, so it is here for information only.
+                                </>
+                              ) : f.variant_group_id && pricedGroups.has(f.variant_group_id) ? (
+                                <>
+                                  Nothing. The same underlying fault is already priced on another row, and one
+                                  fault counts once however many ways it shows up.
+                                </>
+                              ) : (
+                                <>
+                                  Nothing, though the fault is worth {f.penalty} on its own. This category
+                                  already carries heavier findings, and each further repeat in a category
+                                  counts less than the one before, so by this one there is nothing left.
+                                </>
+                              )
+                            ) : (
+                              <>
+                                {contribution.toFixed(1)} of the score, where the fault is worth{" "}
+                                {f.penalty} on its own
+                                {targets.length > 1 ? ` and was found on ${targets.length} paths` : ""}.{" "}
+                                {contribution > (f.penalty ?? 0)
+                                  ? "It counts for more than its own price because a vulnerability it would have contained also fired, so the defense being missing is worth more here than in the abstract."
+                                  : contribution < (f.penalty ?? 0)
+                                    ? "It counts for less than its price because repeats within one category decay: the worst counts in full and each further one counts less."
+                                    : "Nothing damped it, so it counts in full."}
+                              </>
+                            )}
+                          </p>
+                        </div>
                       )}
-                    </p>
-                  </div>
-                )}
-                {entry?.expected && (
-                  <div className="row2">
-                    <span className="term">What should we see</span>
-                    <p className="desc">{entry.expected}</p>
-                  </div>
-                )}
-                {(entry?.actual || ev.length > 0) && (
-                  <div className="row2">
-                    <span className="term">What we saw instead</span>
-                    <div className="desc">
-                      {entry?.actual && <p>{entry.actual}</p>}
-                      {ev.length > 0 && (
-                        <dl className="evidence">
-                          {ev.map(([k, v]) => (
-                            <div key={k}>
-                              <dt>{k.replace(/_/g, " ")}</dt>
-                              <dd>{v}</dd>
-                            </div>
-                          ))}
-                        </dl>
+                      {entry?.expected && (
+                        <div className="row2">
+                          <span className="term">What should we see</span>
+                          <p className="desc">{entry.expected}</p>
+                        </div>
+                      )}
+                      {(entry?.actual || ev.length > 0) && (
+                        <div className="row2">
+                          <span className="term">What we saw instead</span>
+                          <div className="desc">
+                            {entry?.actual && <p>{entry.actual}</p>}
+                            {ev.length > 0 && (
+                              <dl className="evidence">
+                                {ev.map(([k, v]) => (
+                                  <div key={k}>
+                                    <dt>{k.replace(/_/g, " ")}</dt>
+                                    <dd>{v}</dd>
+                                  </div>
+                                ))}
+                              </dl>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {entry?.indicates && (
+                        <div className="row2">
+                          <span className="term">Why it matters</span>
+                          <p className="desc">{entry.indicates}</p>
+                        </div>
+                      )}
+                      {entry?.remediation && (
+                        <div className="row2">
+                          <span className="term">How to fix it</span>
+                          <p className="desc">{entry.remediation}</p>
+                        </div>
+                      )}
+                      {!entry && ev.length === 0 && (
+                        <p className="desc">No detail recorded.</p>
                       )}
                     </div>
-                  </div>
-                )}
-                {entry?.indicates && (
-                  <div className="row2">
-                    <span className="term">Why it matters</span>
-                    <p className="desc">{entry.indicates}</p>
-                  </div>
-                )}
-                {entry?.remediation && (
-                  <div className="row2">
-                    <span className="term">How to fix it</span>
-                    <p className="desc">{entry.remediation}</p>
-                  </div>
-                )}
-                {!entry && ev.length === 0 && (
-                  <p className="desc">No detail recorded.</p>
-                )}
-              </div>
-            </details>
-          );
-        })}
+                  </details>
+                );
+                  })}
+          </div>
+        ))}
       </div>
     </>
   );
@@ -828,6 +877,7 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
 type PassedItem = {
   id: string;
   area: Area;
+  slug: string;
   name: string;
   evidence: Record<string, unknown>;
   targets: string[];
@@ -835,45 +885,68 @@ type PassedItem = {
 
 function Passed({ items }: { items: PassedItem[] }) {
   if (items.length === 0) return null;
+  // One group per category, same shape as what failed. A row's own label IS its category, so
+  // rows lead with the probe id, the per-check identity the index carries.
+  const cats: { slug: string; name: string; area: Area; items: PassedItem[] }[] = [];
+  const bySlug = new Map<string, number>();
+  for (const p of items) {
+    let idx = bySlug.get(p.slug);
+    if (idx === undefined) {
+      idx = cats.length;
+      bySlug.set(p.slug, idx);
+      cats.push({ slug: p.slug, name: p.name, area: p.area, items: [] });
+    }
+    cats[idx].items.push(p);
+  }
+  cats.sort(
+    (a, b) => AREA_ORDER.indexOf(a.area) - AREA_ORDER.indexOf(b.area) || a.name.localeCompare(b.name)
+  );
   return (
     <>
       <h2>Passes ({items.length})</h2>
       <p className="section-intro">Open one for what it measured.</p>
       <div className="sample-findings">
-        {items.map((p) => {
-          const ev = evidencePairs(p.evidence);
-          const targets = [...new Set(p.targets)];
-          return (
-            <details className="finding-detail passed" data-axis={p.area} key={p.id}>
-              <summary className="finding-row passed">
-                <span className="finding-dot" />
-                <span className="finding-body">
-                  <span className="finding-cat">{p.name}</span>
-                  <span className="finding-meta">
-                    {[p.id, targets.length > 1 ? `${targets.length} targets` : targets[0]]
-                      .filter(Boolean)
-                      .join("  /  ")}
-                  </span>
-                </span>
-                <span className="finding-pen">0</span>
-              </summary>
-              <div className="finding-expand">
-                {ev.length > 0 ? (
-                  <dl className="evidence">
-                    {ev.map(([k, v]) => (
-                      <div key={k}>
-                        <dt>{k.replace(/_/g, " ")}</dt>
-                        <dd>{v}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                ) : (
-                  <p className="desc">No reading recorded.</p>
-                )}
-              </div>
-            </details>
-          );
-        })}
+        {cats.map((cat) => (
+          <div className="cat-group" data-axis={cat.area} key={cat.slug}>
+            <p className="cat-head">
+              {cat.name} <span className="cat-count">{cat.items.length}</span>
+            </p>
+            {cat.items.map((p) => {
+                const ev = evidencePairs(p.evidence);
+                const targets = [...new Set(p.targets)];
+                return (
+                  <details className="finding-detail passed" data-axis={p.area} key={p.id}>
+                    <summary className="finding-row passed">
+                      <span className="finding-dot" />
+                      <span className="finding-body">
+                        <span className="finding-cat">{p.name}</span>
+                        <span className="finding-meta">
+                          {[p.id, targets.length > 1 ? `${targets.length} targets` : targets[0]]
+                            .filter(Boolean)
+                            .join("  /  ")}
+                        </span>
+                      </span>
+                      <span className="finding-pen">0</span>
+                    </summary>
+                    <div className="finding-expand">
+                      {ev.length > 0 ? (
+                        <dl className="evidence">
+                          {ev.map(([k, v]) => (
+                            <div key={k}>
+                              <dt>{k.replace(/_/g, " ")}</dt>
+                              <dd>{v}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      ) : (
+                        <p className="desc">No reading recorded.</p>
+                      )}
+                    </div>
+                  </details>
+                );
+                  })}
+          </div>
+        ))}
       </div>
     </>
   );

@@ -3027,3 +3027,20 @@ a.mast-user:hover {
 .crumb a:hover {
   color: var(--ink);
 }
+
+/* Category groups inside what failed / what passed: the flat list read as one undifferentiated
+   wall, so rows now sit under their fault family. Counts are row counts, never point subtotals
+   (repeats decay within a category), which is why they stay quiet. */
+.cat-group {
+  margin: 0 0 0.9rem;
+}
+.cat-head {
+  margin: 0 0 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.cat-count {
+  font-weight: 400;
+  margin-left: 0.25rem;
+}

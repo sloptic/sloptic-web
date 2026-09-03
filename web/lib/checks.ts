@@ -70,6 +70,22 @@ export function describeProbe(id: string): { area: Area; name: string } | null {
   return { area, name: LABELS[slug]?.name ?? slug };
 }
 
+/** The category a probe belongs to, slug plus labeled name. Grouping surfaces (what failed, what
+ *  passed, what a challenge blocked) need this, not the per-probe name the index does not carry. */
+export function describeCategory(id: string): { area: Area; slug: string; name: string } | null {
+  const hit = PROBE_INDEX[id];
+  if (!hit) return null;
+  const [area, slug] = hit;
+  return { area, slug, name: LABELS[slug]?.name ?? slug };
+}
+
+/** A category slug as a reader meets it. Findings carry slugs straight from the grader, so this is
+ *  the join to the hand-written half; an unnamed slug falls back to itself and shows up as
+ *  something to name. */
+export function categoryName(slug: string): string {
+  return LABELS[slug]?.name ?? slug;
+}
+
 /** Passive checks per area, the denominator for "of everything this mode could run". */
 export const PASSIVE_BY_AREA: Record<Area, number> = AREAS.reduce(
   (acc, a) => ({ ...acc, [a.id]: a.passive }),
