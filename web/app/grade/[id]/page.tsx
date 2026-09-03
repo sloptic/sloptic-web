@@ -27,10 +27,6 @@ function elapsed(sinceIso: string, now: number): string {
   return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
 }
 
-/** What the grader is doing right now, in a visitor's words. Phase names come from the pipeline:
- *  discover / discovered / lighthouse / lighthouse_done / probes. During probes the current check's
- *  own name is the most informative thing available, and it is how the accessibility pass (axe-core)
- *  announces itself without needing a phase of its own. */
 /** The blocked-tail recovery, in a reader's words. Returns null when there is nothing to say: no
  *  tail was blocked, or it was recovered. Three states otherwise: a pass is due later (cooling down
  *  while the block clears), a pass is due now, or the passes ran out and the tail stays unmeasured. */
@@ -43,28 +39,32 @@ function retryStatus(
   if (retryDueAt) {
     const mins = Math.max(1, Math.round((Date.parse(retryDueAt) - now) / 60000));
     if (Date.parse(retryDueAt) - now > 45000) {
-      return `Waiting for the block to clear, then the ${blocked} blocked ${blocked === 1 ? "check runs" : "checks run"} again. Next attempt in about ${mins} min.`;
+      return `Waiting for the block to clear. Next attempt in about ${mins} min.`;
     }
-    return "The next attempt runs shortly.";
+    return "Next attempt runs shortly.";
   }
   if ((retryPasses ?? 0) > 0 && blocked > 0) {
-    return `We tried again ${retryPasses} ${retryPasses === 1 ? "time" : "times"} and could not get past the block, so ${blocked === 1 ? "it stays" : "these stay"} unmeasured.`;
+    return `Still blocked after ${retryPasses} more ${retryPasses === 1 ? "try" : "tries"}. ${blocked === 1 ? "It stays" : "These stay"} unmeasured.`;
   }
   return null;
 }
 
+/** What the grader is doing right now, in a visitor's words. Phase names come from the pipeline:
+ *  discover / discovered / lighthouse / lighthouse_done / probes. During probes the current check's
+ *  own name is the most informative thing available, and it is how the accessibility pass (axe-core)
+ *  announces itself without needing a phase of its own. */
 function runningLabel(p: GradeProgress | null | undefined, name: string | null): string {
-  if (!p) return "reading the app and running the checks";
+  if (!p) return "reading the app";
   if (p.phase === "lighthouse") {
     // The worker counts the runs, so this reads "performance run 2 of 3" once measuring starts.
-    return p.label || "measuring performance, which takes a few minutes";
+    return p.label || "measuring performance, a few minutes";
   }
   if (p.phase === "discover") return "mapping the app's surface";
   if (p.phase === "discovered") return p.label || "mapped the surface";
   if (p.done !== undefined && p.total) {
     return name ? `checking ${name}, ${p.done} of ${p.total}` : `running the checks, ${p.done} of ${p.total}`;
   }
-  return p.label || "reading the app and running the checks";
+  return p.label || "reading the app";
 }
 
 export default function GradePage({ params }: { params: { id: string } }) {
@@ -379,13 +379,13 @@ function Withheld({ view, blocked, now }: { view: GradeView; blocked: number; no
       <div className="challenge-note withheld" role="status">
         <p className="challenge-head">No score: the grade was withheld.</p>
         <p>
-          The app answered, but a bot challenge or WAF blocked every check before it could run
-          {blocked > 0 ? ` (all ${blocked} were stopped)` : ""}. There is nothing measured here, so
-          this is not a clean result and not a zero.
+          The app answered. A bot challenge blocked every check before it ran
+          {blocked > 0 ? ` (all ${blocked})` : ""}. Nothing was measured: not a clean result, not a
+          zero.
         </p>
         <p className="fineprint">
           {retry ??
-            "This is usually a protection sitting in front of the deployment. Grading again later, or from an allowed network, may get through."}
+            "Usually a protection in front of the deployment. Grading again later may get through."}
         </p>
       </div>
       <ReportKeep view={view} />
@@ -416,8 +416,7 @@ function ChallengeNote({
   const retry = retryStatus(retryDueAt, retryPasses, blocked.length, now);
   const axes = incomplete.filter(Boolean);
   const remaining = blocked.length;
-  const axesLine =
-    axes.length > 0 ? `, and ${axes.join(" and ")} ${axes.length === 1 ? "is" : "are"} incomplete` : "";
+  const axesLine = axes.length > 0 ? `, ${axes.join(", ")} incomplete` : "";
 
   // A recovery pass has run: say how much of the blocked tail came back. The fineprint carries
   // whether more passes are coming, so the body states only the current fact and makes no promise
@@ -446,8 +445,7 @@ function ChallengeNote({
       </p>
       <p>
         The app&apos;s protection blocked part of the run meaning Sloptic cannot run all its checks
-        {axes.length > 0 ? `, and ${axes.join(" and ")} ${axes.length === 1 ? "is" : "are"} incomplete` : ""}.
-        Sloptic will retry the blocked checks later and will update this page if they succeed.
+        {axesLine}. Sloptic will retry the blocked checks later. This page updates if they succeed.
       </p>
       {retry && <p className="fineprint">{retry}</p>}
     </div>
