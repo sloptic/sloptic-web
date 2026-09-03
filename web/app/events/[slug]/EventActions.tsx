@@ -296,7 +296,7 @@ export default function EventActions({
                         grade_id: e.grade_id,
                         status: gradeOf(e)?.status ?? null,
                         progress: gradeOf(e)?.progress ?? null,
-                        retrying: !!gradeOf(e)?.retry_due_at,
+                        retryDueAt: gradeOf(e)?.retry_due_at ?? null,
                       }))}
                     />
                   )}

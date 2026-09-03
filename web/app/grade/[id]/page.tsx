@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { GradeView, GradeResult, Finding, Coverage, GradeProgress, CardEntry, Outcome } from "@/lib/types";
-import { AREA_LABELS, PASSIVE_BY_AREA, TOTALS, describeProbe, type Area } from "@/lib/checks";
+import { AREA_LABELS, AREAS, PASSIVE_BY_AREA, TOTALS, describeProbe, type Area } from "@/lib/checks";
 import { daysUntil } from "@/lib/retention";
 import { ordinal } from "@/lib/grades";
 import { forgetGrade } from "@/lib/history";
@@ -230,7 +230,13 @@ function Report({ view, now }: { view: GradeView; now: number }) {
       label: AREA_LABELS[id],
       failed: failedBy[id] ?? 0,
       applied: appliedBy[id] ?? 0,
-      possible: PASSIVE_BY_AREA[id] ?? 0,
+      // The denominator is the battery that ran: the full per-axis counts for an active grade, the
+      // passive floor for a passive one. PASSIVE_BY_AREA alone made every active report claim a
+      // 44-check battery and show more applied than available.
+      possible:
+        (r.mode ?? "passive") === "active"
+          ? AREAS.find((a) => a.id === id)?.probes ?? 0
+          : PASSIVE_BY_AREA[id] ?? 0,
       // an axis with nothing wrong is absent from axis_slop entirely, not zero
       slop: r.axis_slop?.[id as keyof typeof r.axis_slop] ?? 0,
     }));

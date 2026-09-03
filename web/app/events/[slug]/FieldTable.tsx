@@ -9,8 +9,9 @@ export type FieldEntry = {
   status: string | null;
   /** The running grade's live progress: how many checks have run of the battery. */
   progress: { done?: number; total?: number; label?: string } | null;
-  /** A challenge-blocked check is being retried, so the report's score is provisional. */
-  retrying?: boolean;
+  /** When the retry over the challenge-blocked checks is due, on grades whose score is
+   *  provisional. Null when nothing is pending. */
+  retryDueAt?: string | null;
 };
 
 /** The status cell for a grade that is running: a real progress bar (checks run of the battery) and
@@ -30,6 +31,23 @@ function RunningCell({ gradeId, progress }: { gradeId: string | null; progress: 
       <span className="entry-progress-label">
         {gradeId ? <a href={`/grade/${gradeId}`}>{text}</a> : text}
       </span>
+    </span>
+  );
+}
+
+/** The provisional marker on a report whose challenge-blocked checks are being retried: a
+ *  superscript B and, in plain text, how long until that retry lands. The field polls every few
+ *  seconds, so the minutes fall on their own. */
+function RetryDue({ at }: { at: string }) {
+  const ms = Date.parse(at) - Date.now();
+  const mins = Math.ceil(ms / 60000);
+  return (
+    <span className="prov-eta">
+      {" "}
+      <sup className="prov-mark" title="A challenge-blocked check is being retried. The score may change.">
+        B
+      </sup>{" "}
+      {ms > 45_000 ? `${mins} min` : "shortly"}
     </span>
   );
 }
@@ -274,11 +292,7 @@ export default function FieldTable({
                   ) : e.grade_id ? (
                     <>
                       <a href={`/grade/${e.grade_id}`}>report</a>
-                      {e.retrying && (
-                        <sup className="prov-mark" title="A challenge-blocked check is being retried. The score may change.">
-                          B
-                        </sup>
-                      )}
+                      {e.retryDueAt && <RetryDue at={e.retryDueAt} />}
                     </>
                   ) : canGrade && runId ? (
                     <button
@@ -299,7 +313,7 @@ export default function FieldTable({
         </table>
       </div>
 
-      {rows.some((e) => e.retrying) && (
+      {rows.some((e) => e.retryDueAt) && (
         <p className="fineprint prov-note">B: a challenge-blocked check is being retried. The score may change.</p>
       )}
 

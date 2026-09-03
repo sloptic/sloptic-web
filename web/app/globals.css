@@ -2245,6 +2245,22 @@ code {
 .check-detail summary {
   cursor: pointer;
 }
+
+/* The field toggle is the one control on an event page that opens the whole app list, so it reads
+   as a heading rather than fine print, with a caret that tracks open/closed. */
+.field-block > summary {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--ink);
+  list-style: none;
+}
+.field-block > summary::before {
+  content: "\25B8\00A0";
+  color: var(--muted);
+}
+.field-block[open] > summary::before {
+  content: "\25BE\00A0";
+}
 .check-detail p {
   margin: 0.5rem 0 0;
   overflow-wrap: anywhere;
