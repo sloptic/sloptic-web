@@ -22,6 +22,11 @@ type Row = {
   maxPenalty: number | null;
   categories: number | null;
   gated: boolean;
+  // Did the probe loop run? A challenge can block the whole battery and still finish as status=done
+  // with slop 0, which must never rank as the cleanest app. probes_total is written only once the
+  // loop is reached.
+  measured: boolean;
+  blocked: number;
 };
 
 function fmt(v: number | null): string {
@@ -55,8 +60,8 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
     ? await db.from("grades").select("id, status").in("id", ids)
     : { data: [] as { id: string; status: string }[] };
   const { data: results } = ids.length
-    ? await db.from("results").select("grade_id, slop_score, axis_slop, ranking, lighthouse_score").in("grade_id", ids)
-    : { data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; ranking: Record<string, unknown>; lighthouse_score: number | null }[] };
+    ? await db.from("results").select("grade_id, slop_score, axis_slop, coverage, blocked_probes, ranking, lighthouse_score").in("grade_id", ids)
+    : { data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; coverage: Record<string, unknown> | null; blocked_probes: string[] | null; ranking: Record<string, unknown>; lighthouse_score: number | null }[] };
 
   const gradeStatus = new Map((grades ?? []).map((g) => [g.id, g.status]));
   const byGrade = new Map((results ?? []).map((r) => [r.grade_id, r]));
@@ -89,6 +94,8 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
                 ? 1
                 : 0,
         gated: rk.has_catastrophe === true,
+        measured: Number((r?.coverage as { probes_total?: number } | null)?.probes_total ?? 0) > 0,
+        blocked: (r?.blocked_probes ?? []).length,
       };
     });
 
@@ -99,7 +106,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
   // fired, then the worst single finding, then exposure survived, then breadth of coverage. Sorting
   // on slop alone would leave the explanation above describing something the table does not do.
   const ranked = rows
-    .filter((r) => r.slop !== null && !r.gated)
+    .filter((r) => r.slop !== null && !r.gated && r.measured)
     .sort(
       (a, b) =>
         (a.slop as number) - (b.slop as number) ||
@@ -109,6 +116,9 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         (b.categories ?? 0) - (a.categories ?? 0)
     );
   const gated = rows.filter((r) => r.gated);
+  // Reached, answered, but the grade measured nothing: a challenge blocked the battery. Not a DNF
+  // (the app was up) and not a clean 0 (nothing ran), so it sits in its own line off the ranking.
+  const withheld = rows.filter((r) => r.slop !== null && !r.gated && !r.measured);
   // A grade that failed is not still running. It has finished and produced nothing, usually because
   // the deployment has since gone down, and calling it in progress leaves a board that never
   // finishes from the reader's side.
@@ -128,7 +138,16 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
     exposure: r.potential,
     catastrophic: r.catastrophic,
   }));
-  const dnfRows: DnfRow[] = failed.map((r) => ({ name: r.name, project_url: r.project_url }));
+  const dnfRows: DnfRow[] = [
+    ...failed.map((r) => ({ name: r.name, project_url: r.project_url, note: "DNF, the deployment did not respond" })),
+    ...withheld.map((r) => ({
+      name: r.name,
+      project_url: r.project_url,
+      note: r.blocked > 0
+        ? "no score, a bot challenge blocked every check"
+        : "no score, the app presented nothing to grade",
+    })),
+  ];
   const skipped = (entries ?? []).filter((e) => e.skip_reason);
   const total = (entries ?? []).length;
 
@@ -143,6 +162,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
           {ranked.length + gated.length} of {total} entries {run.mode}ly graded.
           {pending.length > 0 ? ` ${pending.length} still running.` : ""}
           {failed.length > 0 ? ` ${failed.length} could not be reached.` : ""}
+          {withheld.length > 0 ? ` ${withheld.length} blocked before any check ran.` : ""}
         </p>
       </div>
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import FieldTable, { type FieldEntry } from "./FieldTable";
-import { estimateLabel } from "@/lib/timing";
+import { liveEtaLabel } from "@/lib/timing";
 
 type Claim = {
   id: string; slug: string; token: string;
@@ -11,7 +11,7 @@ type Claim = {
   check_detail: string | null; checked_at: string | null;
 };
 type Progress = { done?: number; total?: number; label?: string } | null;
-type Grade = { status: string; progress: Progress };
+type Grade = { status: string; progress: Progress; claimed_at: string | null; finished_at: string | null };
 type Entry = {
   project_url: string; app_url: string | null; skip_reason: string | null; grade_id: string | null;
   grades?: Grade | Grade[] | null;
@@ -215,6 +215,15 @@ export default function EventActions({
               // line below that says something is happening has to be keyed on this rather than on
               // the run's status.
               const inFlight = gradeable.filter((e) => ["queued", "running"].includes(gradeOf(e)?.status ?? "")).length;
+              // Measured per-grade seconds for the grades that have finished HERE, so the estimate
+              // corrects the corpus number by how this field is actually behaving. finished - claimed
+              // is time the grade was running, so the gaps a drip feed leaves between demos never
+              // inflate it.
+              const durations = gradeable
+                .map((e) => gradeOf(e))
+                .filter((g) => g?.status === "done" && g.claimed_at && g.finished_at)
+                .map((g) => (Date.parse(g!.finished_at!) - Date.parse(g!.claimed_at!)) / 1000)
+                .filter((d) => d > 0 && d < 3600);
               const pct = gradeable.length ? Math.round((finished / gradeable.length) * 100) : 0;
               const why = new Map<string, number>();
               for (const e of entries) if (e.skip_reason) why.set(e.skip_reason, (why.get(e.skip_reason) ?? 0) + 1);
@@ -242,7 +251,7 @@ export default function EventActions({
                       yet are waiting on a person, not on the worker. */}
                   {(r.status === "ready" ? gradeable.length - finished : inFlight) > 0 && (
                     <p className="run-skips">
-                      {estimateLabel(r.status === "ready" ? gradeable.length - finished : inFlight, r.mode)} left.
+                      {liveEtaLabel(r.status === "ready" ? gradeable.length - finished : inFlight, r.mode, durations)} left.
                       {r.priority === 0
                         ? " Priority grading active (judging active and submissions closed)."
                         : r.priority === 2

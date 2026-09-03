@@ -47,13 +47,21 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   let result: GradeResult | null = null;
   if (grade.status === "done") {
-    const { data: r } = await db
+    // blocked_probes/incomplete_axes shipped in 0018 and are safe to read; bot_challenge/
+    // challenge_stage in 0020 may not be applied yet, so fall back without them rather than 500 a
+    // report on a database that predates the column. The withheld/interrupted note derives from
+    // blocked_probes + coverage + outcomes, which are all present here either way.
+    const RESULT_COLS =
+      "mode, catalog_version, passive_probe_count, slop_score, axis_slop, coverage, platform, surface, findings, card, outcomes, percentile, percentile_band, curve_version, ranking, blocked_probes, incomplete_axes";
+    let { data: r, error: rErr } = await db
       .from("results")
-      .select(
-        "mode, catalog_version, passive_probe_count, slop_score, axis_slop, coverage, platform, surface, findings, card, outcomes, percentile, percentile_band, curve_version, ranking"
-      )
+      .select(`${RESULT_COLS}, bot_challenge, challenge_stage`)
       .eq("grade_id", params.id)
       .maybeSingle();
+    if (rErr?.code === "42703") {
+      console.warn("results.bot_challenge/challenge_stage missing; falling back (apply migration 0020)");
+      ({ data: r } = await db.from("results").select(RESULT_COLS).eq("grade_id", params.id).maybeSingle());
+    }
     result = (r as GradeResult) ?? null;
   }
 

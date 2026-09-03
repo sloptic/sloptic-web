@@ -97,6 +97,17 @@ export interface GradeResult {
   /** Per axis, the damped score this app would carry if every applicable check had fired. Always
    *  >= axis_slop, so actual/potential says how much of its own failure surface the app avoided. */
   axis_potential?: Partial<Record<"security" | "qa" | "performance", number>> | null;
+  /** Probes a bot challenge stopped from running. With an empty coverage it means the whole battery
+   *  was blocked and the grade was withheld; a subset means a mid-grade challenge truncated the tail
+   *  (which retry_blocked then recovers). */
+  blocked_probes?: string[] | null;
+  /** Axes left incomplete by a challenge, so a clean axis reading is not mistaken for a full one. */
+  incomplete_axes?: string[] | null;
+  /** True when a WAF / bot challenge fired during the grade. */
+  bot_challenge?: boolean | null;
+  /** "entry" = the first fetch was challenged, nothing graded, the score is not a measurement. A
+   *  later value = some probes ran before the block. Empty/absent when no challenge fired. */
+  challenge_stage?: string | null;
 }
 
 export interface Outcome {

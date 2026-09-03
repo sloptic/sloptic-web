@@ -15,9 +15,10 @@ export type BoardRow = {
   catastrophic: number | null;
 };
 
-/** Graded but unreachable. Kept in the table under everything else, because an organizer needs to
- *  see WHICH entries produced nothing, and a separate section below the fold buries that. */
-export type DnfRow = { name: string; project_url: string };
+/** Graded but produced no score: unreachable, or reached but blocked before any check ran. Kept in
+ *  the table under everything else, because an organizer needs to see WHICH entries produced nothing
+ *  and WHY, and a separate section below the fold buries that. `note` carries the reason. */
+export type DnfRow = { name: string; project_url: string; note: string };
 
 type Key = "rank" | "name" | "slop" | "ratio" | "lighthouse" | "exposure" | "catastrophic";
 
@@ -118,7 +119,7 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
                   <th scope="row">
                     <a href={d.project_url} target="_blank" rel="noopener noreferrer">{d.name}</a>
                   </th>
-                  <td colSpan={5}>DNF, the deployment did not respond</td>
+                  <td colSpan={5}>{d.note}</td>
                   <td />
                 </tr>
               ))}

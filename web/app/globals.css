@@ -2949,3 +2949,29 @@ a.mast-user:hover {
   margin: 0;
   transform: translateY(-50%);
 }
+
+/* A grade a challenge blocked, in whole or in part. Amber, not the red of a finding: nothing was
+   found here, the checks were prevented, and the two must not read alike. */
+.challenge-note {
+  border: 1px solid color-mix(in srgb, var(--warn, #b7791f) 45%, var(--line));
+  border-left: 3px solid var(--warn, #b7791f);
+  background: color-mix(in srgb, var(--warn, #b7791f) 8%, transparent);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  max-width: var(--measure);
+}
+.challenge-note.withheld {
+  margin: 1.25rem 0;
+}
+.challenge-note .challenge-head {
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+}
+.challenge-note p {
+  margin: 0.35rem 0 0;
+}
+.challenge-note .fineprint {
+  color: var(--muted);
+  font-size: 0.85rem;
+}

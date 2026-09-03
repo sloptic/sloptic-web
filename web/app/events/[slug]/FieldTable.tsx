@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export type FieldEntry = {
   project_url: string;
@@ -54,6 +54,17 @@ export default function FieldTable({
   onGraded?: () => void;
 }) {
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  // Remember whether the field was expanded, keyed to this run, so clicking into an app and hitting
+  // back returns to it open. Starts closed for SSR, then reads the saved state on mount.
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!runId) return;
+    try {
+      setOpen(localStorage.getItem(`sloptic.field.${runId}`) === "1");
+    } catch {
+      /* private mode, blocked storage: fall back to closed */
+    }
+  }, [runId]);
   const [queuing, setQueuing] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
@@ -127,7 +138,19 @@ export default function FieldTable({
   const shown = rows.slice(from, from + PAGE);
 
   return (
-    <details className="check-detail field-block">
+    <details
+      className="check-detail field-block"
+      open={open}
+      onToggle={(e) => {
+        const next = e.currentTarget.open;
+        setOpen(next);
+        try {
+          if (runId) localStorage.setItem(`sloptic.field.${runId}`, next ? "1" : "0");
+        } catch {
+          /* storage unavailable: the toggle still works for this view */
+        }
+      }}
+    >
       <summary>the field ({entries.length})</summary>
 
       <div className="field-filters">

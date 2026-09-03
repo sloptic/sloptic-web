@@ -161,6 +161,16 @@ type AreaRow = {
 function Report({ view }: { view: GradeView }) {
   const r = view.result!;
 
+  // Did the probe loop actually run? The grader writes coverage.probes_total only once it reaches
+  // the battery, and outcomes only for probes that ran. Neither, plus blocked probes, means a bot
+  // challenge stopped the grade before anything was measured: the score is 0 because nothing ran,
+  // not because the app is clean. Showing that 0 as a grade is the bug this guards.
+  const blockedProbes = r.blocked_probes ?? [];
+  const ranAnything = (r.coverage?.probes_total ?? 0) > 0 || (r.outcomes?.length ?? 0) > 0;
+  const withheld =
+    !ranAnything && (blockedProbes.length > 0 || r.bot_challenge === true || r.challenge_stage === "entry");
+  if (withheld) return <Withheld view={view} blocked={blockedProbes.length} />;
+
   // Everything the bars need, derived from the record: what fired, what applied, and what this mode
   // could have run. `coverage.applied` lists the probes that applied by id, so what PASSED is what
   // applied minus what fired.
@@ -267,6 +277,8 @@ function Report({ view }: { view: GradeView }) {
         )}
       </div>
 
+      <ChallengeNote blocked={r.blocked_probes ?? []} incomplete={r.incomplete_axes ?? []} />
+
       <div className="sample-axes">
         {rows.map((row) => (
           <div className="sample-axis" data-axis={row.id} key={row.id}>
@@ -317,6 +329,54 @@ function Report({ view }: { view: GradeView }) {
  *  Anyone may run a grade on an app they do not own, so a report can be about someone who never
  *  asked for it, and the only handle they will ever have is this link. Putting the delete here means
  *  the person with the strongest reason to want it gone can act on that without asking us. */
+/** A grade a bot challenge stopped before anything ran. The app answered, so it is not a DNF, but
+ *  its protection blocked every check, so there is no measurement. The one thing this must not do is
+ *  show the 0 as a score: a withheld grade read as a clean one is the whole failure. */
+function Withheld({ view, blocked }: { view: GradeView; blocked: number }) {
+  return (
+    <section className="report">
+      <h1>
+        {view.url}
+        <span className="tag">{view.result?.mode ?? "passive"}</span>
+      </h1>
+      <div className="challenge-note withheld" role="status">
+        <p className="challenge-head">No score: the grade was withheld.</p>
+        <p>
+          The app answered, but a bot challenge or WAF blocked every check before it could run
+          {blocked > 0 ? ` (all ${blocked} were stopped)` : ""}. There is nothing measured here, so
+          this is not a clean result and not a zero.
+        </p>
+        <p className="fineprint">
+          This is usually a protection sitting in front of the deployment. Grading again later, or
+          from an allowed network, may get through.
+        </p>
+      </div>
+      <ReportKeep view={view} />
+    </section>
+  );
+}
+
+/** A grade that DID run but had part of its tail blocked mid-way. The score stands for what ran; the
+ *  note keeps a blocked axis from reading as a clean one and says a retry is coming. Renders nothing
+ *  when no probe was blocked, which is the ordinary case. */
+function ChallengeNote({ blocked, incomplete }: { blocked: string[]; incomplete: string[] }) {
+  if (!blocked || blocked.length === 0) return null;
+  const axes = incomplete.filter(Boolean);
+  return (
+    <div className="challenge-note" role="status">
+      <p className="challenge-head">
+        A challenge interrupted {blocked.length} {blocked.length === 1 ? "check" : "checks"}.
+      </p>
+      <p>
+        The app&apos;s protection blocked part of the run, so what those checks would have found is
+        not in this score
+        {axes.length > 0 ? `, and ${axes.join(" and ")} ${axes.length === 1 ? "is" : "are"} incomplete` : ""}.
+        The blocked checks are booked for another pass, which folds any new findings in.
+      </p>
+    </div>
+  );
+}
+
 function ReportKeep({ view }: { view: GradeView }) {
   const [busy, setBusy] = useState(false);
   const [gone, setGone] = useState(false);

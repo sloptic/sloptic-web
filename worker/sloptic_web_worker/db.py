@@ -198,12 +198,12 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
             INSERT INTO results (grade_id, mode, catalog_version, passive_probe_count, slop_score,
                                  axis_slop, coverage, platform, surface, findings,
                                  card, outcomes, axis_potential, lighthouse_score,
-                                 blocked_probes, incomplete_axes,
+                                 blocked_probes, incomplete_axes, bot_challenge, challenge_stage,
                                  percentile, percentile_band, curve_version, ranking)
             VALUES (%(grade_id)s, %(mode)s, %(catalog_version)s, %(passive_probe_count)s, %(slop_score)s,
                     %(axis_slop)s, %(coverage)s, %(platform)s, %(surface)s, %(findings)s,
                     %(card)s, %(outcomes)s, %(axis_potential)s, %(lighthouse_score)s,
-                    %(blocked_probes)s, %(incomplete_axes)s,
+                    %(blocked_probes)s, %(incomplete_axes)s, %(bot_challenge)s, %(challenge_stage)s,
                     %(percentile)s, %(percentile_band)s, %(curve_version)s, %(ranking)s)
             ON CONFLICT (grade_id) DO UPDATE SET
                 slop_score = EXCLUDED.slop_score, axis_slop = EXCLUDED.axis_slop,
@@ -214,6 +214,8 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
                 lighthouse_score = EXCLUDED.lighthouse_score,
                 blocked_probes = EXCLUDED.blocked_probes,
                 incomplete_axes = EXCLUDED.incomplete_axes,
+                bot_challenge = EXCLUDED.bot_challenge,
+                challenge_stage = EXCLUDED.challenge_stage,
                 percentile = EXCLUDED.percentile, percentile_band = EXCLUDED.percentile_band,
                 curve_version = EXCLUDED.curve_version, ranking = EXCLUDED.ranking;
             """,
@@ -224,6 +226,9 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
                 "lighthouse_score": _lighthouse_score(result.get("outcomes")),
                 "blocked_probes": list(result.get("blocked_probes") or []),
                 "incomplete_axes": list(result.get("incomplete_axes") or []),
+                # The challenge signal, so a withheld grade is never read back as a clean 0.
+                "bot_challenge": bool(result.get("bot_challenge")),
+                "challenge_stage": result.get("challenge_stage") or None,
                 "mode": result["mode"],
                 "catalog_version": result["catalog_version"],
                 "passive_probe_count": result.get("passive_probe_count"),
