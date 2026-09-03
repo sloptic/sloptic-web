@@ -33,7 +33,7 @@ function checkLine(c: Claim): string {
   if (c.check_status === "error") return "Something went wrong on our side during the last check. We are trying again.";
   if (c.check_status === "blocked") return "Devpost did not answer our last check. We are trying again.";
   if (c.check_status === "not_found") return "We could not find that event on Devpost.";
-  return "The link is not on your pages yet.";
+  return "We could not find our link on your page yet.";
 }
 
 /** Everything you can do to one event, in one place. The list page is a list; this is where an

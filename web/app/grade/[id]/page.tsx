@@ -376,9 +376,9 @@ function Withheld({ view, blocked, now }: { view: GradeView; blocked: number; no
         <span className="tag">{view.result?.mode ?? "passive"}</span>
       </h1>
       <div className="challenge-note withheld" role="status">
-        <p className="challenge-head">No score: the grade was withheld.</p>
+        <p className="challenge-head">No score (withheld grade)</p>
         <p>
-          A bot challenge blocked every check before it ran. Not a clean result, not a zero.
+          A bot challenge blocked every check before it ran.
         </p>
         <p className="fineprint">
           {retry ??

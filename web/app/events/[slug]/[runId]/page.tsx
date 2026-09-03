@@ -144,8 +144,8 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
       name: r.name,
       project_url: r.project_url,
       note: r.blocked > 0
-        ? "no score, a bot challenge blocked every check"
-        : "no score, the app presented nothing to grade",
+        ? "no score (a bot challenge appeared)"
+        : "no score (the app had nothing to grade)",
     })),
   ];
   const skipped = (entries ?? []).filter((e) => e.skip_reason);
