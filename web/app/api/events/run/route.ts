@@ -128,7 +128,7 @@ function db_runs(accountId: string) {
       "id, slug, mode, status, override, admin, priority, entries_found, gallery_complete, detail, created_at, resolved_at, " +
         // The grade's own status and progress ride along, so the events page can show a field
         // filling in without asking per entry.
-        "event_entries(project_url, app_url, skip_reason, grade_id, grades(status, progress, claimed_at, finished_at))"
+        "event_entries(project_url, app_url, skip_reason, grade_id, grades(status, progress, claimed_at, finished_at, retry_due_at))"
     )
     .eq("account_id", accountId)
     .order("created_at", { ascending: false })

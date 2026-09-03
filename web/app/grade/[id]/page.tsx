@@ -199,6 +199,7 @@ function Report({ view, now }: { view: GradeView; now: number }) {
   const withheld =
     !ranAnything && (blockedProbes.length > 0 || r.bot_challenge === true || r.challenge_stage === "entry");
   if (withheld) return <Withheld view={view} blocked={blockedProbes.length} now={now} />;
+  // r.challenge_onset_index: how far the grade got before the challenge, for the withheld note.
 
   // Everything the bars need, derived from the record: what fired, what applied, and what this mode
   // could have run. `coverage.applied` lists the probes that applied by id, so what PASSED is what
@@ -369,6 +370,11 @@ function Report({ view, now }: { view: GradeView; now: number }) {
  *  show the 0 as a score: a withheld grade read as a clean one is the whole failure. */
 function Withheld({ view, blocked, now }: { view: GradeView; blocked: number; now: number }) {
   const retry = retryStatus(view.retry_due_at, view.retry_passes, blocked, now);
+  // How far the grade got before the challenge tripped. The grader withholds anything whose onset
+  // landed before 60% of the battery, so "nothing ran" would be a lie for a grade cut down at, say,
+  // check 47 of 102. The mode decides which battery size is honest.
+  const onset = view.result?.challenge_onset_index ?? null;
+  const battery = (view.result?.mode ?? "passive") === "active" ? TOTALS.total : TOTALS.passive;
   return (
     <section className="report">
       <h1>
@@ -378,7 +384,9 @@ function Withheld({ view, blocked, now }: { view: GradeView; blocked: number; no
       <div className="challenge-note withheld" role="status">
         <p className="challenge-head">No score (withheld grade)</p>
         <p>
-          A bot challenge stopped the grade before enough checks ran to score it.
+          {onset !== null
+            ? `A bot challenge stopped the grade at check ${onset} of ${battery}.`
+            : "A bot challenge stopped the grade before enough checks ran to score it."}
         </p>
         <p className="fineprint">
           {retry ??

@@ -111,6 +111,9 @@ export interface GradeResult {
   /** "entry" = the first fetch was challenged, nothing graded, the score is not a measurement. A
    *  later value = some probes ran before the block. Empty/absent when no challenge fired. */
   challenge_stage?: string | null;
+  /** Checks that completed before a bot challenge tripped, so a withheld grade can say how far it
+   *  got. null when no challenge, or a first-fetch challenge with nothing to attribute. */
+  challenge_onset_index?: number | null;
 }
 
 export interface Outcome {

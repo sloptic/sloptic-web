@@ -4,6 +4,7 @@ import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import BoardTable, { type BoardRow, type DnfRow } from "./BoardTable";
 import BoardStats from "./BoardStats";
+import { TOTALS } from "@/lib/checks";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Event board", robots: { index: false, follow: false } };
@@ -27,6 +28,10 @@ type Row = {
   // loop is reached.
   measured: boolean;
   blocked: number;
+  // A challenge-blocked check is being retried, so a score shown today can still move.
+  pendingRetry: boolean;
+  // How many checks had run when the challenge tripped, for the withheld note.
+  onset: number | null;
 };
 
 function fmt(v: number | null): string {
@@ -57,13 +62,14 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
 
   const ids = (entries ?? []).map((e) => e.grade_id).filter(Boolean) as string[];
   const { data: grades } = ids.length
-    ? await db.from("grades").select("id, status").in("id", ids)
-    : { data: [] as { id: string; status: string }[] };
+    ? await db.from("grades").select("id, status, retry_due_at").in("id", ids)
+    : { data: [] as { id: string; status: string; retry_due_at: string | null }[] };
   const { data: results } = ids.length
-    ? await db.from("results").select("grade_id, slop_score, axis_slop, coverage, blocked_probes, ranking, lighthouse_score").in("grade_id", ids)
-    : { data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; coverage: Record<string, unknown> | null; blocked_probes: string[] | null; ranking: Record<string, unknown>; lighthouse_score: number | null }[] };
+    ? await db.from("results").select("grade_id, slop_score, axis_slop, coverage, blocked_probes, challenge_onset_index, ranking, lighthouse_score").in("grade_id", ids)
+    : { data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; coverage: Record<string, unknown> | null; blocked_probes: string[] | null; challenge_onset_index: number | null; ranking: Record<string, unknown>; lighthouse_score: number | null }[] };
 
   const gradeStatus = new Map((grades ?? []).map((g) => [g.id, g.status]));
+  const retrying = new Set((grades ?? []).filter((g) => g.retry_due_at).map((g) => g.id));
   const byGrade = new Map((results ?? []).map((r) => [r.grade_id, r]));
 
   const rows: Row[] = (entries ?? [])
@@ -96,6 +102,8 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         gated: rk.has_catastrophe === true,
         measured: Number((r?.coverage as { probes_total?: number } | null)?.probes_total ?? 0) > 0,
         blocked: (r?.blocked_probes ?? []).length,
+        pendingRetry: retrying.has(e.grade_id as string),
+        onset: typeof r?.challenge_onset_index === "number" ? r.challenge_onset_index : null,
       };
     });
 
@@ -137,14 +145,20 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
     lighthouse: r.lighthouse,
     exposure: r.potential,
     catastrophic: r.catastrophic,
+    provisional: r.pendingRetry,
   }));
+  // The battery size for the "stopped at check X of Y" note: the run's own mode decides which
+  // count is honest.
+  const battery = run.mode === "active" ? TOTALS.total : TOTALS.passive;
   const dnfRows: DnfRow[] = [
     ...failed.map((r) => ({ name: r.name, project_url: r.project_url, note: "DNF, the deployment did not respond" })),
     ...withheld.map((r) => ({
       name: r.name,
       project_url: r.project_url,
       note: r.blocked > 0
-        ? "no score (a bot challenge appeared)"
+        ? r.onset !== null
+          ? `no score (stopped at check ${r.onset} of ${battery})`
+          : "no score (a bot challenge appeared)"
         : "no score (the app had nothing to grade)",
     })),
   ];

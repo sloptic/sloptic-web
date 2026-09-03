@@ -9,6 +9,8 @@ export type FieldEntry = {
   status: string | null;
   /** The running grade's live progress: how many checks have run of the battery. */
   progress: { done?: number; total?: number; label?: string } | null;
+  /** A challenge-blocked check is being retried, so the report's score is provisional. */
+  retrying?: boolean;
 };
 
 /** The status cell for a grade that is running: a real progress bar (checks run of the battery) and
@@ -270,7 +272,14 @@ export default function FieldTable({
                   ) : e.status === "failed" ? (
                     "did not respond"
                   ) : e.grade_id ? (
-                    <a href={`/grade/${e.grade_id}`}>report</a>
+                    <>
+                      <a href={`/grade/${e.grade_id}`}>report</a>
+                      {e.retrying && (
+                        <sup className="prov-mark" title="A challenge-blocked check is being retried. The score may change.">
+                          B
+                        </sup>
+                      )}
+                    </>
                   ) : canGrade && runId ? (
                     <button
                       className="link-button"
@@ -289,6 +298,10 @@ export default function FieldTable({
           </tbody>
         </table>
       </div>
+
+      {rows.some((e) => e.retrying) && (
+        <p className="fineprint prov-note">B: a challenge-blocked check is being retried. The score may change.</p>
+      )}
 
       {rows.length > PAGE && (
         <div className="pager">

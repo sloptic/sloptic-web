@@ -13,6 +13,9 @@ export type BoardRow = {
   exposure: number | null;
   /** Findings that gate absolutely. Null when the grade predates the field. */
   catastrophic: number | null;
+  /** A challenge-blocked check is being retried, so this score can still move. Shown as a
+   *  superscript B, explained once under the table. */
+  provisional: boolean;
 };
 
 /** Graded but produced no score: unreachable, or reached but blocked before any check ran. Kept in
@@ -102,7 +105,14 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
                 <th scope="row">
                   <a href={r.project_url} target="_blank" rel="noopener noreferrer">{r.name}</a>
                 </th>
-                <td>{fmt(r.slop)}</td>
+                <td>
+                  {fmt(r.slop)}
+                  {r.provisional && (
+                    <sup className="prov-mark" title="A challenge-blocked check is being retried. The score may change.">
+                      B
+                    </sup>
+                  )}
+                </td>
                 <td>{r.ratio === null ? "-" : `${r.ratio.toFixed(1)}%`}</td>
                 <td>{fmt(r.exposure)}</td>
                 <td>{r.lighthouse === null ? "-" : r.lighthouse}</td>
@@ -127,6 +137,9 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
           )}
         </table>
       </div>
+      {rows.some((r) => r.provisional) && (
+        <p className="fineprint prov-note">B: a challenge-blocked check is being retried. The score may change.</p>
+      )}
       {sorted.length > PAGE && (
         <div className="pager">
           <button className="link-button" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>

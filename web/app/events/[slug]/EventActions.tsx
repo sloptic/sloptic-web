@@ -11,7 +11,10 @@ type Claim = {
   check_detail: string | null; checked_at: string | null;
 };
 type Progress = { done?: number; total?: number; label?: string } | null;
-type Grade = { status: string; progress: Progress; claimed_at: string | null; finished_at: string | null };
+type Grade = {
+  status: string; progress: Progress; claimed_at: string | null; finished_at: string | null;
+  retry_due_at: string | null;
+};
 type Entry = {
   project_url: string; app_url: string | null; skip_reason: string | null; grade_id: string | null;
   grades?: Grade | Grade[] | null;
@@ -293,6 +296,7 @@ export default function EventActions({
                         grade_id: e.grade_id,
                         status: gradeOf(e)?.status ?? null,
                         progress: gradeOf(e)?.progress ?? null,
+                        retrying: !!gradeOf(e)?.retry_due_at,
                       }))}
                     />
                   )}

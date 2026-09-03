@@ -55,11 +55,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       "mode, catalog_version, passive_probe_count, slop_score, axis_slop, coverage, platform, surface, findings, card, outcomes, percentile, percentile_band, curve_version, ranking, blocked_probes, incomplete_axes";
     let { data: r, error: rErr } = await db
       .from("results")
-      .select(`${RESULT_COLS}, bot_challenge, challenge_stage, retry_blocked_initial`)
+      .select(`${RESULT_COLS}, bot_challenge, challenge_stage, retry_blocked_initial, challenge_onset_index`)
       .eq("grade_id", params.id)
       .maybeSingle();
     if (rErr?.code === "42703") {
-      console.warn("results challenge/retry columns missing; falling back (apply migrations 0020, 0021)");
+      console.warn("results challenge/retry columns missing; falling back (apply migrations 0020, 0021, 0022)");
       ({ data: r } = await db.from("results").select(RESULT_COLS).eq("grade_id", params.id).maybeSingle());
     }
     result = (r as GradeResult) ?? null;

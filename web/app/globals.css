@@ -2788,6 +2788,9 @@ a.mast-user:hover {
   align-items: center;
   gap: 0.6rem;
   width: 100%;
+  /* Hold room for the bar plus "102 of 102", so an auto table layout cannot squeeze the status
+     column back down to truncating the label. */
+  min-width: 10rem;
 }
 .entry-progress .progress-track {
   flex: 1 1 auto;
@@ -2981,4 +2984,17 @@ a.mast-user:hover {
 .challenge-note .fineprint {
   color: var(--muted);
   font-size: 0.85rem;
+}
+
+/* A provisional score: a challenge-blocked check is being retried and may move it. A superscript B
+   on the score, explained on hover and once per page. */
+.prov-mark {
+  color: var(--warn, #b7791f);
+  font-size: 0.65em;
+  font-weight: 600;
+  margin-left: 0.2em;
+  cursor: help;
+}
+.prov-note {
+  margin-top: 0.5rem;
 }

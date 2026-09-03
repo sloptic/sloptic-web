@@ -98,6 +98,10 @@ def _run_grade(origin: str, catalog, mode: str, progress_cb=None, only_probes=No
     `only_probes` narrows the catalog to those ids, which is how a retry pass re-runs just the tail a
     WAF challenged. Same mechanism as the CLI's --probe.
     """
+    # Kept before the narrowing below: the onset index must be a position in the FULL battery's run
+    # order, so a retry pass that trips a challenge still reports where it stopped in the whole 102,
+    # not within its own subset.
+    full_catalog = catalog
     if only_probes:
         wanted = set(only_probes)
         catalog = [p for p in catalog if p.id in wanted]
@@ -187,6 +191,20 @@ def _run_grade(origin: str, catalog, mode: str, progress_cb=None, only_probes=No
     if rank is not None:
         rank["curve_version"] = (curve or {}).get("version")
 
+    # How far the grade got before a bot challenge tripped, in run order, which is what lets a
+    # withheld grade say "stopped at check X of Y" rather than implying nothing ran. The grader
+    # returns the onset PROBE; its position in the same order the pipeline runs probes
+    # (safety.order_weight) is the count that completed clean before it. None when no challenge, or a
+    # first-fetch challenge with no probe to blame.
+    onset = record.get("challenge_onset") or ""
+    onset_index = None
+    if onset:
+        ordered = sorted(full_catalog, key=lambda pr: safety.order_weight(pr.id))
+        for i, pr in enumerate(ordered):
+            if pr.id == onset:
+                onset_index = i
+                break
+
     card = _build_card(record, origin)
     outcomes = [asdict(o) for o in report.outcomes]
     axis_potential = _axis_potential(report)
@@ -202,6 +220,7 @@ def _run_grade(origin: str, catalog, mode: str, progress_cb=None, only_probes=No
         "incomplete_axes": list(record.get("incomplete_axes") or []),
         "bot_challenge": bool(record.get("bot_challenge")),
         "challenge_stage": record.get("challenge_stage") or "",
+        "challenge_onset_index": onset_index,
         "card": card,
         "outcomes": outcomes,
         "axis_potential": axis_potential,
