@@ -39,7 +39,35 @@ function projectName(url: string): string {
  *  This is the staging view, so it shows what WILL be graded as well as what was. The board only
  *  ever shows entries that produced a score, which is the wrong list to check before authorising a
  *  run over other people's apps. */
-export default function FieldTable({ entries }: { entries: FieldEntry[] }) {
+export default function FieldTable({
+  entries,
+  runId,
+  canGrade,
+  onGraded,
+}: {
+  entries: FieldEntry[];
+  runId?: string;
+  /** Whether one-at-a-time grading is offered. Off once the run is finished. */
+  canGrade?: boolean;
+  onGraded?: () => void;
+}) {
+  const [queuing, setQueuing] = useState<string | null>(null);
+
+  async function gradeOne(projectUrl: string) {
+    if (!runId) return;
+    setQueuing(projectUrl);
+    try {
+      await fetch("/api/events/run/grade-one", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ runId, projectUrl }),
+      });
+      onGraded?.();
+    } finally {
+      setQueuing(null);
+    }
+  }
+
   const [page, setPage] = useState(0);
   // Two boxes over one field, so they read as a union: tick nothing and you see everything, tick
   // both and you also see everything, since eligible and skipped are the two halves. A pair of
@@ -151,6 +179,17 @@ export default function FieldTable({ entries }: { entries: FieldEntry[] }) {
                     "did not respond"
                   ) : e.grade_id ? (
                     <a href={`/grade/${e.grade_id}`}>report</a>
+                  ) : canGrade && runId ? (
+                    // The drip feed: grade this one now, which an organizer does as each team
+                    // finishes demoing so active traffic never lands on an app a judge is watching.
+                    <button
+                      className="link-button"
+                      type="button"
+                      disabled={queuing === e.project_url}
+                      onClick={() => void gradeOne(e.project_url)}
+                    >
+                      {queuing === e.project_url ? "queuing..." : "grade now"}
+                    </button>
                   ) : (
                     "will be graded"
                   )}

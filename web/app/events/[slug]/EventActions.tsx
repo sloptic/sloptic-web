@@ -167,8 +167,9 @@ export default function EventActions({
         {live?.status === "ready" && live.mode === "active" && (
           <p className="section-intro fineprint timing-note">
             Do not run this during live demos. Active checks create accounts and test records on each
-            app and load it repeatedly, which a judge looking at the same deployment will see. After
-            submissions close and outside demo slots is the window.
+            app and load it repeatedly, which a judge looking at the same deployment will see. Either
+            grade the whole field after submissions close and outside demo slots, or open the field
+            below and grade each app as its team finishes demoing.
           </p>
         )}
         {live?.status === "ready" && (
@@ -245,6 +246,9 @@ export default function EventActions({
                   )}
                   {entries.length > 0 && (
                     <FieldTable
+                      runId={r.id}
+                      canGrade={r.status === "ready" || r.status === "grading"}
+                      onGraded={() => void load()}
                       entries={entries.map((e): FieldEntry => ({
                         project_url: e.project_url,
                         skip_reason: e.skip_reason,

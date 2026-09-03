@@ -477,10 +477,14 @@ def fail_run(conn: psycopg.Connection, run_id: str, detail: str) -> None:
 
 
 def settle_finished_runs(conn: psycopg.Connection) -> int:
-    """Mark a run done once no grade of its own is still queued or running.
+    """Mark a run done once every gradeable entry has been graded and none is still in flight.
 
-    Counted from the grades rather than tracked as the run goes, so a worker restart or a reaped job
+    Counted from the rows rather than tracked as the run goes, so a worker restart or a reaped job
     cannot leave a finished board reading as still grading.
+
+    BOTH conditions are needed. "Nothing in flight" alone was enough while a run queued its whole
+    field at once, but an organizer grading app by app as each team finishes demoing has long gaps
+    with nothing running, and the run would settle after the first one and report a board of 1.
     """
     rows = conn.execute(
         """
@@ -490,6 +494,9 @@ def settle_finished_runs(conn: psycopg.Connection) -> int:
            AND NOT EXISTS (
                  SELECT 1 FROM grades g
                   WHERE g.event_run_id = r.id AND g.status IN ('queued', 'running'))
+           AND NOT EXISTS (
+                 SELECT 1 FROM event_entries e
+                  WHERE e.run_id = r.id AND e.skip_reason IS NULL AND e.grade_id IS NULL)
      RETURNING 1;
         """
     ).fetchall()
