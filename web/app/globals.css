@@ -2795,6 +2795,24 @@ a.mast-user:hover {
   background: var(--accent);
   transition: width 400ms ease;
 }
+/* A grade in flight, shown as the fact that it is running and nothing more. How far along it is
+   lives on its own report page, which the label links to. */
+.progress-track.indeterminate .progress-fill {
+  width: 45%;
+  animation: track-slide 1.5s ease-in-out infinite;
+}
+@keyframes track-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(222%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .progress-track.indeterminate .progress-fill {
+    animation: none;
+    width: 100%;
+    opacity: 0.4;
+  }
+}
+
 .entry-progress-label {
   color: var(--muted);
   font-size: 0.74rem;

@@ -7,19 +7,21 @@ export type FieldEntry = {
   skip_reason: string | null;
   grade_id: string | null;
   status: string | null;
-  progress: { done?: number; total?: number; label?: string } | null;
 };
 
 const PAGE = 20;
 
-/** Sort order for the status column, which is not alphabetical: what is happening now comes first,
- *  then what is about to, then what is finished, then what never will. Sorting the words instead
- *  would put "did not respond" above "grading now", which is the opposite of useful. */
+/** Sort order for the status column, which is not alphabetical: sorting the words would put "did
+ *  not respond" above "in progress".
+ *
+ *  What is running comes above what has a report, even though the reports are what you came to
+ *  read. A page holds 20, so once 20 apps have finished, reports on top would push the handful
+ *  still running onto page 2 and the drip feed would look like nothing was happening. */
 const STATUS_RANK: Record<string, number> = {
   running: 0,
-  queued: 1,
-  pending: 2,
-  done: 3,
+  done: 1,
+  queued: 2,
+  pending: 3,
   failed: 4,
   skipped: 5,
 };
@@ -92,7 +94,9 @@ export default function FieldTable({
   // checkboxes that can select nothing at all would just be a way to empty the table.
   const [showEligible, setShowEligible] = useState(false);
   const [showSkipped, setShowSkipped] = useState(false);
-  const [sort, setSort] = useState<{ key: "name" | "status"; asc: boolean }>({ key: "name", asc: true });
+  // Status by default: the field is read to find out what happened to it, and alphabetical order
+  // answers that only by accident.
+  const [sort, setSort] = useState<{ key: "name" | "status"; asc: boolean }>({ key: "status", asc: true });
 
   const filtered =
     showEligible === showSkipped
@@ -214,25 +218,17 @@ export default function FieldTable({
                   {e.skip_reason ? (
                     `skipped (${e.skip_reason})`
                   ) : e.status === "running" ? (
-                    // The entry carries its own progress while it runs, so a long field reads as a
-                    // set of things happening rather than one number that moves occasionally.
+                    // One line that does not change while the grade runs. The per probe count and
+                    // the phase name live on the grade's own page, which is what the link is for;
+                    // in a field of twenty they were twenty labels rewriting themselves every few
+                    // seconds, and a bar that slid backwards when a phase reset its count read as
+                    // trouble where there was none.
                     <span className="entry-progress">
-                      <span className="progress-track" aria-hidden>
-                        <span
-                          className="progress-fill"
-                          style={{
-                            width:
-                              e.progress?.total && e.progress?.done !== undefined
-                                ? `${Math.min(100, Math.round((e.progress.done / e.progress.total) * 100))}%`
-                                : "8%",
-                          }}
-                        />
+                      <span className="progress-track indeterminate" aria-hidden>
+                        <span className="progress-fill" />
                       </span>
                       <span className="entry-progress-label">
-                        {e.progress?.label ??
-                          (e.progress?.total !== undefined && e.progress?.done !== undefined
-                            ? `${e.progress.done} of ${e.progress.total} checks`
-                            : "starting")}
+                        {e.grade_id ? <a href={`/grade/${e.grade_id}`}>in progress</a> : "in progress"}
                       </span>
                     </span>
                   ) : e.status === "queued" ? (

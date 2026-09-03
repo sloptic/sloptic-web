@@ -41,10 +41,13 @@ function checkLine(c: Claim): string {
 export default function EventActions({
   slug,
   verified,
+  canActive,
   canOverride,
 }: {
   slug: string;
   verified: boolean;
+  /** Whether the full battery may be asked for. Decided on the server; this only draws the button. */
+  canActive: boolean;
   canOverride: boolean;
 }) {
   const [claim, setClaim] = useState<Claim | null>(null);
@@ -161,7 +164,18 @@ export default function EventActions({
         {(verified || canOverride) && !live && (
           <button className="button" type="button" disabled={busy}
                   onClick={() => void act(async () => { await post("/api/events/run", { event: slug }); return null; })}>
-            {runs.length > 0 ? "Grade it again" : "Grade this event"}
+            {canActive ? "Grade passively" : runs.length > 0 ? "Grade it again" : "Grade this event"}
+          </button>
+        )}
+        {/* Asked for by name, never inherited from the last run. The two batteries are different
+            measurements and the active one sends attack traffic at other people's apps. */}
+        {canActive && !live && (
+          <button className="button secondary" type="button" disabled={busy}
+                  onClick={() => void act(async () => {
+                    await post("/api/events/run", { event: slug, mode: "active" });
+                    return null;
+                  })}>
+            Grade actively
           </button>
         )}
         {live?.status === "ready" && live.mode === "active" && (
@@ -196,6 +210,11 @@ export default function EventActions({
               const gradeable = entries.filter((e) => !e.skip_reason);
               const graded = entries.filter((e) => e.grade_id).length;
               const finished = gradeable.filter((e) => ["done", "failed"].includes(gradeOf(e)?.status ?? "")).length;
+              // What the worker is actually holding for this run. Drip feeding means a run can sit
+              // in `grading` for a whole afternoon with nothing in flight between demos, and every
+              // line below that says something is happening has to be keyed on this rather than on
+              // the run's status.
+              const inFlight = gradeable.filter((e) => ["queued", "running"].includes(gradeOf(e)?.status ?? "")).length;
               const pct = gradeable.length ? Math.round((finished / gradeable.length) * 100) : 0;
               const why = new Map<string, number>();
               for (const e of entries) if (e.skip_reason) why.set(e.skip_reason, (why.get(e.skip_reason) ?? 0) + 1);
@@ -210,15 +229,20 @@ export default function EventActions({
                       // Events drain one after another, so a run confirmed while another is still
                       // going sits at zero for hours. Saying it is queued is the difference between
                       // waiting and looking broken.
-                      (finished === 0 && !gradeable.some((e) => gradeOf(e)?.status === "running")
-                        ? `Queued with ${gradeable.length} entries waiting (another run is grading first).`
-                        : `Grading, ${finished} of ${gradeable.length} done.`)}
+                      (inFlight === 0
+                        ? `${finished} of ${gradeable.length} graded.`
+                        : finished === 0 && !gradeable.some((e) => gradeOf(e)?.status === "running")
+                          ? `Queued with ${inFlight} entries waiting (another run is grading first).`
+                          : `Grading, ${finished} of ${gradeable.length} done.`)}
                     {r.status === "done" && `Done, ${graded} graded.`}
                     {r.status === "failed" && (r.detail ?? "Failed.")}
                   </p>
-                  {(r.status === "ready" || r.status === "grading") && gradeable.length > finished && (
+                  {/* An estimate for work that exists. Ready means the whole field if it is
+                      confirmed; grading means what is in flight, since the apps nobody has ticked
+                      yet are waiting on a person, not on the worker. */}
+                  {(r.status === "ready" ? gradeable.length - finished : inFlight) > 0 && (
                     <p className="run-skips">
-                      {estimateLabel(gradeable.length - finished, r.mode)} left.
+                      {estimateLabel(r.status === "ready" ? gradeable.length - finished : inFlight, r.mode)} left.
                       {r.priority === 0
                         ? " Priority grading active (judging active and submissions closed)."
                         : r.priority === 2
@@ -254,7 +278,6 @@ export default function EventActions({
                         skip_reason: e.skip_reason,
                         grade_id: e.grade_id,
                         status: gradeOf(e)?.status ?? null,
-                        progress: gradeOf(e)?.progress ?? null,
                       }))}
                     />
                   )}
