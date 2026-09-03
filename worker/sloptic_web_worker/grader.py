@@ -8,7 +8,7 @@ from importlib.metadata import PackageNotFoundError, version
 from dataclasses import asdict
 
 from sloptic import browser, egress, lighthouse, reportcard, safety
-from sloptic.aggregate import compute_axis_slop, compute_slop_score
+from sloptic.aggregate import compute_axis_slop, compute_slop_score, coverage_metrics
 from sloptic.catalog import load_catalog
 from sloptic.cli import _grade_record
 from sloptic.deploy import RemoteDeployer
@@ -301,6 +301,13 @@ def merge_retry(stored: dict, retry: dict, retried_ids: list) -> dict:
         f for f in (stored.get("findings") or []) if f.get("probe_id") not in reran
     ] + list(retry.get("findings") or [])
 
+    # The final record's challenge state is the RETRY's, not the stored grade's. A tail that came
+    # back clean completes the battery; leaving "limited" stamped would keep a complete grade out of
+    # the ranking for ever, because benchmark.rank() refuses a challenge-cut record. A retry that was
+    # challenged again stamps its own stage and blocked set, which the next pass (if any) replaces.
+    merged["bot_challenge"] = bool(retry.get("bot_challenge"))
+    merged["challenge_stage"] = retry.get("challenge_stage") or ""
+
     # How many were blocked when recovery began, kept across passes, so the report can say "recovered
     # P of M". On the first pass the stored blocked set IS that original count.
     initial = stored.get("retry_blocked_initial")
@@ -308,12 +315,13 @@ def merge_retry(stored: dict, retry: dict, retried_ids: list) -> dict:
         initial = len(stored.get("blocked_probes") or [])
     merged["retry_blocked_initial"] = initial
 
-    # A grade a challenge withheld entirely carried no coverage. If the retry got through and measured
-    # the battery, adopt its coverage so the record stops reading as "nothing ran" (which is what
-    # keeps such a grade in the board's blocked bucket). For a grade that already had coverage, the
-    # retry ran only a slice, so its partial coverage would understate the field: keep the original.
-    if not (stored.get("coverage") or {}).get("probes_total") and (retry.get("coverage") or {}).get("probes_total"):
-        merged["coverage"] = retry.get("coverage")
+    # Coverage is DERIVED from outcomes, so recompute it from the merged set with the grader's own
+    # function rather than adopting either side's: a withheld grade carried none, a limited one
+    # carried only its pre-onset slice, and a retry's narrowed run undersells the merged whole.
+    # Stale coverage is not cosmetic -- the passive rank guard compares coverage.probes_total against
+    # the curve's battery, so a merged record still carrying its partial slice would be refused a
+    # percentile it has now earned.
+    merged["coverage"] = coverage_metrics(outs)
 
     # Re-rank the merged record. The recovered tail is the injection and upload families, exactly the
     # probes that can raise the score, trip a catastrophe gate, or move the percentile, so a ranking

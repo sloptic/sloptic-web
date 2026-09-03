@@ -32,6 +32,9 @@ type Row = {
   pendingRetry: boolean;
   // How many checks had run when the challenge tripped, for the withheld note.
   onset: number | null;
+  // A challenge cut this battery below the keepable fraction: a real PARTIAL score that must not
+  // rank against complete batteries, the same rule that keeps it off the percentile curve.
+  limited: boolean;
 };
 
 function fmt(v: number | null): string {
@@ -65,8 +68,8 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
     ? await db.from("grades").select("id, status, retry_due_at").in("id", ids)
     : { data: [] as { id: string; status: string; retry_due_at: string | null }[] };
   const { data: results } = ids.length
-    ? await db.from("results").select("grade_id, slop_score, axis_slop, coverage, blocked_probes, challenge_onset_index, ranking, lighthouse_score").in("grade_id", ids)
-    : { data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; coverage: Record<string, unknown> | null; blocked_probes: string[] | null; challenge_onset_index: number | null; ranking: Record<string, unknown>; lighthouse_score: number | null }[] };
+    ? await db.from("results").select("grade_id, slop_score, axis_slop, coverage, blocked_probes, challenge_onset_index, challenge_stage, ranking, lighthouse_score").in("grade_id", ids)
+    : { data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; coverage: Record<string, unknown> | null; blocked_probes: string[] | null; challenge_onset_index: number | null; challenge_stage: string | null; ranking: Record<string, unknown>; lighthouse_score: number | null }[] };
 
   const gradeStatus = new Map((grades ?? []).map((g) => [g.id, g.status]));
   const retrying = new Set((grades ?? []).filter((g) => g.retry_due_at).map((g) => g.id));
@@ -104,6 +107,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         blocked: (r?.blocked_probes ?? []).length,
         pendingRetry: retrying.has(e.grade_id as string),
         onset: typeof r?.challenge_onset_index === "number" ? r.challenge_onset_index : null,
+        limited: r?.challenge_stage === "limited",
       };
     });
 
@@ -114,7 +118,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
   // fired, then the worst single finding, then exposure survived, then breadth of coverage. Sorting
   // on slop alone would leave the explanation above describing something the table does not do.
   const ranked = rows
-    .filter((r) => r.slop !== null && !r.gated && r.measured)
+    .filter((r) => r.slop !== null && !r.gated && r.measured && !r.limited)
     .sort(
       (a, b) =>
         (a.slop as number) - (b.slop as number) ||
@@ -124,9 +128,13 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         (b.categories ?? 0) - (a.categories ?? 0)
     );
   const gated = rows.filter((r) => r.gated);
-  // Reached, answered, but the grade measured nothing: a challenge blocked the battery. Not a DNF
-  // (the app was up) and not a clean 0 (nothing ran), so it sits in its own line off the ranking.
-  const withheld = rows.filter((r) => r.slop !== null && !r.gated && !r.measured);
+  // Reached and answered, but not a complete measurement: a challenge blocked the whole battery
+  // (nothing ran), or cut it below the keepable fraction (a partial score). Not a DNF -- the app was
+  // up -- and not comparable to complete scores, so both sit off the ranking, the score stated where
+  // there is one.
+  const withheld = rows.filter(
+    (r) => r.slop !== null && !r.gated && (!r.measured || r.limited)
+  );
   // A grade that failed is not still running. It has finished and produced nothing, usually because
   // the deployment has since gone down, and calling it in progress leaves a board that never
   // finishes from the reader's side.
@@ -155,11 +163,13 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
     ...withheld.map((r) => ({
       name: r.name,
       project_url: r.project_url,
-      note: r.blocked > 0
-        ? r.onset !== null
-          ? `no score (stopped at check ${r.onset} of ${battery})`
-          : "no score (a bot challenge appeared)"
-        : "no score (the app had nothing to grade)",
+      note: !r.measured
+        ? r.blocked > 0
+          ? r.onset !== null
+            ? `no score (stopped at check ${r.onset} of ${battery})`
+            : "no score (a bot challenge appeared)"
+          : "no score (the app had nothing to grade)"
+        : `partial score ${fmt(r.slop)} (a challenge blocked ${r.blocked} of ${battery} checks)`,
     })),
   ];
   const skipped = (entries ?? []).filter((e) => e.skip_reason);
@@ -176,7 +186,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
           {ranked.length + gated.length} of {total} entries {run.mode}ly graded.
           {pending.length > 0 ? ` ${pending.length} still running.` : ""}
           {failed.length > 0 ? ` ${failed.length} could not be reached.` : ""}
-          {withheld.length > 0 ? ` ${withheld.length} could not be scored.` : ""}
+          {withheld.length > 0 ? ` ${withheld.length} interrupted by a bot challenge.` : ""}
         </p>
       </div>
 

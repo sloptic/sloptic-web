@@ -288,6 +288,7 @@ function Report({ view, now }: { view: GradeView; now: number }) {
       <h1>
         {view.url}
         <span className="tag">{r.mode ?? "passive"}</span>
+        {r.challenge_stage === "limited" && <span className="tag">limited</span>}
       </h1>
 
       <div className="score-block">
