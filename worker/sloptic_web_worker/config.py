@@ -207,6 +207,9 @@ EMAIL_TOKEN = os.environ.get("SLOPTIC_EMAIL_TOKEN", "")
 
 # How long to wait before re-running the probes a WAF challenged mid-grade. Vercel's block clears in
 # roughly ten minutes, and retry_blocked's whole purpose is RECOVERING that tail: a challenged probe
-# read as N/A is lost recall, not a clean result.
+# read as N/A is lost recall, not a clean result. The cooldown ESCALATES: 12 minutes for the first
+# pass, and if that one ran into a block that had not cleared, 16 before trying again.
 RETRY_BLOCKED_DELAY_SECONDS = float(os.environ.get("RETRY_BLOCKED_DELAY_SECONDS", str(12 * 60)))
+RETRY_BLOCKED_NEXT_DELAY_SECONDS = float(
+    os.environ.get("RETRY_BLOCKED_NEXT_DELAY_SECONDS", str(16 * 60)))
 RETRY_BLOCKED_MAX_PASSES = int(os.environ.get("RETRY_BLOCKED_MAX_PASSES", "2"))

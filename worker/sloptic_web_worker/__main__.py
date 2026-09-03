@@ -192,7 +192,7 @@ def process_retries(conn) -> int:
     Inline rather than in a child process: a narrowed catalog of a handful of probes is short work,
     and unlike a full grade it carries no wedge risk from the render phase.
     """
-    r = db.claim_retry(conn)
+    r = db.claim_retry(conn, config.RETRY_BLOCKED_NEXT_DELAY_SECONDS)
     if r is None:
         return 0
     print(f"[retry] {r.grade_id}: pass {r.passes} over {len(r.blocked)} blocked probe(s)", flush=True)
