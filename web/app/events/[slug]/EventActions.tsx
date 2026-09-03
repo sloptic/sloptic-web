@@ -232,7 +232,12 @@ export default function EventActions({
                   <p className="run-head">
                     <span className="tag">{r.mode}</span>
                     {r.admin ? <span className="tag">admin</span> : r.override ? <span className="tag">override</span> : null}{" "}
-                    {r.status === "resolving" && (r.entries_found ? `Reading the gallery, ${r.entries_found} found so far.` : "Reading the gallery.")}
+                    {r.status === "resolving" && (
+                      <>
+                        Reading the gallery{r.entries_found ? `, ${r.entries_found} found so far` : ""}
+                        <span className="dots" aria-hidden />
+                      </>
+                    )}
                     {r.status === "ready" && (entries.length === 0 ? "No submissions in the gallery yet." : `${entries.length} entries, ${gradeable.length} gradeable.`)}
                     {r.status === "grading" &&
                       // Events drain one after another, so a run confirmed while another is still
