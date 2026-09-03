@@ -407,7 +407,8 @@ function Withheld({ view, blocked, now }: { view: GradeView; blocked: number; no
 
 /** A grade that DID run but had part of its tail blocked mid-way. The score stands for what ran; the
  *  note keeps a blocked axis from reading as a clean one and says a retry is coming. Renders nothing
- *  when no probe was blocked, which is the ordinary case. */
+ *  when no probe was ever blocked, which is the ordinary case; when a pass recovered one, the note
+ *  stays, because a clean report that was provisional yesterday should say so. */
 function ChallengeNote({
   blocked,
   retryDueAt,
@@ -422,7 +423,18 @@ function ChallengeNote({
   initial?: number | null;
   now: number;
 }) {
-  if (!blocked || blocked.length === 0) return null;
+  if (!blocked || blocked.length === 0) {
+    // Fully recovered: the pass cleared every blocked check, so the report reads clean and this is
+    // the only trace that part of the battery ran later than the rest of it.
+    if ((retryPasses ?? 0) > 0 && (initial ?? 0) > 0) {
+      return (
+        <div className="challenge-note" role="status">
+          <p className="challenge-head">Recovered all {initial} checks a bot challenge blocked.</p>
+        </div>
+      );
+    }
+    return null;
+  }
   const retry = retryStatus(retryDueAt, retryPasses, blocked.length, now);
   const remaining = blocked.length;
 
