@@ -18,10 +18,12 @@ to the frozen curve while everything else runs in parallel.
 An empty queue sleeps POLL_INTERVAL_SECONDS. Any grade error fails just that job; the loop never dies.
 """
 
+import json
 import os
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 import traceback
 import time
@@ -186,19 +188,62 @@ def _kill(run: _Running) -> None:
         print(f"[kill]  {run.job.id}: did not reap after SIGKILL", flush=True)
 
 
+def _retry_pass(origin: str, mode: str, only_probes: list | None) -> dict:
+    """Run one recovery pass in a child on its OWN session and return the result record.
+
+    Own session + killpg, same as a grade child: the pass renders pages (Playwright) and can wedge,
+    and an orphaned Chrome must not outlive it. The serial injection pools are set in the child's
+    environment only, since the grader reads them once at import; the child writes the result to a
+    temp file because stdout already belongs to the grader's noise.
+    """
+    out = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, prefix="sloptic-retry-")
+    out.close()
+    try:
+        cmd = [sys.executable, "-m", "sloptic_web_worker.retry_child", origin, mode, out.name]
+        if only_probes:
+            cmd.append(json.dumps(only_probes))
+        env = {**os.environ,
+               "SLOPTIC_INJECT_POOL": config.RETRY_INJECT_POOL,
+               "SLOPTIC_EXPOSURE_POOL": config.RETRY_INJECT_POOL}
+        proc = subprocess.Popen(cmd, start_new_session=True, env=env,
+                                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        try:
+            proc.wait(timeout=config.GRADE_TIMEOUT_SECONDS + 300)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                pass
+            proc.wait(timeout=10)
+            print(f"[retry] {origin}: pass exceeded its wall clock, killed", flush=True)
+            raise
+        if proc.returncode != 0:
+            err = (proc.stderr.read() or b"").decode(errors="replace").strip()
+            raise RuntimeError(f"retry child exited {proc.returncode}: {err[-400:]}")
+        with open(out.name) as f:
+            return json.load(f)
+    finally:
+        try:
+            os.unlink(out.name)
+        except OSError:
+            pass
+
+
 def process_retries(conn) -> int:
     """Re-run one grade's WAF-blocked probe tail and fold the result back in.
 
-    Inline rather than in a child process: a narrowed catalog of a handful of probes is short work,
-    and unlike a full grade it carries no wedge risk from the render phase.
+    The pass runs in a child (retry_child): a padded one is near a full battery long, and the serial
+    injection pools have to differ from the main grade's, which is per-process. The child grades;
+    this claims, merges, and books whatever comes next.
     """
-    r = db.claim_retry(conn, config.RETRY_BLOCKED_NEXT_DELAY_SECONDS)
+    r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
     if r is None:
         return 0
-    print(f"[retry] {r.grade_id}: pass {r.passes} over {len(r.blocked)} blocked probe(s)", flush=True)
+    pad = grader.benign_pad(set(r.blocked)) if (r.mode == "active" and config.RETRY_PAD_BENIGN) else []
+    print(f"[retry] {r.grade_id}: pass {r.passes} over {len(r.blocked)} blocked probe(s)"
+          f"{f' +{len(pad)} benign pad' if pad else ''}, serial injection", flush=True)
     try:
-        again = grader.run_active_grade(r.origin, only_probes=r.blocked) if r.mode == "active" \
-            else grader.run_passive_grade(r.origin)
+        again = _retry_pass(r.origin, r.mode, pad + list(r.blocked) if r.mode == "active" else None)
     except Exception as e:  # noqa: BLE001
         traceback.print_exc()
         print(f"[retry] {r.grade_id}: pass failed: {type(e).__name__}: {e}", flush=True)
@@ -209,7 +254,8 @@ def process_retries(conn) -> int:
         db.clear_retry(conn, r.grade_id)
         return 1
     try:
-        merged = grader.merge_retry(stored, again, r.blocked)
+        overlay = set(r.blocked) if r.mode == "active" else None
+        merged = grader.merge_retry(stored, again, r.blocked, overlay_ids=overlay)
     except ValueError as e:
         # A shape we do not understand is not something to guess at: leave the stored result alone.
         print(f"[retry] {r.grade_id}: cannot merge: {e}", flush=True)
@@ -220,9 +266,13 @@ def process_retries(conn) -> int:
     recovered = len(r.blocked) - len(merged.get("blocked_probes") or [])
     print(f"[retry] {r.grade_id}: recovered {recovered} of {len(r.blocked)}, "
           f"slop {stored.get('slop_score')} -> {merged.get('slop_score')}", flush=True)
-    # Still blocked and passes left? claim_retry already pushed the due time out. Otherwise stop.
     if not merged.get("blocked_probes") or r.passes >= config.RETRY_BLOCKED_MAX_PASSES:
         db.clear_retry(conn, r.grade_id)
+    else:
+        # Still blocked with a pass left: book it at the escalated cooldown, from NOW, so the wait
+        # covers the block the pass just re-tripped rather than resuming a stale countdown.
+        db.schedule_retry(conn, r.grade_id, merged["blocked_probes"],
+                          config.RETRY_BLOCKED_NEXT_DELAY_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
     return 1
 
 

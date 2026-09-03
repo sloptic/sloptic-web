@@ -213,3 +213,18 @@ RETRY_BLOCKED_DELAY_SECONDS = float(os.environ.get("RETRY_BLOCKED_DELAY_SECONDS"
 RETRY_BLOCKED_NEXT_DELAY_SECONDS = float(
     os.environ.get("RETRY_BLOCKED_NEXT_DELAY_SECONDS", str(16 * 60)))
 RETRY_BLOCKED_MAX_PASSES = int(os.environ.get("RETRY_BLOCKED_MAX_PASSES", "2"))
+# The claim pushes retry_due_at out so a slow pass cannot be picked up twice. That push is only a
+# visibility lock now (the next cadence is booked explicitly after a failed pass), but it must still
+# outlive the worst pass: a padded retry is bounded like a grade, so give it a grade's wall clock.
+RETRY_CLAIM_LOCK_SECONDS = float(
+    os.environ.get("RETRY_CLAIM_LOCK_SECONDS", str(GRADE_TIMEOUT_SECONDS + 300)))
+
+# A retry pass re-runs the blocked tail, which on Vercel is ~all attack probes. Two levers proven by
+# the corpus retry tool (sloptic-main scripts/retry_blocked.py): open the session with the benign
+# battery, because a full grade survives while a tail-only subset reads attack-from-probe-#1 and the
+# challenge keys on that behavioral shape, not the IP; and fire the injection fan-out SERIAL, because
+# the grader's default 6-wide burst stacks into a WAF-visible pattern on an all-attack set (serial
+# recovered 769/785 there). The pool is set in the retry child's environment only: the grader reads
+# it once at import, and the main grade keeps the parallel default its diluted battery survives.
+RETRY_PAD_BENIGN = os.environ.get("RETRY_PAD_BENIGN", "1") != "0"
+RETRY_INJECT_POOL = os.environ.get("RETRY_INJECT_POOL", "1")

@@ -610,20 +610,20 @@ class Retry:
     passes: int
 
 
-def claim_retry(conn: psycopg.Connection, next_delay_s: float) -> Retry | None:
+def claim_retry(conn: psycopg.Connection, lock_s: float) -> Retry | None:
     """Take one grade whose blocked tail is due for another pass.
 
     The due time is pushed out by the claim itself, so a slow pass cannot be picked up twice, and the
     pass counter increments here rather than on success: a pass that crashes still counts, or a
-    reliably-crashing grade would retry for ever. The push is also the NEXT cooldown: a pass that
-    fails leaves the tail blocked, and this due time is when the following pass fires, so it carries
-    the escalated delay rather than a flat lock margin.
+    reliably-crashing grade would retry for ever. That push is only a VISIBILITY LOCK, sized to
+    outlive the worst pass; the next pass's cooldown is booked explicitly once the pass's outcome is
+    known, so the cadence is 12 then 16 regardless of how long the pass in between actually ran.
     """
     row = conn.execute(
         """
         UPDATE grades g
            SET retry_passes = g.retry_passes + 1,
-               retry_due_at = now() + make_interval(secs => %(next_delay)s)
+               retry_due_at = now() + make_interval(secs => %(lock)s)
          WHERE g.id = (
                SELECT g2.id FROM grades g2
                  JOIN results r ON r.grade_id = g2.id
@@ -637,7 +637,7 @@ def claim_retry(conn: psycopg.Connection, next_delay_s: float) -> Retry | None:
      RETURNING g.id, g.origin, g.mode, g.retry_passes,
                (SELECT r2.blocked_probes FROM results r2 WHERE r2.grade_id = g.id) AS blocked;
         """,
-        {"next_delay": next_delay_s},
+        {"lock": lock_s},
     ).fetchone()
     if not row:
         return None

@@ -237,6 +237,22 @@ def _run_grade(origin: str, catalog, mode: str, progress_cb=None, only_probes=No
     }
 
 
+def benign_pad(exclude: set) -> list:
+    """The benign opener a padded retry pass leads with: the tier-0/1 battery minus perf-*.
+
+    Lighthouse is a heavy render that adds no benign signal the pipeline's own discovery render does
+    not already add. The pipeline re-sorts by safety.order_weight, so these run before the attack
+    tail whatever order the ids arrive in. Same shape as the corpus retry tool's `--pad-benign`
+    (sloptic-main scripts/retry_blocked.py): a full grade survives Vercel because most of its battery
+    reads benign before the attack tail fires, and a tail-only subset reads attack-from-probe-#1,
+    the behavioral shape their challenge keys on. Pad outcomes never merge (merge_retry scopes the
+    overlay to the blocked tail), so this is camouflage plus a live check that the block cleared.
+    """
+    return [p.id for p in load_catalog(config.CATALOG_DIR)
+            if safety.order_weight(p.id) <= 1 and not p.id.startswith("perf-")
+            and p.id not in exclude]
+
+
 def run_passive_grade(origin: str, progress_cb=None) -> dict:
     """The 44 check floor any URL gets."""
     return _run_grade(origin, passive_catalog(), "passive", progress_cb)
@@ -252,11 +268,17 @@ def run_active_grade(origin: str, progress_cb=None, only_probes=None) -> dict:
     return _run_grade(origin, load_catalog(config.CATALOG_DIR), "active", progress_cb, only_probes)
 
 
-def merge_retry(stored: dict, retry: dict, retried_ids: list) -> dict:
+def merge_retry(stored: dict, retry: dict, retried_ids: list, overlay_ids: set | None = None) -> dict:
     """Fold a retry pass's outcomes into a stored result and re-score it.
 
     Only the probes that were actually re-run are replaced. Everything else in the stored result
     stands, because the retry ran a narrowed catalog and knows nothing about the rest.
+
+    `overlay_ids` scopes what the pass may replace. The padded active pass re-runs the benign battery
+    too, but those probes are camouflage: the main grade already measured them, in the session this
+    record describes, so their fresh copies must not overwrite anything, and a pad probe the retry
+    session tripped on must not become a new block. None (the passive full re-run) overlays whatever
+    the pass produced.
 
     The score is recomputed with the grader's OWN aggregate functions rather than adjusted here:
     slop is damped across variant groups and categories, so a recovered finding does not simply add
@@ -266,14 +288,21 @@ def merge_retry(stored: dict, retry: dict, retried_ids: list) -> dict:
     from sloptic.schema import Outcome
 
     retried = set(retried_ids)
-    # Exclude every probe the retry actually re-ran, not just the ids we asked it to. The active
-    # retry runs exactly the blocked ids, but the passive retry re-runs the WHOLE battery, so keying
-    # only on `retried` would keep the stored copy of every non-blocked passive probe AND add the
-    # retry's, double counting each one into the score. Overlaying whatever the pass produced is
-    # correct for both.
-    reran = retried | {o.get("probe_id") for o in (retry.get("outcomes") or [])}
+    produced = {o.get("probe_id") for o in (retry.get("outcomes") or [])}
+    if overlay_ids is None:
+        # Overlay everything the pass produced, not just the ids we asked it to. The passive retry
+        # re-runs the WHOLE battery, so keying only on `retried` would keep the stored copy of every
+        # non-blocked passive probe AND add the retry's, double counting each one into the score.
+        reran = retried | produced
+        retry_outs = list(retry.get("outcomes") or [])
+        still_blocked = sorted(set(retry.get("blocked_probes") or []))
+    else:
+        allowed = set(overlay_ids)
+        reran = retried & produced
+        retry_outs = [o for o in (retry.get("outcomes") or []) if o.get("probe_id") in reran]
+        still_blocked = sorted(set(retry.get("blocked_probes") or []) & retried & allowed)
     kept = [o for o in (stored.get("outcomes") or []) if o.get("probe_id") not in reran]
-    merged_dicts = kept + list(retry.get("outcomes") or [])
+    merged_dicts = kept + retry_outs
 
     # Rehydrate for the grader's aggregates. A dict that will not become an Outcome is a shape we do
     # not understand, and silently dropping it would quietly lower the score.
@@ -284,10 +313,8 @@ def merge_retry(stored: dict, retry: dict, retried_ids: list) -> dict:
         except TypeError as e:
             raise ValueError(f"cannot rehydrate outcome {d.get('probe_id')!r}: {e}") from e
 
-    # What is STILL blocked after this pass, straight from the retry: for the active lane its blocked
-    # set is a subset of what we retried; for the passive re-run it is whatever the fresh grade could
-    # not complete.
-    still_blocked = sorted(set(retry.get("blocked_probes") or []))
+    # What is STILL blocked after this pass is already computed above: the retry's own verdict for
+    # the passive lane, the asked-for tail's residue for the padded active one.
     merged = dict(stored)
     merged["outcomes"] = merged_dicts
     merged["slop_score"] = compute_slop_score(outs)
@@ -296,10 +323,11 @@ def merge_retry(stored: dict, retry: dict, retried_ids: list) -> dict:
     merged["incomplete_axes"] = sorted(
         {o.bundle for o in outs if o.probe_id in still_blocked and getattr(o, "bundle", None)}
     )
-    # Findings are the fired outcomes, which the retry may have changed either way.
+    # Findings are the fired outcomes, which the retry may have changed either way. Retry findings
+    # outside `reran` are the pad's (camouflage, already graded in the main run), never merged.
     merged["findings"] = [
         f for f in (stored.get("findings") or []) if f.get("probe_id") not in reran
-    ] + list(retry.get("findings") or [])
+    ] + [f for f in (retry.get("findings") or []) if f.get("probe_id") in reran]
 
     # The final record's challenge state is the RETRY's, not the stored grade's. A tail that came
     # back clean completes the battery; leaving "limited" stamped would keep a complete grade out of
