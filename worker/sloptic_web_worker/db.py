@@ -198,10 +198,12 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
             INSERT INTO results (grade_id, mode, catalog_version, passive_probe_count, slop_score,
                                  axis_slop, coverage, platform, surface, findings,
                                  card, outcomes, axis_potential, lighthouse_score,
+                                 blocked_probes, incomplete_axes,
                                  percentile, percentile_band, curve_version, ranking)
             VALUES (%(grade_id)s, %(mode)s, %(catalog_version)s, %(passive_probe_count)s, %(slop_score)s,
                     %(axis_slop)s, %(coverage)s, %(platform)s, %(surface)s, %(findings)s,
                     %(card)s, %(outcomes)s, %(axis_potential)s, %(lighthouse_score)s,
+                    %(blocked_probes)s, %(incomplete_axes)s,
                     %(percentile)s, %(percentile_band)s, %(curve_version)s, %(ranking)s)
             ON CONFLICT (grade_id) DO UPDATE SET
                 slop_score = EXCLUDED.slop_score, axis_slop = EXCLUDED.axis_slop,
@@ -210,6 +212,8 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
                 card = EXCLUDED.card, outcomes = EXCLUDED.outcomes,
                 axis_potential = EXCLUDED.axis_potential,
                 lighthouse_score = EXCLUDED.lighthouse_score,
+                blocked_probes = EXCLUDED.blocked_probes,
+                incomplete_axes = EXCLUDED.incomplete_axes,
                 percentile = EXCLUDED.percentile, percentile_band = EXCLUDED.percentile_band,
                 curve_version = EXCLUDED.curve_version, ranking = EXCLUDED.ranking;
             """,
@@ -218,6 +222,8 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
                 # Lifted out of the outcomes blob at save time. Reading it back later would mean
                 # pulling ~150 probe records with their evidence per app, which a board cannot do.
                 "lighthouse_score": _lighthouse_score(result.get("outcomes")),
+                "blocked_probes": list(result.get("blocked_probes") or []),
+                "incomplete_axes": list(result.get("incomplete_axes") or []),
                 "mode": result["mode"],
                 "catalog_version": result["catalog_version"],
                 "passive_probe_count": result.get("passive_probe_count"),
@@ -541,3 +547,84 @@ def may_grade_actively(conn: psycopg.Connection, job_id: str) -> tuple[bool, str
     if live:
         return True, ""
     return False, f"no live grant for {row['origin']}"
+
+
+# --- recovering a WAF-blocked probe tail ----------------------------------------------------------
+
+def schedule_retry(conn: psycopg.Connection, job_id: str, blocked: list, delay_s: float,
+                   max_passes: int) -> bool:
+    """Book a second pass over the probes a challenge stopped, if there are any and passes remain.
+
+    Returns whether one was booked. A grade with nothing blocked, or one that has already had its
+    passes, simply carries no retry, which is the ordinary case.
+    """
+    if not blocked:
+        return False
+    row = conn.execute(
+        """
+        UPDATE grades
+           SET retry_due_at = now() + make_interval(secs => %(delay)s)
+         WHERE id = %(id)s AND retry_passes < %(max)s
+     RETURNING 1;
+        """,
+        {"id": job_id, "delay": delay_s, "max": max_passes},
+    ).fetchone()
+    return bool(row)
+
+
+@dataclass
+class Retry:
+    grade_id: str
+    origin: str
+    mode: str
+    blocked: list
+    passes: int
+
+
+def claim_retry(conn: psycopg.Connection) -> Retry | None:
+    """Take one grade whose blocked tail is due for another pass.
+
+    The due time is pushed out by the claim itself, so a slow pass cannot be picked up twice, and the
+    pass counter increments here rather than on success: a pass that crashes still counts, or a
+    reliably-crashing grade would retry for ever.
+    """
+    row = conn.execute(
+        """
+        UPDATE grades g
+           SET retry_passes = g.retry_passes + 1,
+               retry_due_at = now() + interval '30 minutes'
+         WHERE g.id = (
+               SELECT g2.id FROM grades g2
+                 JOIN results r ON r.grade_id = g2.id
+                WHERE g2.retry_due_at IS NOT NULL AND g2.retry_due_at <= now()
+                  AND g2.status = 'done'
+                  AND array_length(r.blocked_probes, 1) > 0
+                ORDER BY g2.retry_due_at
+                FOR UPDATE OF g2 SKIP LOCKED
+                LIMIT 1
+         )
+     RETURNING g.id, g.origin, g.mode, g.retry_passes,
+               (SELECT r2.blocked_probes FROM results r2 WHERE r2.grade_id = g.id) AS blocked;
+        """
+    ).fetchone()
+    if not row:
+        return None
+    return Retry(grade_id=str(row["id"]), origin=row["origin"], mode=row["mode"],
+                 blocked=list(row["blocked"] or []), passes=row["retry_passes"])
+
+
+def clear_retry(conn: psycopg.Connection, job_id: str) -> None:
+    """Stop asking. Either the tail came back or it is not going to."""
+    conn.execute("UPDATE grades SET retry_due_at = NULL WHERE id = %s;", (job_id,))
+
+
+def load_result(conn: psycopg.Connection, grade_id: str) -> dict | None:
+    """The stored result in the shape save_result writes, so a merge can hand it straight back."""
+    row = conn.execute(
+        """SELECT mode, catalog_version, passive_probe_count, slop_score, axis_slop, coverage,
+                  platform, surface, findings, card, outcomes, axis_potential, lighthouse_score,
+                  blocked_probes, incomplete_axes, percentile, percentile_band, curve_version, ranking
+             FROM results WHERE grade_id = %s;""",
+        (grade_id,),
+    ).fetchone()
+    return dict(row) if row else None

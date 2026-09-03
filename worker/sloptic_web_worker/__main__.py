@@ -27,7 +27,7 @@ import traceback
 import time
 from dataclasses import dataclass
 
-from . import config, db, resolve_event, verify_event
+from . import config, db, grader, resolve_event, verify_event
 from .egress import install as install_egress
 from .grade_child import EXIT_ENTRY_CHALLENGE
 
@@ -184,6 +184,46 @@ def _kill(run: _Running) -> None:
         run.proc.wait(timeout=10)
     except subprocess.TimeoutExpired:
         print(f"[kill]  {run.job.id}: did not reap after SIGKILL", flush=True)
+
+
+def process_retries(conn) -> int:
+    """Re-run one grade's WAF-blocked probe tail and fold the result back in.
+
+    Inline rather than in a child process: a narrowed catalog of a handful of probes is short work,
+    and unlike a full grade it carries no wedge risk from the render phase.
+    """
+    r = db.claim_retry(conn)
+    if r is None:
+        return 0
+    print(f"[retry] {r.grade_id}: pass {r.passes} over {len(r.blocked)} blocked probe(s)", flush=True)
+    try:
+        again = grader.run_active_grade(r.origin, only_probes=r.blocked) if r.mode == "active" \
+            else grader.run_passive_grade(r.origin)
+    except Exception as e:  # noqa: BLE001
+        traceback.print_exc()
+        print(f"[retry] {r.grade_id}: pass failed: {type(e).__name__}: {e}", flush=True)
+        return 1
+
+    stored = db.load_result(conn, r.grade_id)
+    if stored is None:
+        db.clear_retry(conn, r.grade_id)
+        return 1
+    try:
+        merged = grader.merge_retry(stored, again, r.blocked)
+    except ValueError as e:
+        # A shape we do not understand is not something to guess at: leave the stored result alone.
+        print(f"[retry] {r.grade_id}: cannot merge: {e}", flush=True)
+        db.clear_retry(conn, r.grade_id)
+        return 1
+
+    db.save_result(conn, r.grade_id, merged)
+    recovered = len(r.blocked) - len(merged.get("blocked_probes") or [])
+    print(f"[retry] {r.grade_id}: recovered {recovered} of {len(r.blocked)}, "
+          f"slop {stored.get('slop_score')} -> {merged.get('slop_score')}", flush=True)
+    # Still blocked and passes left? claim_retry already pushed the due time out. Otherwise stop.
+    if not merged.get("blocked_probes") or r.passes >= config.RETRY_BLOCKED_MAX_PASSES:
+        db.clear_retry(conn, r.grade_id)
+    return 1
 
 
 def process_event_runs(conn) -> int:
@@ -377,6 +417,7 @@ def main() -> None:
             # every pass rather than waiting behind the grade queue.
             worked = process_event_checks(conn) > 0 or worked
             worked = process_event_runs(conn) > 0 or worked
+            worked = process_retries(conn) > 0 or worked
 
             # Say WHY we are idle, but only when the reason changes: this loop runs every 5s.
             blocked = rep.blocked(conn)

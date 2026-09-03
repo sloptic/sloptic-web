@@ -8,7 +8,7 @@ from importlib.metadata import PackageNotFoundError, version
 from dataclasses import asdict
 
 from sloptic import browser, egress, lighthouse, reportcard, safety
-from sloptic.aggregate import compute_slop_score
+from sloptic.aggregate import compute_axis_slop, compute_slop_score
 from sloptic.catalog import load_catalog
 from sloptic.cli import _grade_record
 from sloptic.deploy import RemoteDeployer
@@ -76,11 +76,31 @@ def _axis_potential(report) -> dict:
     return {bundle: compute_slop_score(outs) for bundle, outs in by_bundle.items()}
 
 
-def _run_grade(origin: str, catalog, mode: str, progress_cb=None) -> dict:
+def _email_receiver():
+    """The email-verification probes' inbox, or None so they read N/A. Both halves are required, the
+    address suffix and the endpoint to poll, exactly as the CLI requires them."""
+    if not (config.EMAIL_DOMAIN and config.EMAIL_ENDPOINT):
+        return None
+    try:
+        from sloptic.email_verify import HttpReceiver
+        return HttpReceiver(domain=config.EMAIL_DOMAIN, endpoint=config.EMAIL_ENDPOINT,
+                            token=config.EMAIL_TOKEN or "")
+    except Exception as e:  # noqa: BLE001 - an inbox is never worth losing a grade over
+        print(f"[grade] email receiver unavailable: {type(e).__name__}: {e}", flush=True)
+        return None
+
+
+def _run_grade(origin: str, catalog, mode: str, progress_cb=None, only_probes=None) -> dict:
     """Grade `origin` with `catalog`. Raises Unreachable if the target cannot be reached.
 
     render_routes turns on the browser so the a11y and Core Web Vitals probes can run.
+
+    `only_probes` narrows the catalog to those ids, which is how a retry pass re-runs just the tail a
+    WAF challenged. Same mechanism as the CLI's --probe.
     """
+    if only_probes:
+        wanted = set(only_probes)
+        catalog = [p for p in catalog if p.id in wanted]
     try:
         # origin_scope pins every resolution in this grade to the submitted scheme+host+port, so a
         # redirect cannot carry the grade off the origin the submitter named -- not even to another
@@ -128,8 +148,19 @@ def _run_grade(origin: str, catalog, mode: str, progress_cb=None) -> dict:
             if real_run_local is not None:
                 lighthouse.run_local = _counting_run_local
             with egress.origin_scope(origin):
+                # The authenticated lane, active only. browser_register self-registers a throwaway
+                # account; auth_crawl carries that session into discovery so an SPA's behind-login
+                # surface is mapped and the upload/CRUD/IDOR probes have something to aim at.
+                # Passive never gets either: it must stay a read-only look at the public surface.
+                extra = {}
+                if mode == "active" and config.ACTIVE_BROWSER_AUTH:
+                    extra["browser_register"] = browser.register_in_browser
+                    extra["auth_crawl"] = True
+                if mode == "active":
+                    extra["email_receiver"] = _email_receiver()
+
                 report = run(RemoteDeployer(origin), catalog, render=browser.render_routes,
-                             on_progress=_on_progress, on_phase=_on_phase)
+                             on_progress=_on_progress, on_phase=_on_phase, **extra)
         finally:
             if real_run_local is not None:
                 lighthouse.run_local = real_run_local
@@ -165,6 +196,10 @@ def _run_grade(origin: str, catalog, mode: str, progress_cb=None) -> dict:
         # `challenge_stage == "entry"` means we were challenged on the FIRST fetch: nothing was
         # graded, and per scripts/retry_blocked.py an IP-level flag re-challenges every app at entry
         # and every retry re-warms it. That is a stop signal for the whole worker, not one job.
+        # Probes a challenge stopped from running at all. Carried up so the worker can recover them
+        # on a later pass: read as N/A they would be lost recall dressed as a clean result.
+        "blocked_probes": list(record.get("blocked_probes") or []),
+        "incomplete_axes": list(record.get("incomplete_axes") or []),
         "bot_challenge": bool(record.get("bot_challenge")),
         "challenge_stage": record.get("challenge_stage") or "",
         "card": card,
@@ -188,11 +223,53 @@ def run_passive_grade(origin: str, progress_cb=None) -> dict:
     return _run_grade(origin, passive_catalog(), "passive", progress_cb)
 
 
-def run_active_grade(origin: str, progress_cb=None) -> dict:
+def run_active_grade(origin: str, progress_cb=None, only_probes=None) -> dict:
     """The full battery, which SENDS ATTACK TRAFFIC.
 
     Only ever called for a target the requesting account has proven it may test: the caller checks
     that, and grade_child checks it again immediately before this runs. Nothing in this function
     verifies authorization, so nothing should call it without having done so.
     """
-    return _run_grade(origin, load_catalog(config.CATALOG_DIR), "active", progress_cb)
+    return _run_grade(origin, load_catalog(config.CATALOG_DIR), "active", progress_cb, only_probes)
+
+
+def merge_retry(stored: dict, retry: dict, retried_ids: list) -> dict:
+    """Fold a retry pass's outcomes into a stored result and re-score it.
+
+    Only the probes that were actually re-run are replaced. Everything else in the stored result
+    stands, because the retry ran a narrowed catalog and knows nothing about the rest.
+
+    The score is recomputed with the grader's OWN aggregate functions rather than adjusted here:
+    slop is damped across variant groups and categories, so a recovered finding does not simply add
+    its penalty, and any arithmetic done locally would drift from the real ruler the moment the
+    dampers changed.
+    """
+    from sloptic.schema import Outcome
+
+    retried = set(retried_ids)
+    kept = [o for o in (stored.get("outcomes") or []) if o.get("probe_id") not in retried]
+    merged_dicts = kept + list(retry.get("outcomes") or [])
+
+    # Rehydrate for the grader's aggregates. A dict that will not become an Outcome is a shape we do
+    # not understand, and silently dropping it would quietly lower the score.
+    outs = []
+    for d in merged_dicts:
+        try:
+            outs.append(Outcome(**d))
+        except TypeError as e:
+            raise ValueError(f"cannot rehydrate outcome {d.get('probe_id')!r}: {e}") from e
+
+    still_blocked = sorted(set(retry.get("blocked_probes") or []) & retried)
+    merged = dict(stored)
+    merged["outcomes"] = merged_dicts
+    merged["slop_score"] = compute_slop_score(outs)
+    merged["axis_slop"] = compute_axis_slop(outs)
+    merged["blocked_probes"] = still_blocked
+    merged["incomplete_axes"] = sorted(
+        {o.bundle for o in outs if o.probe_id in still_blocked and getattr(o, "bundle", None)}
+    )
+    # Findings are the fired outcomes, which the retry may have changed either way.
+    merged["findings"] = [
+        f for f in (stored.get("findings") or []) if f.get("probe_id") not in retried
+    ] + list(retry.get("findings") or [])
+    return merged

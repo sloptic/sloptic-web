@@ -171,3 +171,28 @@ EVENT_QUEUE_TIMEOUT_SECONDS = float(os.environ.get("EVENT_QUEUE_TIMEOUT_SECONDS"
 # The two are separate ceilings, not a split of one: the box can do more than 300 grades a day, and
 # 300 is a brake on runaway cost rather than a hardware limit.
 DAILY_EVENT_BUDGET = int(os.environ.get("DAILY_EVENT_BUDGET", "500"))
+
+
+# --- the fully active battery ---------------------------------------------------------------------
+# An active grade is the whole lane, not just the injection probes: without a session the upload,
+# CRUD and IDOR families have no surface to aim at, and the behind-login half of an SPA is never
+# mapped. --browser-auth self-registers a throwaway account, carries it into the crawl and lets the
+# probes reuse it.
+#
+# NOTE what that means: Sloptic CREATES AN ACCOUNT on the graded app and acts as that user, so
+# state-changing probes leave real records. That is unambiguous for an owner grading their own
+# domain. For an event it is a disclosure question, and the participant notice does not mention
+# account creation yet.
+ACTIVE_BROWSER_AUTH = os.environ.get("ACTIVE_BROWSER_AUTH", "1").strip().lower() in ("1", "true", "yes")
+
+# The throwaway inbox the email-verification probes register with. BOTH are needed; with either
+# missing those probes read N/A, which is the CLI's behaviour too.
+EMAIL_DOMAIN = os.environ.get("SLOPTIC_EMAIL_DOMAIN", "")
+EMAIL_ENDPOINT = os.environ.get("SLOPTIC_EMAIL_ENDPOINT", "")
+EMAIL_TOKEN = os.environ.get("SLOPTIC_EMAIL_TOKEN", "")
+
+# How long to wait before re-running the probes a WAF challenged mid-grade. Vercel's block clears in
+# roughly ten minutes, and retry_blocked's whole purpose is RECOVERING that tail: a challenged probe
+# read as N/A is lost recall, not a clean result.
+RETRY_BLOCKED_DELAY_SECONDS = float(os.environ.get("RETRY_BLOCKED_DELAY_SECONDS", str(12 * 60)))
+RETRY_BLOCKED_MAX_PASSES = int(os.environ.get("RETRY_BLOCKED_MAX_PASSES", "2"))

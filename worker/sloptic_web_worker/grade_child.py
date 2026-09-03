@@ -92,6 +92,16 @@ def main(argv: list[str]) -> int:
         run = run_active_grade if job.mode == "active" else run_passive_grade
         result = run(job.origin, progress_cb=_progress)
         db.save_result(conn, job.id, result)
+
+        # A challenge truncates a grade rather than failing it, so book a second pass over the tail
+        # once the block has cleared. Recovering those probes is the whole point: read as N/A they
+        # are lost recall dressed as a clean result, and on an active grade the blocked tail is
+        # usually the injection and upload families.
+        blocked = result.get("blocked_probes") or []
+        if db.schedule_retry(conn, job.id, blocked, config.RETRY_BLOCKED_DELAY_SECONDS,
+                             config.RETRY_BLOCKED_MAX_PASSES):
+            print(f"[retry] {job.id}: {len(blocked)} probe(s) blocked, another pass booked",
+                  flush=True)
         print(f"[done]  {job.id} slop={result['slop_score']} axes={result['axis_slop']}", flush=True)
         return EXIT_ENTRY_CHALLENGE if result.get("challenge_stage") == "entry" else EXIT_OK
     except EgressNotReady as e:
