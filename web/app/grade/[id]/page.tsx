@@ -67,6 +67,18 @@ function runningLabel(p: GradeProgress | null | undefined, name: string | null):
   return p.label || "reading the app";
 }
 
+/** The event run that queued this grade, when one did. A grade reached from an event's field has no
+ *  other way back, and the event page resolves for the organizer, who is the viewer this button is
+ *  for. Rendered above the header on every state, since a running grade is followed from the field
+ *  too. */
+function EventCrumb({ slug }: { slug: string }) {
+  return (
+    <p className="crumb">
+      <a href={`/events/${slug}`}>← Back to {slug}</a>
+    </p>
+  );
+}
+
 export default function GradePage({ params }: { params: { id: string } }) {
   const [view, setView] = useState<GradeView | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -129,6 +141,7 @@ export default function GradePage({ params }: { params: { id: string } }) {
 
   if (error) return <p className="error">{error}</p>;
   if (!view) return <p className="status">loading</p>;
+  const crumb = view.event ? <EventCrumb slug={view.event.slug} /> : null;
 
   if (view.status === "queued" || view.status === "running") {
     // A wait that cannot explain itself is just a spinner. Say which of the three situations this
@@ -140,6 +153,7 @@ export default function GradePage({ params }: { params: { id: string } }) {
       p && p.total && p.done !== undefined ? Math.min(100, Math.round((p.done / p.total) * 100)) : null;
     return (
       <section className="pending">
+        {crumb}
         <h1>{view.url}</h1>
         <p className="status">
           {!stalled && <span className="tick" aria-hidden />}
@@ -169,6 +183,7 @@ export default function GradePage({ params }: { params: { id: string } }) {
   if (view.status === "failed") {
     return (
       <section className="report">
+        {crumb}
         <h1>{view.url}</h1>
         <p className="error">{view.error || "The target did not present a gradeable surface."}</p>
       </section>
@@ -285,6 +300,7 @@ function Report({ view, now }: { view: GradeView; now: number }) {
 
   return (
     <section className="report">
+      {view.event && <EventCrumb slug={view.event.slug} />}
       <h1>
         {view.url}
         <span className="tag">{r.mode ?? "passive"}</span>
@@ -384,6 +400,7 @@ function Withheld({ view, blocked, now }: { view: GradeView; blocked: number; no
   const battery = (view.result?.mode ?? "passive") === "active" ? TOTALS.total : TOTALS.passive;
   return (
     <section className="report">
+      {view.event && <EventCrumb slug={view.event.slug} />}
       <h1>
         {view.url}
         <span className="tag">{view.result?.mode ?? "passive"}</span>

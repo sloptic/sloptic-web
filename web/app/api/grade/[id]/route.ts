@@ -33,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const CORE = "id, status, submitted_url, submitted_at, finished_at, error";
   let { data: grade, error } = await db
     .from("grades")
-    .select(`${CORE}, progress, account_id, retry_due_at, retry_passes`)
+    .select(`${CORE}, progress, account_id, retry_due_at, retry_passes, event_run_id`)
     .eq("id", params.id)
     .maybeSingle();
 
@@ -63,6 +63,17 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       ({ data: r } = await db.from("results").select(RESULT_COLS).eq("grade_id", params.id).maybeSingle());
     }
     result = (r as GradeResult) ?? null;
+  }
+
+  // The event run that queued this grade, so the report can link back to the event it serves.
+  // Only the slug travels: the event page itself gates on the organizer's account, and the grade
+  // link is shareable in a way the event is not, so provenance is named for everyone and the way
+  // back works for whoever can follow it.
+  let event: { slug: string } | null = null;
+  const runId = (grade as { event_run_id?: string | null }).event_run_id;
+  if (runId) {
+    const { data: run } = await db.from("event_runs").select("slug").eq("id", runId).maybeSingle();
+    if (run) event = { slug: run.slug };
   }
 
   // While queued, work out WHY the user is waiting. A queue that is merely busy and a system with
@@ -111,6 +122,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     // drops them and they read as "no retry", which is correct there.
     retry_due_at: (grade as { retry_due_at?: string | null }).retry_due_at ?? null,
     retry_passes: (grade as { retry_passes?: number }).retry_passes ?? 0,
+    event,
     ...retention(grade as { account_id?: unknown; finished_at?: string | null }),
   };
   return NextResponse.json(view);

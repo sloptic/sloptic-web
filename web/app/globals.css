@@ -3014,3 +3014,16 @@ a.mast-user:hover {
 .prov-note {
   margin-top: 0.5rem;
 }
+
+/* Where a grade came from, when an event queued it. Sits above the report header, quiet, so it is
+   findable without competing with the score. */
+.crumb {
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+}
+.crumb a {
+  color: var(--muted);
+}
+.crumb a:hover {
+  color: var(--ink);
+}
