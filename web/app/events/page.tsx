@@ -27,7 +27,7 @@ export default async function EventsPage({
         <div className="page-head">
           <h1>Your events</h1>
           <p className="page-lead">
-            Verify a hackathon you run and Sloptic will grade its web app entries on one scale.
+            Verify a hackathon you run and Sloptic will grade its web app entries.
           </p>
         </div>
         <section className="section attached">
@@ -57,7 +57,7 @@ export default async function EventsPage({
       <div className="page-head">
         <h1>Your events</h1>
         <p className="page-lead">
-          Verify a hackathon you run and Sloptic will grade its web app entries on one scale.
+          Verify a hackathon you run and Sloptic will grade its web app entries.
         </p>
       </div>
 

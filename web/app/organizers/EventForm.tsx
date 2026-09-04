@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 const NOTE =
-  "Verify you organize this event and Sloptic will grade its web app entries on one scale.";
+  "Verify you organize this event and Sloptic will grade its web app entries.";
 
 // The event input lives here so the page still works for someone arriving from a link rather than
 // from the landing. The carried value comes in as a prop rather than from useSearchParams, so the
