@@ -206,9 +206,6 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         <p className="back-link">
           <a href={`/events/${params.slug}`}>Back to {params.slug}</a>
         </p>
-        <p className="crumb">
-        <a href={`/events/${params.slug}`}>← Back to {params.slug}</a>
-      </p>
       <h1>{run.slug}</h1>
         <p className="page-lead">
           {ranked.length + gated.length} of {total} entries {run.mode}ly graded.
