@@ -493,6 +493,12 @@ def cancel_run(conn: psycopg.Connection, run_id: str) -> int:
             (run_id,),
         )
         conn.execute(
+            """UPDATE grades
+                   SET retry_due_at = NULL
+                 WHERE event_run_id = %s AND retry_due_at IS NOT NULL;""",
+            (run_id,),
+        )
+        conn.execute(
             """UPDATE event_runs
                    SET status = 'cancelled', paused = false, finished_at = now()
                  WHERE id = %s;""",
@@ -668,6 +674,9 @@ def schedule_retry(conn: psycopg.Connection, job_id: str, blocked: list, delay_s
         UPDATE grades
            SET retry_due_at = now() + make_interval(secs => %(delay)s)
          WHERE id = %(id)s AND retry_passes < %(max)s
+           AND NOT EXISTS (
+                 SELECT 1 FROM event_runs r
+                  WHERE r.id = grades.event_run_id AND r.status = 'cancelled')
      RETURNING 1;
         """,
         {"id": job_id, "delay": delay_s, "max": max_passes},
@@ -704,6 +713,13 @@ def claim_retry(conn: psycopg.Connection, lock_s: float) -> Retry | None:
                 WHERE g2.retry_due_at IS NOT NULL AND g2.retry_due_at <= now()
                   AND g2.status = 'done'
                   AND array_length(r.blocked_probes, 1) > 0
+                  -- Pause holds the pass like it holds the queue; cancel ends the story. Without
+                  -- this, cancelling an active run would still fire its attack-tail re-checks at
+                  -- the apps for up to two passes afterwards.
+                  AND NOT EXISTS (
+                        SELECT 1 FROM event_runs r2
+                         WHERE r2.id = g2.event_run_id
+                           AND (r2.paused OR r2.status = 'cancelled'))
                 ORDER BY g2.retry_due_at
                 FOR UPDATE OF g2 SKIP LOCKED
                 LIMIT 1

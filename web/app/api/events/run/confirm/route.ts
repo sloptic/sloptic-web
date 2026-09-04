@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   const regrade = body.regrade === true;
   let entriesQuery = db
     .from("event_entries")
-    .select("id, app_url")
+    .select("id, app_url, grade_id")
     .eq("run_id", run.id)
     .is("skip_reason", null);
   if (!regrade) entriesQuery = entriesQuery.is("grade_id", null);
@@ -97,6 +97,16 @@ export async function POST(req: NextRequest) {
   if (insErr) {
     console.error("event enqueue failed:", insErr.message);
     return NextResponse.json({ error: "Could not queue the grades." }, { status: 500 });
+  }
+
+  // A superseded grade's booked retry dies with its link: nothing displays that grade any more, so
+  // recovering its blocked tail would spend the field's budget and re-fire traffic at an app whose
+  // report no entry points at.
+  const superseded = entries
+    .map((e) => e.grade_id)
+    .filter((id): id is string => Boolean(id));
+  if (regrade && superseded.length > 0) {
+    await db.from("grades").update({ retry_due_at: null }).in("id", superseded);
   }
 
   // Link and flip in parallel. A link that survived the screen but will not normalize is that
