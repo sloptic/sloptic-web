@@ -360,7 +360,7 @@ export default function EventActions({
                       <button className="button secondary" type="button" disabled={busy}
                               onClick={() => void act(async () => {
                                 await post("/api/events/run/pause", { id: live.id, paused: !live.paused });
-                                return live.paused ? "Grading resumed." : "Grading paused. Queued grades hold their place.";
+                                return null;
                               })}>
                         {live.paused ? "Resume grading" : "Pause grading"}
                       </button>
