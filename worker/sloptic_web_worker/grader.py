@@ -119,11 +119,20 @@ def _run_grade(origin: str, catalog, mode: str, progress_cb=None, only_probes=No
             if progress_cb:
                 progress_cb(dict(state))
 
+        # The score so far, priced with the grader's own aggregate over every probe that has
+        # finished. A preview by construction: probes still pending can only add to it, so it reads
+        # as a floor in motion, never a verdict.
+        seen: list[Outcome] = []
+
         def _on_progress(done, total, probe, outcomes):
             state.update(done=done, total=total,
                          probe=getattr(probe, "id", "") or "")
             if outcomes is None:            # starting this probe: the useful moment to display
                 _emit()
+                return
+            seen.extend(outcomes)
+            state["preview"] = round(compute_slop_score(seen), 1)
+            _emit()
 
         def _on_phase(name, label, important=False):
             state.update(phase=name or "", label=label or "")

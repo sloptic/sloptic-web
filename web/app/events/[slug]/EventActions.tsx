@@ -324,6 +324,14 @@ export default function EventActions({
                   );
                 })()}
 
+                {["grading", "done"].includes(live.status) && (
+                  <div className="run-controls">
+                    <a className="button secondary" href={`/events/${slug}/${live.id}`}>
+                      Leaderboard
+                    </a>
+                  </div>
+                )}
+
                 {live.status === "grading" && (
                   <>
                     {ungradedCount(live) > 0 && (

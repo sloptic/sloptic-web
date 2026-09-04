@@ -156,6 +156,9 @@ export interface GradeProgress {
   done?: number;
   total?: number;
   probe?: string;
+  /** The score priced over the probes that have finished so far. A floor in motion: pending checks
+   *  can only add, so it never reads as a verdict while the grade runs. */
+  slop_preview?: number;
 }
 
 export interface GradeView {

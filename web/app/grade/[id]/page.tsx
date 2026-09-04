@@ -237,6 +237,12 @@ export default function GradePage({ params }: { params: { id: string } }) {
                 : "queued, starting shortly"}
         </p>
         <p className="elapsed">{elapsed(view.submitted_at, now)}</p>
+        {typeof view.progress?.slop_preview === "number" && (
+          <p className="note">
+            Slop so far: <b className="mono">{view.progress.slop_preview.toFixed(1)}</b>
+            {" "}of the checks still pending, so it can only climb.
+          </p>
+        )}
         {view.status === "running" && pct !== null && (
           <span className="progress-track" aria-hidden>
             <span className="progress-fill" style={{ width: `${pct}%` }} />

@@ -10,7 +10,7 @@ export type FieldEntry = {
   grade_id: string | null;
   status: string | null;
   /** The running grade's live progress: how many checks have run of the battery. */
-  progress: { done?: number; total?: number; label?: string } | null;
+  progress: { done?: number; total?: number; label?: string; slop_preview?: number } | null;
   /** When the retry over the challenge-blocked checks is due, on grades whose score is
    *  provisional. Null when nothing is pending. */
   retryDueAt?: string | null;
@@ -34,6 +34,11 @@ function RunningCell({ gradeId, progress }: { gradeId: string | null; progress: 
       </span>
       <span className="entry-progress-label">
         {gradeId ? <a href={`/grade/${gradeId}`}>{text}</a> : text}
+        {typeof progress?.slop_preview === "number" && (
+          <span className="mono" style={{ color: "var(--muted)", fontSize: "0.8rem" }}>
+            {" "}· {progress.slop_preview.toFixed(1)} slop so far
+          </span>
+        )}
       </span>
     </span>
   );
@@ -328,7 +333,7 @@ export default function FieldTable({
                       grade now
                     </button>
                   ) : (
-                    "&mdash;"
+                    "—"
                   )}
                 </td>
               </tr>
