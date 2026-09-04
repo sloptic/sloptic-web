@@ -468,6 +468,7 @@ export default function EventActions({
         {history.length === 0 ? (
           <p className="section-intro">{live ? "The run above is the only one." : "None yet."}</p>
         ) : (
+          <div className="table-scroll">
           <table className="count-table history-table">
             <thead>
               <tr>
@@ -500,10 +501,10 @@ export default function EventActions({
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
 
-      
     </>
   );
 }

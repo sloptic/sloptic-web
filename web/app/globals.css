@@ -3280,3 +3280,25 @@ h1.report-url {
   font-size: 0.8rem;
   color: var(--muted);
 }
+
+/* ===== mobile: the redesigned pieces ===== */
+@media (max-width: 42rem) {
+  /* the band's top row wraps instead of squeezing: the score stands alone, the placement follows,
+     and the view switch takes its own right-aligned line rather than clipping at the edge */
+  .band-top { flex-wrap: wrap; row-gap: 0.5rem; }
+  .band-top .grow { display: none; }
+  .band-top .score-cleaner { flex: 1; }
+  .band-top .mode-toggle { margin-left: auto; }
+  .score-band { padding: 0.9rem 0.85rem; }
+  .score-axes .sample-axis { grid-template-columns: 5.2rem 1fr 5.6rem; gap: 0.5rem; }
+  .score-big { font-size: clamp(2.9rem, 15vw, 3.6rem); }
+
+  /* the run card's controls go full-width stacked, one tap target per line */
+  .run-card .run-controls .button,
+  .run-card .run-controls .mode-toggle { flex: 1 1 auto; }
+  .run-card .mode-toggle { display: flex; }
+  .run-card .mode-toggle span { flex: 1; text-align: center; }
+
+  /* the didn't-finish list drops its two-column spread */
+  .dnf-list li { flex-direction: column; gap: 0.15rem; align-items: flex-start; }
+}
