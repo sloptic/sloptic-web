@@ -19,6 +19,11 @@ function RecoverySup({ marks }: { marks?: RecoveryMarks | null }) {
           P
         </sup>
       )}
+      {!marks.retry && marks.full && (
+        <sup className="prov-mark" title="The retries recovered every blocked check.">
+          F
+        </sup>
+      )}
       {marks.limited && (
         <sup className="prov-mark" title="Limited engagement: fewer than 40 checks applied.">
           L
@@ -173,9 +178,9 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
       {rows.some((r) => r.provisional) && (
         <p className="fineprint prov-note">B: a challenge-blocked check is being retried. The score may change.</p>
       )}
-      {rows.some((r) => !r.provisional && (r.marks.none || r.marks.partial || r.marks.limited)) && (
+      {rows.some((r) => !r.provisional && (r.marks.none || r.marks.partial || r.marks.full || r.marks.limited)) && (
         <p className="fineprint prov-note">
-          N: the retries recovered nothing. P: partially recovered. L: limited engagement.
+          N: the retries recovered nothing. P: partially recovered. F: fully recovered. L: limited engagement.
         </p>
       )}
       {sorted.length > PAGE && (

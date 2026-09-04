@@ -91,13 +91,15 @@ export function ordinal(n: number): string {
 /** The challenge-recovery superscripts a list row can carry.
  *
  *  B: a retry is booked (the score is provisional). N: recovery ran to completion and recovered
- *  NOTHING. P: it recovered some but not all. L: the grader noted limited engagement (fewer than
- *  40 checks applied), whatever the cause. N and P are mutually exclusive; L can sit beside either,
- *  and B outranks them while a pass is still pending, since the score may still change. */
+ *  NOTHING. P: it recovered some but not all. F: it recovered everything blocked. L: the grader
+ *  noted limited engagement (fewer than 40 checks applied), whatever the cause. N, P and F are
+ *  mutually exclusive; L can sit beside any of them, and B outranks all while a pass is still
+ *  pending, since the score may still change. */
 export type RecoveryMarks = {
   retry: boolean;
   none: boolean;
   partial: boolean;
+  full: boolean;
   limited: boolean;
 };
 
@@ -117,6 +119,7 @@ export function recoveryMarks(input: {
     retry: pending,
     none: done && recovered === 0,
     partial: done && recovered > 0 && recovered < initial,
+    full: done && recovered >= initial,
     limited: input.limitedEngagement === true,
   };
 }
