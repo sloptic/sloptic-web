@@ -240,7 +240,6 @@ export default function GradePage({ params }: { params: { id: string } }) {
         {typeof view.progress?.slop_preview === "number" && (
           <p className="note">
             Slop so far: <b className="mono">{view.progress.slop_preview.toFixed(1)}</b>
-            {" "}of the checks still pending, so it can only climb.
           </p>
         )}
         {view.status === "running" && pct !== null && (
