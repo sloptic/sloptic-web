@@ -306,6 +306,14 @@ export default function EventActions({
                   </div>
                 )}
 
+                {live.refresh_new_submissions !== null && (
+                  <p className="section-intro fineprint">
+                    {live.refresh_new_submissions === 0 && live.refresh_modified_submissions === 0
+                      ? "The last refresh found nothing new: the gallery has not changed."
+                      : `The last refresh found ${live.refresh_new_submissions} new ${live.refresh_new_submissions === 1 ? "submission" : "submissions"} and ${live.refresh_modified_submissions} ${live.refresh_modified_submissions === 1 ? "update" : "updates"}.`}
+                  </p>
+                )}
+
                 {live.status === "ready" && live.mode === "active" && (
                   <p className="section-intro fineprint">
                     Avoid running this during live demos. Active checks create accounts and test records on each

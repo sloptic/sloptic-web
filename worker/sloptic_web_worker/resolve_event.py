@@ -37,6 +37,11 @@ class Field:
     #: than no board.
     complete: bool
     detail: str
+    #: What this resolve saw change, counted against what the cache held beforehand: submissions the
+    #: gallery listed that we had never fetched, and known ones whose app links differ from the
+    #: cached copy. Meaningful mainly for an explicit refresh; a first resolve counts everything new.
+    new: int = 0
+    modified: int = 0
 
 
 def _pick_app_url(hrefs: list[str]) -> tuple[str | None, str | None]:
@@ -69,19 +74,41 @@ class _FieldCache(devpost.IngestCache):
     regrade is the waste an organizer sees as "Reading the gallery" all over again. The gallery
     PAGES are the opposite: a run started later must still discover a team that submitted in
     between, so `page:` keys are neither read nor written and the listing is always fetched fresh.
-    A submission whose links were edited after we cached keeps the old links, the deliberate cost of
-    caching what is, near a deadline, a moving target.
+
+    The ordinary path's cost is that an EDITED submission keeps its stale cached links for ever.
+    A REFRESH (an organizer pressing the button because they expect the field to have changed) is
+    the one moment staleness matters, so it flips every link key to a miss: each submission is
+    fetched again and compared against the snapshot taken before the pass started, which is what
+    makes "X new, Y modified" a measurement rather than a guess.
     """
 
+    def __init__(self, path, refresh: bool = False):
+        super().__init__(path)
+        self.refresh = refresh
+        self._previous = dict(self.mem)     # everything known BEFORE this pass touched the cache
+
     def has(self, key):
-        return False if str(key).startswith("page:") else super().has(key)
+        k = str(key)
+        if k.startswith("page:"):
+            return False
+        if self.refresh and (k.startswith("hrefs:") or k.startswith("links:")):
+            return False                    # a refresh re-asks, even for submissions we know
+        return super().has(key)
 
     def put(self, key, val):
         if not str(key).startswith("page:"):
             super().put(key, val)
 
+    def previous(self, project_url):
+        """The links this project had before the pass started, under either key space."""
+        for prefix in ("hrefs:", "links:"):
+            v = self._previous.get(f"{prefix}{project_url}")
+            if v is not None:
+                return v
+        return None
 
-def resolve(slug: str, limit: int = 1000, on_progress=None) -> Field:
+
+def resolve(slug: str, limit: int = 1000, on_progress=None, refresh: bool = False) -> Field:
     """`on_progress(n)` is called as entries accumulate.
 
     A count, never a percentage: Devpost's gallery does not say how many submissions an event has
@@ -94,11 +121,17 @@ def resolve(slug: str, limit: int = 1000, on_progress=None) -> Field:
     # fetch only the submissions we have not seen". Optional: a cache that cannot be opened must
     # never stop a resolve, so fall back to no cache.
     try:
-        cache = _FieldCache(pathlib.Path(config.DEVPOST_CACHE_DIR) / f"{slug}.jsonl")
+        cache = _FieldCache(pathlib.Path(config.DEVPOST_CACHE_DIR) / f"{slug}.jsonl", refresh=refresh)
     except Exception:  # noqa: BLE001
         cache = None
+    new = modified = 0
     try:
         for project_url, hrefs in devpost.submissions(slug, cache=cache):
+            previous = cache.previous(project_url) if cache is not None else None
+            if previous is None:
+                new += 1
+            elif sorted(previous) != sorted(hrefs):
+                modified += 1
             app_url, why = _pick_app_url(list(hrefs))
             entries.append(Entry(project_url, app_url, why))
             if on_progress is not None and len(entries) % 10 == 0:
@@ -115,4 +148,4 @@ def resolve(slug: str, limit: int = 1000, on_progress=None) -> Field:
     except Exception as e:  # noqa: BLE001
         complete = False
         detail = f"worker error: {type(e).__name__}: {e}"
-    return Field(entries, complete, detail)
+    return Field(entries, complete, detail, new, modified)

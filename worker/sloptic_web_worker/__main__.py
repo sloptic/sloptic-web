@@ -293,7 +293,8 @@ def process_event_runs(conn) -> int:
     try:
         # Report the count as it climbs, so a big gallery does not read as a stalled page.
         field = resolve_event.resolve(
-            run.slug, on_progress=lambda n: db.note_resolve_progress(conn, run.id, n)
+            run.slug, on_progress=lambda n: db.note_resolve_progress(conn, run.id, n),
+            refresh=run.refresh_requested,
         )
     except Exception as e:  # noqa: BLE001
         traceback.print_exc()
@@ -301,9 +302,11 @@ def process_event_runs(conn) -> int:
         print(f"[run]   {run.slug}: failed to resolve", flush=True)
         return 1
     gradeable = sum(1 for e in field.entries if e.skip_reason is None)
-    db.save_field(conn, run.id, field.entries, field.complete, field.detail)
+    counts = (field.new, field.modified) if run.refresh_requested else None
+    db.save_field(conn, run.id, field.entries, field.complete, field.detail, counts)
     print(f"[run]   {run.slug}: {len(field.entries)} entries, {gradeable} gradeable, "
-          f"complete={field.complete}", flush=True)
+          f"complete={field.complete}"
+          + (f", {field.new} new, {field.modified} modified" if counts else ""), flush=True)
     return 1
 
 

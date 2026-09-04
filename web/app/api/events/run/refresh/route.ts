@@ -41,10 +41,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "A cancelled run stays cancelled." }, { status: 409 });
   }
   // started_at cleared too: it is what marks the run as claimed, and the worker only picks up an
-  // unclaimed resolving run.
+  // unclaimed resolving run. refresh_requested switches the worker's resolve into re-check mode:
+  // every submission is fetched again and compared with the cache, so the counts it reports are
+  // measurements, not guesses.
   const { error } = await db
     .from("event_runs")
-    .update({ status: "resolving", started_at: null, finished_at: null })
+    .update({ status: "resolving", started_at: null, finished_at: null, refresh_requested: true })
     .eq("id", run.id);
   if (error) return NextResponse.json({ error: "Could not start the refresh." }, { status: 500 });
   return NextResponse.json({ refreshing: true });

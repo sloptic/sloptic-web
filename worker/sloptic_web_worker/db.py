@@ -419,6 +419,7 @@ class Run:
     slug: str
     mode: str
     override: bool
+    refresh_requested: bool = False
 
 
 def claim_event_run(conn: psycopg.Connection) -> Run | None:
@@ -434,12 +435,13 @@ def claim_event_run(conn: psycopg.Connection) -> Run | None:
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
          )
-     RETURNING id, slug, mode, override;
+     RETURNING id, slug, mode, override, refresh_requested;
         """
     ).fetchone()
     if not row:
         return None
-    return Run(id=str(row["id"]), slug=row["slug"], mode=row["mode"], override=row["override"])
+    return Run(id=str(row["id"]), slug=row["slug"], mode=row["mode"], override=row["override"],
+               refresh_requested=row["refresh_requested"])
 
 
 def note_resolve_progress(conn: psycopg.Connection, run_id: str, found: int) -> None:
@@ -456,7 +458,7 @@ def set_run_priority(conn: psycopg.Connection, run_id: str, priority: int) -> No
 
 
 def save_field(conn: psycopg.Connection, run_id: str, entries: list, complete: bool,
-               detail: str) -> None:
+               detail: str, refresh_counts: tuple[int, int] | None = None) -> None:
     """Store the resolved field and mark the run ready for the organizer to look at.
 
     MERGE, not replace, so a re-resolve (the refresh button) cannot orphan graded work: an entry
@@ -486,9 +488,14 @@ def save_field(conn: psycopg.Connection, run_id: str, entries: list, complete: b
         conn.execute(
             """UPDATE event_runs
                   SET status = 'ready', entries_found = %(n)s, gallery_complete = %(c)s,
-                      detail = left(%(d)s, 2000), resolved_at = now()
+                      detail = left(%(d)s, 2000), resolved_at = now(),
+                      refresh_requested = false,
+                      refresh_new_submissions = %(rn)s,
+                      refresh_modified_submissions = %(rm)s
                 WHERE id = %(id)s;""",
-            {"n": len(entries), "c": complete, "d": detail, "id": run_id},
+            {"n": len(entries), "c": complete, "d": detail, "id": run_id,
+             "rn": refresh_counts[0] if refresh_counts else None,
+             "rm": refresh_counts[1] if refresh_counts else None},
         )
 
 
