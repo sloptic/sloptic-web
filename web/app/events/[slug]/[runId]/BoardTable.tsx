@@ -152,6 +152,9 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
       )}
       {sorted.length > PAGE && (
         <div className="pager">
+          <button className="link-button" type="button" disabled={page === 0} onClick={() => setPage(0)}>
+            first
+          </button>
           <button className="link-button" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>
             previous
           </button>
@@ -160,6 +163,9 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
           </span>
           <button className="link-button" type="button" disabled={page >= last} onClick={() => setPage(page + 1)}>
             next
+          </button>
+          <button className="link-button" type="button" disabled={page >= last} onClick={() => setPage(last)}>
+            last
           </button>
         </div>
       )}

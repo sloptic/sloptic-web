@@ -350,6 +350,9 @@ export default function FieldTable({
 
       {rows.length > PAGE && (
         <div className="pager">
+          <button className="link-button" type="button" disabled={page === 0} onClick={() => setPage(0)}>
+            first
+          </button>
           <button className="link-button" type="button" disabled={from === 0} onClick={() => setPage(Math.min(page, last) - 1)}>
             previous
           </button>
@@ -358,6 +361,9 @@ export default function FieldTable({
           </span>
           <button className="link-button" type="button" disabled={from + PAGE >= rows.length} onClick={() => setPage(Math.min(page, last) + 1)}>
             next
+          </button>
+          <button className="link-button" type="button" disabled={page >= last} onClick={() => setPage(last)}>
+            last
           </button>
         </div>
       )}
