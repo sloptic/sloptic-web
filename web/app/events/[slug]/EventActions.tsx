@@ -186,10 +186,9 @@ export default function EventActions({
         )}
         {live?.status === "ready" && live.mode === "active" && (
           <p className="section-intro fineprint timing-note">
-            Do not run this during live demos. Active checks create accounts and test records on each
-            app and load it repeatedly, which a judge looking at the same deployment will see. Either
-            grade the whole field after submissions close and outside demo slots, or open the field
-            below and grade each app as its team finishes demoing.
+            Avoid running this during live demos. Active checks create accounts and test records on each
+            app and load it repeatedly which can affect demo quality. Either wait until submissions close
+            and outside demo slots, grade each team individually after their demo, or grade passively instead.
           </p>
         )}
         {live?.status === "ready" && (
