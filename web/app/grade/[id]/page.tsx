@@ -492,14 +492,16 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
               </span>
             )}
           </p>
-          {r.ranking?.reference ? (
-            <p className="band-footnote">* compared against {r.ranking.reference}.</p>
-          ) : null}
-        </div>
-        <div className="score-chips">
-          <span className="tag">{r.mode ?? "passive"}</span>
-          {r.challenge_stage === "limited" && <span className="tag">limited</span>}
-          <RecoverySup marks={bandMarks} />
+          <div className="band-bottom">
+            {r.ranking?.reference ? (
+              <p className="band-footnote">* compared against {r.ranking.reference}.</p>
+            ) : <span />}
+            <div className="score-chips">
+              <span className="tag">{r.mode ?? "passive"}</span>
+              {r.challenge_stage === "limited" && <span className="tag">limited</span>}
+              <RecoverySup marks={bandMarks} />
+            </div>
+          </div>
         </div>
       </div>
 
