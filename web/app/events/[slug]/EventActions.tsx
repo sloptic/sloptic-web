@@ -315,6 +315,17 @@ export default function EventActions({
 
                 {live.status === "grading" && (
                   <>
+                    {ungradedCount(live) > 0 && (
+                      <div className="run-controls">
+                        <button className="button" type="button" disabled={busy}
+                                onClick={() => void act(async () => {
+                                  const d = await post("/api/events/run/confirm", { id: live.id });
+                                  return `Queued ${d.queued}.`;
+                                })}>
+                          Grade {ungradedCount(live)} new entries
+                        </button>
+                      </div>
+                    )}
                     <span className="progress-track" aria-hidden>
                       <span
                         className="progress-fill"

@@ -40,7 +40,9 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (!run) return NextResponse.json({ error: "No such run." }, { status: 404 });
-  if (run.status !== "ready") {
+  // Ready is the approval gate; grading is allowed again so a mid-drain refresh's new entries can
+  // be bulk-queued instead of one grade-now at a time.
+  if (run.status !== "ready" && run.status !== "grading") {
     return NextResponse.json(
       { error: `This run is ${run.status}, so there is nothing to confirm.` },
       { status: 409 }

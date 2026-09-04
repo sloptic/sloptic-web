@@ -677,6 +677,11 @@ def schedule_retry(conn: psycopg.Connection, job_id: str, blocked: list, delay_s
            AND NOT EXISTS (
                  SELECT 1 FROM event_runs r
                   WHERE r.id = grades.event_run_id AND r.status = 'cancelled')
+           -- A regrade that happened mid-pass repointed the entry at a new grade; the superseded
+           -- one holds no link any more, so its tail is recovered into a report nobody reads.
+           -- Public grades have no entries and keep booking as always.
+           AND (grades.event_run_id IS NULL
+                OR EXISTS (SELECT 1 FROM event_entries e WHERE e.grade_id = grades.id))
      RETURNING 1;
         """,
         {"id": job_id, "delay": delay_s, "max": max_passes},
