@@ -415,6 +415,7 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
       {/* One band for the whole verdict: score, placement, the bars, and what qualifies it. The
           findings and their evidence stay below, unchanged; nothing up here explains a fault. */}
       <div className="score-band">
+        <div className="band-top">
         <div className="score-big">
           {fmtScore(r.slop_score)}
           <small>slop score</small>
@@ -431,23 +432,23 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
             <span>of {r.mode === "active" ? "actively" : "passively"} graded apps</span>
           </div>
         )}
+        <span className="grow" />
+        <span className="mode-toggle" aria-label="axis readout">
+          <span
+            className={axisView === "checks" ? "on" : ""}
+            onClick={() => setAxisView("checks")}
+          >
+            checks
+          </span>
+          <span
+            className={axisView === "slop" ? "on" : ""}
+            onClick={() => setAxisView("slop")}
+          >
+            slop points
+          </span>
+        </span>
+        </div>
         <div className="score-axes">
-          <div className="score-axes-head">
-            <span className="mode-toggle" aria-label="axis readout">
-              <span
-                className={axisView === "checks" ? "on" : ""}
-                onClick={() => setAxisView("checks")}
-              >
-                checks
-              </span>
-              <span
-                className={axisView === "slop" ? "on" : ""}
-                onClick={() => setAxisView("slop")}
-              >
-                slop points
-              </span>
-            </span>
-          </div>
           <div className="sample-axes">
             {rows.map((row) => (
               <div className="sample-axis" data-axis={row.id} key={row.id}>

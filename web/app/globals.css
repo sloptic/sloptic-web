@@ -3198,14 +3198,17 @@ h1.report-url {
   padding: 0.85rem 1rem 0.9rem;
   max-width: var(--measure);
 }
-/* The axes block carries its own view switch: check counts or slop points. */
-.score-axes-head {
+/* The top row: the score sits beside the view switch, vertically centred against it, and the bars
+   begin below with a clear breath so the switch reads as separate from the axes. */
+.band-top {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.45rem;
-  margin: 0;
+  gap: 1.3rem;
+  width: 100%;
 }
+.band-top .grow { flex: 1; }
+.band-top .mode-toggle { flex: none; }
+.score-axes { width: 100%; margin-top: 0.7rem; }
 .band-bottom {
   display: flex;
   justify-content: space-between;
@@ -3220,7 +3223,7 @@ h1.report-url {
   flex-direction: row;
   align-items: center;
 }
-.score-axes-head .mode-toggle span {
+.band-top .mode-toggle span {
   padding: 0.1rem 0.5rem;
   font-size: 0.72rem;
 }
