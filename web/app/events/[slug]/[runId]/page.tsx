@@ -68,12 +68,17 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
     .eq("run_id", run.id);
 
   const ids = (entries ?? []).map((e) => e.grade_id).filter(Boolean) as string[];
-  const { data: grades } = ids.length
-    ? await db.from("grades").select("id, status, retry_due_at, retry_passes").in("id", ids)
-    : { data: [] as { id: string; status: string; retry_due_at: string | null; retry_passes?: number | null }[] };
-  const { data: results } = ids.length
-    ? await db.from("results").select("grade_id, slop_score, axis_slop, coverage, blocked_probes, retry_blocked_initial, challenge_onset_index, challenge_stage, ranking, lighthouse_score").in("grade_id", ids)
-    : { data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; coverage: Record<string, unknown> | null; blocked_probes: string[] | null; retry_blocked_initial?: number | null; challenge_onset_index: number | null; challenge_stage: string | null; ranking: Record<string, unknown>; lighthouse_score: number | null }[] };
+  // Two independent lookups for the same id set: one round trip, not two.
+  const [gradesRes, resultsRes] = await Promise.all([
+    ids.length
+      ? db.from("grades").select("id, status, retry_due_at, retry_passes").in("id", ids)
+      : Promise.resolve({ data: [] as { id: string; status: string; retry_due_at: string | null; retry_passes?: number | null }[] }),
+    ids.length
+      ? db.from("results").select("grade_id, slop_score, axis_slop, coverage, blocked_probes, retry_blocked_initial, challenge_onset_index, challenge_stage, ranking, lighthouse_score").in("grade_id", ids)
+      : Promise.resolve({ data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; coverage: Record<string, unknown> | null; blocked_probes: string[] | null; retry_blocked_initial?: number | null; challenge_onset_index: number | null; challenge_stage: string | null; ranking: Record<string, unknown>; lighthouse_score: number | null }[] }),
+  ]);
+  const grades = gradesRes.data;
+  const results = resultsRes.data;
 
   const gradeStatus = new Map((grades ?? []).map((g) => [g.id, g.status]));
   const retrying = new Set((grades ?? []).filter((g) => g.retry_due_at).map((g) => g.id));

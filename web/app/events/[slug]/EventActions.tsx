@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import FieldTable, { type FieldEntry } from "./FieldTable";
-import { recoveryMarks, isLimitedEngagement } from "@/lib/grades";
+import type { Entry, Grade, Progress, Run } from "@/lib/event-runs";
 import { liveEtaLabel } from "@/lib/timing";
 
 type Claim = {
@@ -10,23 +10,6 @@ type Claim = {
   status: "pending" | "verified" | "failed" | "revoked";
   check_status: "ok" | "not_found" | "blocked" | "error" | null;
   check_detail: string | null; checked_at: string | null;
-};
-type Progress = { done?: number; total?: number; label?: string } | null;
-type Grade = {
-  status: string; progress: Progress; claimed_at: string | null; finished_at: string | null;
-  retry_due_at: string | null;
-  retry_passes?: number | null;
-  results?: { blocked_probes?: string[] | null; retry_blocked_initial?: number | null; ranking?: unknown } | Record<string, unknown>[] | null;
-};
-type Entry = {
-  project_url: string; app_url: string | null; skip_reason: string | null; grade_id: string | null;
-  grades?: Grade | Grade[] | null;
-};
-type Run = {
-  id: string; slug: string; mode: "passive" | "active";
-  status: "resolving" | "ready" | "grading" | "done" | "failed" | "cancelled";
-  override: boolean; admin: boolean; priority: number | null; entries_found: number | null; gallery_complete: boolean | null;
-  detail: string | null; created_at: string; event_entries: Entry[];
 };
 
 const POLL_MS = 4000;
@@ -43,21 +26,31 @@ function checkLine(c: Claim): string {
 }
 
 /** Everything you can do to one event, in one place. The list page is a list; this is where an
- *  event's link, its runs and its actions live, so neither view has to be both. */
+ *  event's link, its runs and its actions live, so neither view has to be both.
+ *
+ *  The server seeds the first claim and runs (the same shape /api/events/run returns), so the field
+ *  paints with the page instead of waiting for a fetch that would redo auth and the whole query
+ *  after hydration. */
 export default function EventActions({
   slug,
   verified,
   canActive,
   canOverride,
+  initialClaim,
+  initialRuns,
 }: {
   slug: string;
   verified: boolean;
   /** Whether the full battery may be asked for. Decided on the server; this only draws the button. */
   canActive: boolean;
   canOverride: boolean;
+  initialClaim?: Claim | null;
+  initialRuns?: Run[];
 }) {
-  const [claim, setClaim] = useState<Claim | null>(null);
-  const [runs, setRuns] = useState<Run[]>([]);
+  const [claim, setClaim] = useState<Claim | null>(initialClaim ?? null);
+  const [runs, setRuns] = useState<Run[]>(initialRuns ?? []);
+  // Seeds present means the server already answered, so the first client fetch would be a repeat.
+  const [seeded] = useState(initialRuns !== undefined);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   // The checked_at we had when Check now was pressed. A check is finished when the row carries a
@@ -77,7 +70,11 @@ export default function EventActions({
     if (r) setRuns(r.runs ?? []);
   }, [slug]);
 
-  useEffect(() => { void load(); }, [load]);
+  // Skip the first fetch entirely when the server seeded the data; polling takes over from there.
+  useEffect(() => {
+    if (seeded) return;
+    void load();
+  }, [load, seeded]);
   const checking = checkingFrom !== undefined && claim?.checked_at === checkingFrom;
 
   useEffect(() => {
@@ -324,8 +321,6 @@ export default function EventActions({
                       onGraded={() => void load()}
                       entries={entries.map((e): FieldEntry => {
                         const g = gradeOf(e);
-                        const res = Array.isArray(g?.results) ? g?.results[0] : g?.results;
-                        const r = (res ?? {}) as { blocked_probes?: string[] | null; retry_blocked_initial?: number | null; ranking?: unknown };
                         return {
                           project_url: e.project_url,
                           skip_reason: e.skip_reason,
@@ -333,13 +328,7 @@ export default function EventActions({
                           status: g?.status ?? null,
                           progress: g?.progress ?? null,
                           retryDueAt: g?.retry_due_at ?? null,
-                          marks: recoveryMarks({
-                            retryDueAt: g?.retry_due_at,
-                            retryPasses: g?.retry_passes,
-                            initial: r.retry_blocked_initial,
-                            blocked: (r.blocked_probes ?? []).length,
-                            limitedEngagement: isLimitedEngagement(r.ranking),
-                          }),
+                          marks: g?.marks ?? null,
                         };
                       })}
                     />

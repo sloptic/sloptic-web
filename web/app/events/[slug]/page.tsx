@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import EventActions from "./EventActions";
 import DeleteEvent from "./DeleteEvent";
 import { mayOverrideEvents, isAdmin } from "@/lib/flags";
+import { runsForAccount } from "@/lib/event-runs";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Event", robots: { index: false, follow: false } };
@@ -14,30 +15,34 @@ export default async function EventPage({ params }: { params: { slug: string } }
   if (!user) redirect(`/signin?next=/events/${params.slug}`);
 
   const db = supabaseAdmin();
-  const [{ data: grant }, { count: claims }, { count: runs }, { data: verified }] = await Promise.all([
+  const [{ data: grant }, { data: claimRows }, { data: verified }, { data: runRows }] = await Promise.all([
     db.from("grants").select("granted_at, expires_at")
       .eq("account_id", user.id).eq("kind", "organizer_event").eq("scope", params.slug)
       .is("revoked_at", null).maybeSingle(),
-    db.from("event_claims").select("id", { count: "exact", head: true })
+    db.from("event_claims").select("id, slug, token, status, check_status, check_detail, checked_at")
       .eq("account_id", user.id).eq("slug", params.slug).neq("status", "revoked"),
-    db.from("event_runs").select("id", { count: "exact", head: true })
-      .eq("account_id", user.id).eq("slug", params.slug),
     db.from("event_claims").select("window_open_at_verification")
       .eq("account_id", user.id).eq("slug", params.slug).eq("status", "verified"),
+    db.from("event_runs").select("id")
+      .eq("account_id", user.id).eq("slug", params.slug),
   ]);
 
   // An event this account has never touched is not a page. Scoped to the caller, so someone else's
   // event is a 404 here whether or not it exists, which is also the honest answer: we have nothing
   // of theirs to show you.
-  if (!grant && !claims && !runs) notFound();
+  if (!grant && (claimRows ?? []).length === 0 && (runRows ?? []).length === 0) notFound();
 
-  // What removing it would actually take with it, counted so the warning can name numbers.
-  const { data: runRows } = await db.from("event_runs").select("id")
-    .eq("account_id", user.id).eq("slug", params.slug);
   const runIds = (runRows ?? []).map((r) => r.id as string);
-  const { count: graded } = runIds.length
-    ? await db.from("grades").select("id", { count: "exact", head: true }).in("event_run_id", runIds)
-    : { count: 0 };
+  // Seeding the client with the runs it would otherwise fetch after hydration: the field paints with
+  // the page, and the events API's own compact shape arrives without a second auth-plus-query chain.
+  const [gradedRes, seededRuns] = await Promise.all([
+    runIds.length
+      ? db.from("grades").select("id", { count: "exact", head: true }).in("event_run_id", runIds)
+      : Promise.resolve({ count: 0 }),
+    runsForAccount(user.id, params.slug).catch(() => []),
+  ]);
+  const claimRow = (claimRows ?? [])[0] ?? null;
+  const graded = gradedRes.count ?? 0;
 
   const admin = isAdmin(user.email);
 
@@ -73,6 +78,8 @@ export default async function EventPage({ params }: { params: { slug: string } }
         verified={!!grant}
         canActive={canActive}
         canOverride={admin || mayOverrideEvents(user.email)}
+        initialClaim={claimRow}
+        initialRuns={seededRuns}
       />
 
       <DeleteEvent slug={params.slug} runs={runIds.length} graded={graded ?? 0} />

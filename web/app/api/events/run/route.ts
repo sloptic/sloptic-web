@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { currentUser } from "@/lib/auth";
 import { parseEventSlug, BadEvent } from "@/lib/devpost-slug";
 import { mayOverrideEvents, isAdmin } from "@/lib/flags";
+import { runsForAccount } from "@/lib/event-runs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -109,31 +110,17 @@ export async function POST(req: NextRequest) {
 }
 
 // GET /api/events/run?slug=... -> this account's runs, with the resolved field.
+// The rows are compacted server-side (see lib/event-runs): the jsonb this endpoint reads to build
+// the recovery marks never reaches the browser.
 export async function GET(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ runs: [] });
 
-  const slug = new URL(req.url).searchParams.get("slug");
-  let q = db_runs(user.id);
-  if (slug) q = q.eq("slug", slug);
-  const { data, error } = await q;
-  if (error) return NextResponse.json({ error: "Could not list runs." }, { status: 500 });
-  return NextResponse.json({ runs: data ?? [] });
-}
-
-function db_runs(accountId: string) {
-  return supabaseAdmin()
-    .from("event_runs")
-    .select(
-      "id, slug, mode, status, override, admin, priority, entries_found, gallery_complete, detail, created_at, resolved_at, " +
-        // The grade's own status and progress ride along, so the events page can show a field
-        // filling in without asking per entry. The recovery columns and the ranking's engagement
-        // status ride along so the field can mark what a challenge did to each report.
-        "event_entries(project_url, app_url, skip_reason, grade_id, " +
-          "grades(status, progress, claimed_at, finished_at, retry_due_at, retry_passes, " +
-          "results(blocked_probes, retry_blocked_initial, ranking)))"
-    )
-    .eq("account_id", accountId)
-    .order("created_at", { ascending: false })
-    .limit(20);
+  const slug = new URL(req.url).searchParams.get("slug") ?? undefined;
+  try {
+    const runs = await runsForAccount(user.id, slug);
+    return NextResponse.json({ runs });
+  } catch {
+    return NextResponse.json({ error: "Could not list runs." }, { status: 500 });
+  }
 }
