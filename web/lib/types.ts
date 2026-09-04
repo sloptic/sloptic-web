@@ -166,6 +166,9 @@ export interface GradeView {
   status: GradeStatus;
   url: string;
   submitted_at: string;
+  /** When the worker claimed the grade. Differs from submitted_at by the queue wait, which for
+   *  event grades can include long pauses; the running timer starts here, not at submission. */
+  claimed_at?: string | null;
   error: string | null;
   result: GradeResult | null;
   /** Present only while queued, so the UI can explain the wait instead of spinning. */

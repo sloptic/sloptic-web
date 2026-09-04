@@ -236,7 +236,12 @@ export default function GradePage({ params }: { params: { id: string } }) {
                 ? `queued, ${q.ahead} ${q.ahead === 1 ? "grade" : "grades"} ahead`
                 : "queued, starting shortly"}
         </p>
-        <p className="elapsed">{elapsed(view.submitted_at, now)}</p>
+        <p className="elapsed">
+          {elapsed(
+            view.status === "running" && view.claimed_at ? view.claimed_at : view.submitted_at,
+            now,
+          )}
+        </p>
         {typeof view.progress?.slop_preview === "number" && (
           <p className="note">
             Slop so far: <b className="mono">{view.progress.slop_preview.toFixed(1)}</b>

@@ -33,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const CORE = "id, status, submitted_url, submitted_at, finished_at, error";
   let { data: grade, error } = await db
     .from("grades")
-    .select(`${CORE}, progress, account_id, retry_due_at, retry_passes, event_run_id`)
+    .select(`${CORE}, progress, account_id, retry_due_at, retry_passes, event_run_id, claimed_at`)
     .eq("id", params.id)
     .maybeSingle();
 
@@ -132,6 +132,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     // The blocked-tail recovery, so the report can say a second pass is coming rather than present a
     // truncated grade as finished. On a database without these columns the fallback select above
     // drops them and they read as "no retry", which is correct there.
+    // When the worker actually claimed the grade. For event grades this can be far later than
+    // submitted_at (queue, pauses), and the running timer must start at zero when grading starts.
+    claimed_at: (grade as { claimed_at?: string | null }).claimed_at ?? null,
     retry_due_at: (grade as { retry_due_at?: string | null }).retry_due_at ?? null,
     retry_passes: (grade as { retry_passes?: number }).retry_passes ?? 0,
     event,
