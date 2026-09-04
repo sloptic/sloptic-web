@@ -1,37 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import RecoverySup from "@/app/RecoverySup";
 import type { RecoveryMarks } from "@/lib/grades";
-
-/** The recovery letters, same rule as the field's. The score cell shows them right of the number;
- *  N and P render only once no retry is pending (B owns the cell while a pass is still booked). */
-function RecoverySup({ marks }: { marks?: RecoveryMarks | null }) {
-  if (!marks) return null;
-  return (
-    <>
-      {!marks.retry && marks.none && (
-        <sup className="prov-mark" title="The retries recovered nothing: a challenge held every time.">
-          N
-        </sup>
-      )}
-      {!marks.retry && marks.partial && (
-        <sup className="prov-mark" title="The retries recovered some blocked checks, not all.">
-          P
-        </sup>
-      )}
-      {!marks.retry && marks.full && (
-        <sup className="prov-mark" title="The retries recovered every blocked check.">
-          F
-        </sup>
-      )}
-      {marks.limited && (
-        <sup className="prov-mark" title="Limited: fewer than 40 checks applied, or a challenge cut the battery short.">
-          L
-        </sup>
-      )}
-    </>
-  );
-}
 
 export type BoardRow = {
   name: string;
@@ -156,32 +127,28 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
               </tr>
             ))}
           </tbody>
-          {dnf.length > 0 && page >= last && (
-            <tbody className="dnf-rows">
-              {dnf.map((d) => (
-                <tr key={d.project_url}>
-                  <td>-</td>
-                  <th scope="row">
-                    <a href={d.project_url} target="_blank" rel="noopener noreferrer">{d.name}</a>
-                  </th>
-                  <td colSpan={5}>
-                    {d.note}
-                    <RecoverySup marks={d.marks} />
-                  </td>
-                  <td />
-                </tr>
-              ))}
-            </tbody>
-          )}
         </table>
       </div>
-      {rows.some((r) => r.provisional) && (
-        <p className="fineprint prov-note">B: a challenge-blocked check is being retried. The score may change.</p>
-      )}
-      {rows.some((r) => !r.provisional && (r.marks.none || r.marks.partial || r.marks.full || r.marks.limited)) && (
-        <p className="fineprint prov-note">
-          N: the retries recovered nothing. P: partially recovered. F: fully recovered. L: limited battery.
+      {rows.some((r) => r.provisional || r.marks.retry || r.marks.none || r.marks.partial || r.marks.full || r.marks.limited) && (
+        <p className="marks-key">
+          <b>B</b> retry pending, <b>N</b> recovered none, <b>P</b> partial, <b>F</b> full, <b>L</b> limited battery
         </p>
+      )}
+      {dnf.length > 0 && (
+        <>
+          <h2 className="dnf-head">didn&apos;t finish ({dnf.length})</h2>
+          <ul className="dnf-list">
+            {dnf.map((d) => (
+              <li key={d.project_url}>
+                <a href={d.project_url} target="_blank" rel="noopener noreferrer">{d.name}</a>
+                <span>
+                  {d.note}
+                  <RecoverySup marks={d.marks} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
       {sorted.length > PAGE && (
         <div className="pager">

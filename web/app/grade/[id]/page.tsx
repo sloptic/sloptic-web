@@ -5,7 +5,8 @@ import { track } from "@vercel/analytics";
 import type { GradeView, GradeResult, Finding, Coverage, GradeProgress, CardEntry, Outcome } from "@/lib/types";
 import { AREA_LABELS, AREAS, PASSIVE_BY_AREA, TOTALS, categoryName, describeCategory, describeProbe, type Area } from "@/lib/checks";
 import { daysUntil } from "@/lib/retention";
-import { ordinal } from "@/lib/grades";
+import { ordinal, recoveryMarks } from "@/lib/grades";
+import RecoverySup from "@/app/RecoverySup";
 import { forgetGrade } from "@/lib/history";
 
 const POLL_MS = 3000;
@@ -312,6 +313,16 @@ function Report({ view, now }: { view: GradeView; now: number }) {
 
   const totalApplied = rows.reduce((n, x) => n + x.applied, 0);
   const totalPossible = rows.reduce((n, x) => n + x.possible, 0);
+  // The same letters the lists show, computed from the record the same way, so the report and the
+  // board cannot disagree about what the retries achieved.
+  const bandMarks = recoveryMarks({
+    retryDueAt: view.retry_due_at,
+    retryPasses: view.retry_passes,
+    initial: r.retry_blocked_initial,
+    blocked: blockedProbes.length,
+    limitedEngagement:
+      r.ranking?.reporting?.status === "limited_engagement" || r.challenge_stage === "limited",
+  });
 
   // The report card explains a finding (expected / seen / means / fix); the finding itself carries
   // the evidence. Join them on probe_id so an expanded row can show both.
@@ -326,33 +337,58 @@ function Report({ view, now }: { view: GradeView; now: number }) {
   return (
     <section className="report">
       {view.event && <EventCrumb slug={view.event.slug} />}
-      <h1>
-        {view.url}
-        <span className="tag">{r.mode ?? "passive"}</span>
-        {r.challenge_stage === "limited" && <span className="tag">limited</span>}
-      </h1>
+      <h1 className="report-url">{view.url}</h1>
 
-      <div className="score-block">
-        <span className="score-num">{fmtScore(r.slop_score)}</span>
-        <span className="score-cap">
-          <b>slop score</b>
-        </span>
+      {/* One band for the whole verdict: score, placement, the bars, and what qualifies it. The
+          findings and their evidence stay below, unchanged; nothing up here explains a fault. */}
+      <div className="score-band">
+        <div className="score-big">
+          {fmtScore(r.slop_score)}
+          <small>slop score</small>
+        </div>
         {r.ranking?.cleaner_than_pct !== null && r.ranking?.cleaner_than_pct !== undefined && (
-          <span className="rank-block">
+          <div className="score-cleaner">
             {/* The grader's `percentile` counts apps BETTER than this one, so a low number is good and
                 showing it raw reads as its own opposite. `cleaner_than_pct` is the share strictly
                 worse. Said as "cleaner than", not as a percentile: a percentile makes the reader
                 supply the direction, and this exact ambiguity already shipped once, with the same row
                 reading 19 in one place and 81st in another. */}
-            <span className="score-cap rank-line">
-              <b>
-                cleaner than{" "}
-                <span className="rank-num">{Math.round(r.ranking.cleaner_than_pct)}%</span> of{" "}
-                {r.mode === "active" ? "actively" : "passively"} graded apps
-              </b>
-            </span>
-          </span>
+            cleaner than <b>{Math.round(r.ranking.cleaner_than_pct)}%</b>
+            <span>of {r.mode === "active" ? "actively" : "passively"} graded apps</span>
+          </div>
         )}
+        <div className="score-axes">
+          <div className="sample-axes">
+            {rows.map((row) => (
+              <div className="sample-axis" data-axis={row.id} key={row.id}>
+                <span className="sample-axis-name">{row.label}</span>
+                <span className="sample-axis-track">
+                  <span className="seg failed" style={{ flexGrow: row.failed }} />
+                  <span className="seg clean" style={{ flexGrow: Math.max(0, row.applied - row.failed) }} />
+                  <span className="seg na" style={{ flexGrow: Math.max(0, row.possible - row.applied) }} />
+                </span>
+                <span className="sample-axis-val">
+                  {row.failed}
+                  <span className="of">/{row.applied}</span>
+                  <span className="of dim">/{row.possible}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="sample-legend">
+            <span className="key failed" aria-hidden /> failed
+            <span className="key clean" aria-hidden /> passed
+            <span className="key na" aria-hidden /> did not apply
+            <span className="legend-note">
+              failed / applied / available. {totalApplied} of {totalPossible} applied.
+            </span>
+          </p>
+        </div>
+        <div className="score-chips">
+          <span className="tag">{r.mode ?? "passive"}</span>
+          {r.challenge_stage === "limited" && <span className="tag">limited</span>}
+          <RecoverySup marks={bandMarks} />
+        </div>
       </div>
 
       <ChallengeNote
@@ -362,32 +398,6 @@ function Report({ view, now }: { view: GradeView; now: number }) {
         initial={r.retry_blocked_initial}
         now={now}
       />
-
-      <div className="sample-axes">
-        {rows.map((row) => (
-          <div className="sample-axis" data-axis={row.id} key={row.id}>
-            <span className="sample-axis-name">{row.label}</span>
-            <span className="sample-axis-track">
-              <span className="seg failed" style={{ flexGrow: row.failed }} />
-              <span className="seg clean" style={{ flexGrow: Math.max(0, row.applied - row.failed) }} />
-              <span className="seg na" style={{ flexGrow: Math.max(0, row.possible - row.applied) }} />
-            </span>
-            <span className="sample-axis-val">
-              {row.failed}
-              <span className="of">/{row.applied}</span>
-              <span className="of dim">/{row.possible}</span>
-            </span>
-          </div>
-        ))}
-      </div>
-      <p className="sample-legend">
-        <span className="key failed" aria-hidden /> failed
-        <span className="key clean" aria-hidden /> passed
-        <span className="key na" aria-hidden /> did not apply
-        <span className="legend-note">
-          failed / applied / available. {totalApplied} of {totalPossible} applied.
-        </span>
-      </p>
 
       {r.ranking?.reference ? (
         <p className="rank-reference">Compared against {r.ranking.reference}.</p>

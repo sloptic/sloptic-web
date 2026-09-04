@@ -1,38 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import RecoverySup from "@/app/RecoverySup";
 import type { RecoveryMarks } from "@/lib/grades";
-
-/** The recovery superscripts next to a report link: N recovered nothing across the passes, P
- *  recovered some, L marks the grader's limited-engagement note. Titles carry the meaning; the
- *  letters stay quiet enough to sit beside any row. */
-function RecoverySup({ marks }: { marks?: RecoveryMarks | null }) {
-  if (!marks) return null;
-  return (
-    <>
-      {marks.none && (
-        <sup className="prov-mark" title="The retries recovered nothing: a challenge held every time.">
-          N
-        </sup>
-      )}
-      {marks.partial && (
-        <sup className="prov-mark" title="The retries recovered some blocked checks, not all.">
-          P
-        </sup>
-      )}
-      {marks.full && (
-        <sup className="prov-mark" title="The retries recovered every blocked check.">
-          F
-        </sup>
-      )}
-      {marks.limited && (
-        <sup className="prov-mark" title="Limited: fewer than 40 checks applied, or a challenge cut the battery short.">
-          L
-        </sup>
-      )}
-    </>
-  );
-}
 
 export type FieldEntry = {
   project_url: string;
@@ -282,20 +252,23 @@ export default function FieldTable({
           <thead>
             <tr>
               {canGrade && runId && selectable.length > 0 && <th className="pick-col" />}
-              {(["name", "status"] as const).map((k) => (
-                <th
-                  key={k}
-                  className={k === "name" ? "col-name" : undefined}
-                  aria-sort={sort.key === k ? (sort.asc ? "ascending" : "descending") : "none"}
-                >
-                  <button type="button" className="col-sort" onClick={() => click(k)}>
-                    {k === "name" ? "submission" : "status"}
-                    <span className="col-arrow" aria-hidden>
-                      {sort.key === k ? (sort.asc ? "▲" : "▼") : ""}
-                    </span>
-                  </button>
-                </th>
-              ))}
+              <th className="col-name">
+                <button type="button" className="col-sort" onClick={() => click("name")}>
+                  submission
+                  <span className="col-arrow" aria-hidden>
+                    {sort.key === "name" ? (sort.asc ? "▲" : "▼") : ""}
+                  </span>
+                </button>
+              </th>
+              <th aria-sort={sort.key === "status" ? (sort.asc ? "ascending" : "descending") : "none"}>
+                <button type="button" className="col-sort" onClick={() => click("status")}>
+                  state
+                  <span className="col-arrow" aria-hidden>
+                    {sort.key === "status" ? (sort.asc ? "▲" : "▼") : ""}
+                  </span>
+                </button>
+              </th>
+              <th className="col-action">action</th>
             </tr>
           </thead>
           <tbody>
@@ -320,7 +293,7 @@ export default function FieldTable({
                 </th>
                 <td className="band-note">
                   {e.skip_reason ? (
-                    `skipped (${e.skip_reason})`
+                    `skipped, ${e.skip_reason}`
                   ) : e.status === "running" ? (
                     <RunningCell gradeId={e.grade_id} progress={e.progress} />
                   ) : e.status === "queued" ? (
@@ -328,12 +301,21 @@ export default function FieldTable({
                   ) : e.status === "failed" ? (
                     "did not respond"
                   ) : e.grade_id ? (
+                    "graded"
+                  ) : canGrade && runId ? (
+                    "not graded"
+                  ) : (
+                    "will be graded"
+                  )}
+                </td>
+                <td className="band-note">
+                  {e.grade_id ? (
                     <>
                       <a href={`/grade/${e.grade_id}`}>report</a>
                       {e.retryDueAt && <RetryDue at={e.retryDueAt} />}
                       {!e.retryDueAt && <RecoverySup marks={e.marks} />}
                     </>
-                  ) : canGrade && runId ? (
+                  ) : canGrade && runId && !e.skip_reason && !e.status ? (
                     <button
                       className="link-button"
                       type="button"
@@ -343,7 +325,7 @@ export default function FieldTable({
                       grade now
                     </button>
                   ) : (
-                    "will be graded"
+                    "&mdash;"
                   )}
                 </td>
               </tr>
@@ -352,12 +334,9 @@ export default function FieldTable({
         </table>
       </div>
 
-      {rows.some((e) => e.retryDueAt) && (
-        <p className="fineprint prov-note">B: a challenge-blocked check is being retried. The score may change.</p>
-      )}
-      {rows.some((e) => !e.retryDueAt && e.marks && (e.marks.none || e.marks.partial || e.marks.full || e.marks.limited)) && (
-        <p className="fineprint prov-note">
-          N: the retries recovered nothing. P: partially recovered. F: fully recovered. L: limited battery.
+      {rows.some((e) => e.retryDueAt || e.marks) && (
+        <p className="marks-key">
+          <b>B</b> retry pending, <b>N</b> recovered none, <b>P</b> partial, <b>F</b> full, <b>L</b> limited battery
         </p>
       )}
 

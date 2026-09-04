@@ -3081,3 +3081,156 @@ a.mast-user:hover {
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
+
+/* ===== the current-run card and its neighbours (event page redesign) ===== */
+
+/* One card names the run's state and offers only what that state allows. */
+.run-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  max-width: var(--measure);
+}
+.runhead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+.runhead .grow { flex: 1; }
+.run-card .st {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.run-controls {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.8rem;
+}
+/* The battery as a two-way control: the lit side is what this run grades with. */
+.mode-toggle {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.mode-toggle span {
+  padding: 0.32rem 0.8rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.mode-toggle span.on {
+  background: var(--ink);
+  color: var(--paper);
+  cursor: default;
+}
+.mode-toggle span:not(.on):hover { color: var(--ink); }
+.chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.7rem; }
+
+/* One key for every letter the table can carry, instead of stacked legend lines. */
+.marks-key {
+  color: var(--muted);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8rem;
+  margin: 0.5rem 0 0;
+}
+.marks-key b { color: var(--warn); font-weight: 600; }
+
+/* Runs history: a table, not a second copy of the live run. */
+.history-table th:last-child,
+.history-table td:last-child { text-align: right; }
+
+/* The board's didn't-finish list: same visibility, its own shape. */
+.dnf-list {
+  margin: 0.4rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.dnf-list li {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px dotted var(--line);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+.dnf-head {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 1rem 0 0.2rem;
+}
+
+/* The field's action column is narrow and quiet: state says what happened, action says what you
+   can do. The name column was already left-aligned; the action column mirrors the old right-aligned
+   status so the report links line up as before. */
+.field-block .col-action {
+  width: 13rem;
+}
+
+/* ===== the report's scorecard band ===== */
+
+/* The URL as a plain line: the verdict lives in the band below it, not in the header. */
+h1.report-url {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 1rem;
+  font-weight: 400;
+  margin: 0 0 0.6rem;
+}
+
+/* One band for the whole verdict: score, placement, the axis bars, and what qualifies the number.
+   Findings and evidence stay below, unchanged; nothing up here explains a fault. */
+.score-band {
+  display: flex;
+  gap: 1.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  max-width: var(--measure);
+}
+.score-big {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 2.1rem;
+  font-weight: 600;
+  line-height: 1;
+}
+.score-big small {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 0.25rem;
+}
+.score-cleaner {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.85rem;
+}
+.score-cleaner b {
+  font-size: 1.05rem;
+}
+.score-cleaner span {
+  display: block;
+  color: var(--muted);
+}
+.score-axes {
+  flex: 1;
+  min-width: 15rem;
+}
+.score-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: flex-end;
+}

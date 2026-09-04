@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import FieldTable, { type FieldEntry } from "./FieldTable";
-import type { Entry, Grade, Progress, Run } from "@/lib/event-runs";
+import type { Entry, Run } from "@/lib/event-runs";
 import { liveEtaLabel } from "@/lib/timing";
 
 type Claim = {
@@ -16,6 +16,11 @@ const POLL_MS = 4000;
 /** While a check is in flight, so the verdict lands within a second or two of the worker writing it. */
 const CHECK_POLL_MS = 1500;
 const gradeOf = (e: Entry) => (Array.isArray(e.grades) ? e.grades[0] : e.grades) ?? null;
+const gradeableOf = (r: Run) => r.event_entries.filter((e) => !e.skip_reason);
+const gradedCount = (r: Run) => r.event_entries.filter((e) => e.grade_id).length;
+const runningCount = (r: Run) => r.event_entries.filter((e) => gradeOf(e)?.status === "running").length;
+const inFlightCount = (r: Run) =>
+  r.event_entries.filter((e) => ["queued", "running"].includes(gradeOf(e)?.status ?? "")).length;
 
 function checkLine(c: Claim): string {
   if (!c.checked_at) return "Waiting for the first check.";
@@ -25,8 +30,38 @@ function checkLine(c: Claim): string {
   return "We could not find our link on your page yet.";
 }
 
+/** Where a run stands, in one line. The card names the state; the controls below it are the ones
+ *  that state actually offers. */
+function runLine(r: Run): string {
+  const gradeable = gradeableOf(r).length;
+  const finished = gradedCount(r);
+  switch (r.status) {
+    case "resolving":
+      return `reading the gallery${r.entries_found ? `, ${r.entries_found} found so far` : ""}`;
+    case "ready":
+      return r.event_entries.length === 0
+        ? "ready, nothing in the gallery yet"
+        : `ready, ${r.event_entries.length} entries, ${gradeable} gradeable`;
+    case "grading": {
+      const inFlight = inFlightCount(r);
+      // A run confirmed while another is still going sits at zero for hours. Saying it is queued is
+      // the difference between waiting and looking broken.
+      if (inFlight === 0) return `grading, ${finished} of ${gradeable} graded`;
+      if (finished === 0 && runningCount(r) === 0)
+        return `queued with ${inFlight} entries waiting, another run is grading first`;
+      return `grading, ${finished} of ${gradeable} done, ${runningCount(r)} running`;
+    }
+    case "done":
+      return `done, ${finished} graded`;
+    case "failed":
+      return r.detail ?? "failed";
+    default:
+      return r.status;
+  }
+}
+
 /** Everything you can do to one event, in one place. The list page is a list; this is where an
- *  event's link, its runs and its actions live, so neither view has to be both.
+ *  event's link, its current run and its run history live.
  *
  *  The server seeds the first claim and runs (the same shape /api/events/run returns), so the field
  *  paints with the page instead of waiting for a fetch that would redo auth and the whole query
@@ -113,6 +148,40 @@ export default function EventActions({
 
   const live = runs.find((r) => ["resolving", "ready", "grading"].includes(r.status));
   const pending = claim?.status === "pending";
+  const history = runs.filter((r) => r !== live);
+  const lastRun = runs[0];
+
+  /** The estimate under the card. Ready means the whole ungraded field if it is confirmed; grading
+   *  means what is in flight, since apps nobody has ticked yet wait on a person, not the worker. */
+  function etaOf(r: Run): string | null {
+    const durations = r.event_entries
+      .map((e) => gradeOf(e))
+      .filter((g) => g?.status === "done" && g.claimed_at && g.finished_at)
+      .map((g) => (Date.parse(g!.finished_at!) - Date.parse(g!.claimed_at!)) / 1000)
+      .filter((d) => d > 0 && d < 3600);
+    const remaining = r.status === "ready" ? gradeableOf(r).length - gradedCount(r) : inFlightCount(r);
+    if (remaining <= 0) return null;
+    return (
+      liveEtaLabel(remaining, r.mode, durations) +
+      (r.priority === 0 ? ", priority grading active" : r.priority === 2 ? ", standard grading active" : "")
+    );
+  }
+
+  /** Why entries were skipped, most common first, as the card's chips. */
+  function skipChips(r: Run) {
+    const why = new Map<string, number>();
+    for (const e of r.event_entries) if (e.skip_reason) why.set(e.skip_reason, (why.get(e.skip_reason) ?? 0) + 1);
+    return [...why.entries()].sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ label: `${n} ${k}` }));
+  }
+
+  function refresh(r: Run) {
+    return act(async () => {
+      await post("/api/events/run/refresh", { id: r.id });
+      return "Reading the gallery again. New entries land in the field as they resolve.";
+    });
+  }
+
+  const refreshable = (r: Run) => ["ready", "grading", "done", "failed"].includes(r.status);
 
   return (
     <>
@@ -149,196 +218,204 @@ export default function EventActions({
               </p>
             )}
           </div>
-        </section>
-      )}
-
-      {/* One row, all the actions. */}
-      <div className="cta-row event-actions">
-        {pending && (
-          <button className="button secondary" type="button" disabled={busy}
-                  onClick={() => void act(async () => {
+          <div className="cta-row event-actions">
+            <button className="button secondary" type="button" disabled={busy}
+                    onClick={() => void act(async () => {
               setCheckingFrom(claim.checked_at ?? null);
               await post("/api/events/recheck", { id: claim.id });
               return null;
             })}>
-            {checking ? "Checking" : "Check now"}
-          </button>
-        )}
-        {(verified || canOverride) && !live && (
-          <button className="button" type="button" disabled={busy}
-                  onClick={() => void act(async () => { await post("/api/events/run", { event: slug }); return null; })}>
-            {canActive ? "Grade passively" : runs.length > 0 ? "Grade it again" : "Grade this event"}
-          </button>
-        )}
-        {/* Asked for by name, never inherited from the last run. The two batteries are different
-            measurements and the active one sends attack traffic at other people's apps. */}
-        {canActive && !live && (
-          <button className="button secondary" type="button" disabled={busy}
-                  onClick={() => void act(async () => {
-                    await post("/api/events/run", { event: slug, mode: "active" });
-                    return null;
-                  })}>
-            Grade actively
-          </button>
-        )}
-        {live?.status === "ready" && live.mode === "active" && (
-          <p className="section-intro fineprint timing-note">
-            Avoid running this during live demos. Active checks create accounts and test records on each
-            app and load it repeatedly which can affect demo quality. Either wait until submissions close
-            and outside demo slots, grade each team individually after their demo, or grade passively instead.
-          </p>
-        )}
-        {live?.status === "ready" && (
-          <button className="button" type="button" disabled={busy}
-                  onClick={() => void act(async () => {
-                    const d = await post("/api/events/run/confirm", { id: live.id });
-                    return `Queued ${d.queued}.`;
-                  })}>
-            Grade {live.event_entries.filter((e) => !e.skip_reason).length} entries
-          </button>
-        )}
+              {checking ? "Checking" : "Check now"}
+            </button>
+          </div>
+        </section>
+      )}
 
-        {/* The battery, after the field is known. Nothing graded yet flips the run in place; the
-            active side needs what starting active would have needed. */}
-        {live?.status === "ready" && live.event_entries.every((e) => !e.grade_id) && (
-          <button
-            className="button secondary"
-            type="button"
-            disabled={busy || (live.mode === "passive" && !canActive)}
-            title={live.mode === "passive" && !canActive ? "Active grading needs the disclosure verified before the deadline." : undefined}
-            onClick={() => void act(async () => {
-              const target = live.mode === "passive" ? "active" : "passive";
-              await post("/api/events/run/mode", { id: live.id, mode: target });
-              return `Switched to ${target}.`;
-            })}
-          >
-            Switch to {live.mode === "passive" ? "active" : "passive"}
-          </button>
-        )}
+      {/* THE CURRENT RUN. One card names the state and offers only what that state allows: the mode
+          toggle when nothing is measured, the confirm button when the field is approved, a refresh
+          when the gallery could have grown. */}
+      {(live || ((verified || canOverride) && !live)) && (
+        <section className="section attached">
+          <div className="run-card">
+            {live ? (
+              <>
+                <div className="runhead">
+                  <span className="st">
+                    {live.status === "resolving" ? (
+                      <>
+                        {runLine(live)}
+                        <span className="dots" aria-hidden />
+                      </>
+                    ) : (
+                      <>run of {new Date(live.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}, {live.mode}, {runLine(live)}</>
+                    )}
+                  </span>
+                  <span className="grow" />
+                  {etaOf(live) && <span className="st">{etaOf(live)}</span>}
+                </div>
 
-        {/* Late submissions: re-read the gallery on the cached submissions, fetching only new or
-            changed ones. Graded entries keep their reports either way. */}
-        {live && ["ready", "grading"].includes(live.status) && (
-          <button className="button secondary" type="button" disabled={busy}
-                  onClick={() => void act(async () => {
-                    await post("/api/events/run/refresh", { id: live.id });
-                    return "Reading the gallery again. New entries land in the field as they resolve.";
-                  })}>
-            Refresh gallery
-          </button>
-        )}
+                {live.status === "ready" && live.event_entries.length > 0 && (
+                  <div className="run-controls">
+                    <span className="mode-toggle" aria-label="battery for this run">
+                      <span
+                        className={live.mode === "passive" ? "on" : ""}
+                        onClick={() => {
+                          if (live.mode !== "passive" && !busy)
+                            void act(async () => {
+                              await post("/api/events/run/mode", { id: live.id, mode: "passive" });
+                              return "Switched to passive.";
+                            });
+                        }}
+                      >
+                        passive
+                      </span>
+                      <span
+                        className={live.mode === "active" ? "on" : ""}
+                        title={live.mode !== "active" && !canActive ? "Active grading needs the disclosure verified before the deadline." : undefined}
+                        onClick={() => {
+                          if (live.mode !== "active" && !busy && canActive)
+                            void act(async () => {
+                              await post("/api/events/run/mode", { id: live.id, mode: "active" });
+                              return "Switched to active.";
+                            });
+                        }}
+                      >
+                        active
+                      </span>
+                    </span>
+                    <button className="button" type="button" disabled={busy}
+                            onClick={() => void act(async () => {
+                              const d = await post("/api/events/run/confirm", { id: live.id });
+                              return `Queued ${d.queued}.`;
+                            })}>
+                      Grade {gradeableOf(live).length} entries
+                    </button>
+                    <button className="button secondary" type="button" disabled={busy}
+                            onClick={() => refresh(live)}>
+                      Refresh gallery
+                    </button>
+                  </div>
+                )}
 
-      </div>
-      {note && <p className="section-intro">{note}</p>}
+                {live.status === "grading" && (
+                  <div className="run-controls">
+                    <button className="button secondary" type="button" disabled={busy}
+                            onClick={() => refresh(live)}>
+                      Refresh gallery
+                    </button>
+                  </div>
+                )}
+
+                {live.status === "ready" && live.mode === "active" && (
+                  <p className="section-intro fineprint">
+                    Avoid running this during live demos. Active checks create accounts and test records on each
+                    app and load it repeatedly, which can affect demo quality.
+                  </p>
+                )}
+                {live.gallery_complete === false && (
+                  <p className="section-intro fineprint">Incomplete gallery, so this is not the whole field.</p>
+                )}
+
+                {live.event_entries.length > 0 && (
+                  <div className="chips">
+                    <span className="tag">{live.event_entries.length} entries</span>
+                    <span className="tag">{gradeableOf(live).length} gradeable</span>
+                    {skipChips(live).map((c) => (
+                      <span className="tag" key={c.label}>{c.label}</span>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="runhead">
+                  <span className="st">
+                    {lastRun
+                      ? `last run of ${new Date(lastRun.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}, ${lastRun.mode}, ${lastRun.status}`
+                      : "no runs yet"}
+                  </span>
+                </div>
+                <div className="run-controls">
+                  <button className="button" type="button" disabled={busy}
+                          onClick={() => void act(async () => { await post("/api/events/run", { event: slug }); return null; })}>
+                    {lastRun ? "Grade it again" : "Grade this event"}
+                  </button>
+                  {canActive && (
+                    <button className="button secondary" type="button" disabled={busy}
+                            onClick={() => void act(async () => {
+                              await post("/api/events/run", { event: slug, mode: "active" });
+                              return null;
+                            })}>
+                      Grade actively
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+          {note && <p className="section-intro">{note}</p>}
+        </section>
+      )}
+
+      {/* The live run's field sits with its card; history rows never carry one. */}
+      {live && live.event_entries.length > 0 && (
+        <FieldTable
+          runId={live.id}
+          canGrade={live.status === "ready" || live.status === "grading"}
+          onGraded={() => void load()}
+          entries={live.event_entries.map((e): FieldEntry => ({
+            project_url: e.project_url,
+            skip_reason: e.skip_reason,
+            grade_id: e.grade_id,
+            status: gradeOf(e)?.status ?? null,
+            progress: gradeOf(e)?.progress ?? null,
+            retryDueAt: gradeOf(e)?.retry_due_at ?? null,
+            marks: gradeOf(e)?.marks ?? null,
+          }))}
+        />
+      )}
 
       <section className="section">
         <h2 className="section-head">Runs</h2>
-        {runs.length === 0 ? (
-          <p className="section-intro">None yet.</p>
+        {history.length === 0 ? (
+          <p className="section-intro">{live ? "The run above is the only one." : "None yet."}</p>
         ) : (
-          <ul className="run-list">
-            {runs.map((r) => {
-              const entries = r.event_entries ?? [];
-              const gradeable = entries.filter((e) => !e.skip_reason);
-              const graded = entries.filter((e) => e.grade_id).length;
-              const finished = gradeable.filter((e) => ["done", "failed"].includes(gradeOf(e)?.status ?? "")).length;
-              // What the worker is actually holding for this run. Drip feeding means a run can sit
-              // in `grading` for a whole afternoon with nothing in flight between demos, and every
-              // line below that says something is happening has to be keyed on this rather than on
-              // the run's status.
-              const inFlight = gradeable.filter((e) => ["queued", "running"].includes(gradeOf(e)?.status ?? "")).length;
-              // Measured per-grade seconds for the grades that have finished HERE, so the estimate
-              // corrects the corpus number by how this field is actually behaving. finished - claimed
-              // is time the grade was running, so the gaps a drip feed leaves between demos never
-              // inflate it.
-              const durations = gradeable
-                .map((e) => gradeOf(e))
-                .filter((g) => g?.status === "done" && g.claimed_at && g.finished_at)
-                .map((g) => (Date.parse(g!.finished_at!) - Date.parse(g!.claimed_at!)) / 1000)
-                .filter((d) => d > 0 && d < 3600);
-              const pct = gradeable.length ? Math.round((finished / gradeable.length) * 100) : 0;
-              const why = new Map<string, number>();
-              for (const e of entries) if (e.skip_reason) why.set(e.skip_reason, (why.get(e.skip_reason) ?? 0) + 1);
-              return (
-                <li key={r.id}>
-                  <p className="run-head">
+          <table className="count-table history-table">
+            <thead>
+              <tr>
+                <th>date</th><th>battery</th><th className="num">entries</th>
+                <th className="num">graded</th><th>gallery</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((r) => (
+                <tr key={r.id}>
+                  <td>{new Date(r.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</td>
+                  <td>
                     <span className="tag">{r.mode}</span>
-                    {r.admin ? <span className="tag">admin</span> : r.override ? <span className="tag">override</span> : null}{" "}
-                    {r.status === "resolving" && (
-                      <>
-                        Reading the gallery{r.entries_found ? `, ${r.entries_found} found so far` : ""}
-                        <span className="dots" aria-hidden />
-                      </>
+                    {r.admin ? <span className="tag"> admin</span> : r.override ? <span className="tag"> override</span> : null}
+                  </td>
+                  <td className="num">{r.entries_found ?? r.event_entries.length}</td>
+                  <td className="num">{gradedCount(r)} / {gradeableOf(r).length}</td>
+                  <td>{r.gallery_complete === false ? "short" : r.gallery_complete === true ? "complete" : "unknown"}</td>
+                  <td>
+                    {["grading", "done"].includes(r.status) && (
+                      <><a href={`/events/${slug}/${r.id}`}>board</a>{refreshable(r) ? ", " : ""}</>
                     )}
-                    {r.status === "ready" && (entries.length === 0 ? "No submissions in the gallery yet." : `${entries.length} entries, ${gradeable.length} gradeable.`)}
-                    {r.status === "grading" &&
-                      // Events drain one after another, so a run confirmed while another is still
-                      // going sits at zero for hours. Saying it is queued is the difference between
-                      // waiting and looking broken.
-                      (inFlight === 0
-                        ? `${finished} of ${gradeable.length} graded.`
-                        : finished === 0 && !gradeable.some((e) => gradeOf(e)?.status === "running")
-                          ? `Queued with ${inFlight} entries waiting (another run is grading first).`
-                          : `Grading, ${finished} of ${gradeable.length} done.`)}
-                    {r.status === "done" && `Done, ${graded} graded.`}
-                    {r.status === "failed" && (r.detail ?? "Failed.")}
-                  </p>
-                  {/* An estimate for work that exists. Ready means the whole field if it is
-                      confirmed; grading means what is in flight, since the apps nobody has ticked
-                      yet are waiting on a person, not on the worker. */}
-                  {(r.status === "ready" ? gradeable.length - finished : inFlight) > 0 && (
-                    <p className="run-skips">
-                      {liveEtaLabel(r.status === "ready" ? gradeable.length - finished : inFlight, r.mode, durations)} left.
-                      {r.priority === 0
-                        ? " Priority grading active (judging active, submissions closed)."
-                        : r.priority === 2
-                          ? " Standard grading active."
-                          : ""}
-                    </p>
-                  )}
-                  {(r.status === "grading") && (
-                    <span className="progress-track" aria-hidden>
-                      <span className="progress-fill" style={{ width: `${pct}%` }} />
-                    </span>
-                  )}
-                  {why.size > 0 && (
-                    <p className="run-skips">
-                      {[...why.entries()].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${n} ${k}`).join("  ·  ")}
-                    </p>
-                  )}
-                  {r.gallery_complete === false && (
-                    <p className="run-skips">Incomplete gallery, so this is not the whole field.</p>
-                  )}
-                  {(r.status === "grading" || r.status === "done") && (
-                    <div className="cta-row claim-check">
-                      <a className="button secondary" href={`/events/${slug}/${r.id}`}>See the board</a>
-                    </div>
-                  )}
-                  {entries.length > 0 && (
-                    <FieldTable
-                      runId={r.id}
-                      canGrade={r.status === "ready" || r.status === "grading"}
-                      onGraded={() => void load()}
-                      entries={entries.map((e): FieldEntry => {
-                        const g = gradeOf(e);
-                        return {
-                          project_url: e.project_url,
-                          skip_reason: e.skip_reason,
-                          grade_id: e.grade_id,
-                          status: g?.status ?? null,
-                          progress: g?.progress ?? null,
-                          retryDueAt: g?.retry_due_at ?? null,
-                          marks: g?.marks ?? null,
-                        };
-                      })}
-                    />
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                    {refreshable(r) && (
+                      <button className="linkish" type="button" disabled={busy} onClick={() => refresh(r)}>
+                        refresh
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </section>
+
+      
     </>
   );
 }
