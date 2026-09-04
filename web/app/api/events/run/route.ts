@@ -127,8 +127,11 @@ function db_runs(accountId: string) {
     .select(
       "id, slug, mode, status, override, admin, priority, entries_found, gallery_complete, detail, created_at, resolved_at, " +
         // The grade's own status and progress ride along, so the events page can show a field
-        // filling in without asking per entry.
-        "event_entries(project_url, app_url, skip_reason, grade_id, grades(status, progress, claimed_at, finished_at, retry_due_at))"
+        // filling in without asking per entry. The recovery columns and the ranking's engagement
+        // status ride along so the field can mark what a challenge did to each report.
+        "event_entries(project_url, app_url, skip_reason, grade_id, " +
+          "grades(status, progress, claimed_at, finished_at, retry_due_at, retry_passes, " +
+          "results(blocked_probes, retry_blocked_initial, ranking)))"
     )
     .eq("account_id", accountId)
     .order("created_at", { ascending: false })

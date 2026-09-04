@@ -87,3 +87,42 @@ export function ordinal(n: number): string {
   if (tens >= 11 && tens <= 13) return `${n}th`;
   return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
 }
+
+/** The challenge-recovery superscripts a list row can carry.
+ *
+ *  B: a retry is booked (the score is provisional). N: recovery ran to completion and recovered
+ *  NOTHING. P: it recovered some but not all. L: the grader noted limited engagement (fewer than
+ *  40 checks applied), whatever the cause. N and P are mutually exclusive; L can sit beside either,
+ *  and B outranks them while a pass is still pending, since the score may still change. */
+export type RecoveryMarks = {
+  retry: boolean;
+  none: boolean;
+  partial: boolean;
+  limited: boolean;
+};
+
+export function recoveryMarks(input: {
+  retryDueAt?: string | null;
+  retryPasses?: number | null;
+  initial?: number | null;
+  blocked?: number | null;
+  limitedEngagement?: boolean | null;
+}): RecoveryMarks {
+  const pending = Boolean(input.retryDueAt);
+  const initial = input.initial ?? 0;
+  const passes = input.retryPasses ?? 0;
+  const recovered = Math.max(0, initial - (input.blocked ?? 0));
+  const done = !pending && passes > 0 && initial > 0;
+  return {
+    retry: pending,
+    none: done && recovered === 0,
+    partial: done && recovered > 0 && recovered < initial,
+    limited: input.limitedEngagement === true,
+  };
+}
+
+/** Whether the grader's stored ranking noted limited engagement on this record. */
+export function isLimitedEngagement(ranking: unknown): boolean {
+  const status = (ranking as { reporting?: { status?: string } } | null)?.reporting?.status;
+  return status === "limited_engagement";
+}

@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import BoardTable, { type BoardRow, type DnfRow } from "./BoardTable";
 import BoardStats from "./BoardStats";
 import { TOTALS } from "@/lib/checks";
+import { recoveryMarks, isLimitedEngagement, type RecoveryMarks } from "@/lib/grades";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Event board", robots: { index: false, follow: false } };
@@ -35,6 +36,9 @@ type Row = {
   // A challenge cut this battery below the keepable fraction: a real PARTIAL score that must not
   // rank against complete batteries, the same rule that keeps it off the percentile curve.
   limited: boolean;
+  // What the recovery passes did (B while pending, N/P once done) plus the grader's
+  // limited-engagement note.
+  marks: RecoveryMarks;
 };
 
 function fmt(v: number | null): string {
@@ -65,14 +69,15 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
 
   const ids = (entries ?? []).map((e) => e.grade_id).filter(Boolean) as string[];
   const { data: grades } = ids.length
-    ? await db.from("grades").select("id, status, retry_due_at").in("id", ids)
-    : { data: [] as { id: string; status: string; retry_due_at: string | null }[] };
+    ? await db.from("grades").select("id, status, retry_due_at, retry_passes").in("id", ids)
+    : { data: [] as { id: string; status: string; retry_due_at: string | null; retry_passes?: number | null }[] };
   const { data: results } = ids.length
-    ? await db.from("results").select("grade_id, slop_score, axis_slop, coverage, blocked_probes, challenge_onset_index, challenge_stage, ranking, lighthouse_score").in("grade_id", ids)
-    : { data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; coverage: Record<string, unknown> | null; blocked_probes: string[] | null; challenge_onset_index: number | null; challenge_stage: string | null; ranking: Record<string, unknown>; lighthouse_score: number | null }[] };
+    ? await db.from("results").select("grade_id, slop_score, axis_slop, coverage, blocked_probes, retry_blocked_initial, challenge_onset_index, challenge_stage, ranking, lighthouse_score").in("grade_id", ids)
+    : { data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; coverage: Record<string, unknown> | null; blocked_probes: string[] | null; retry_blocked_initial?: number | null; challenge_onset_index: number | null; challenge_stage: string | null; ranking: Record<string, unknown>; lighthouse_score: number | null }[] };
 
   const gradeStatus = new Map((grades ?? []).map((g) => [g.id, g.status]));
   const retrying = new Set((grades ?? []).filter((g) => g.retry_due_at).map((g) => g.id));
+  const gradesById = new Map((grades ?? []).map((g) => [g.id, g]));
   const byGrade = new Map((results ?? []).map((r) => [r.grade_id, r]));
 
   const rows: Row[] = (entries ?? [])
@@ -108,6 +113,15 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         pendingRetry: retrying.has(e.grade_id as string),
         onset: typeof r?.challenge_onset_index === "number" ? r.challenge_onset_index : null,
         limited: r?.challenge_stage === "limited",
+        // The recovery letters and the grader's limited-engagement note, from the same shared rule
+        // the event field uses, so a row cannot read differently across the two pages.
+        marks: recoveryMarks({
+          retryDueAt: gradesById.get(e.grade_id as string)?.retry_due_at ?? null,
+          retryPasses: gradesById.get(e.grade_id as string)?.retry_passes,
+          initial: r?.retry_blocked_initial,
+          blocked: (r?.blocked_probes ?? []).length,
+          limitedEngagement: isLimitedEngagement(rk),
+        }),
       };
     });
 
@@ -154,6 +168,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
     exposure: r.potential,
     catastrophic: r.catastrophic,
     provisional: r.pendingRetry,
+    marks: r.marks,
   }));
   // The battery size for the "stopped at check X of Y" note: the run's own mode decides which
   // count is honest.
@@ -167,9 +182,10 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         ? r.blocked > 0
           ? r.onset !== null
             ? `no score (stopped at check ${r.onset} of ${battery})`
-            : "no score (a bot challenge appeared)"
+            : `no score (a bot challenge blocked every check${r.marks.none ? ", and the retries recovered nothing" : ""})`
           : "no score (the app had nothing to grade)"
         : `partial score ${fmt(r.slop)} (a challenge blocked ${r.blocked} of ${battery} checks)`,
+      marks: r.marks,
     })),
   ];
   const skipped = (entries ?? []).filter((e) => e.skip_reason);

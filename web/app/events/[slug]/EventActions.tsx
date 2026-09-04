@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import FieldTable, { type FieldEntry } from "./FieldTable";
+import { recoveryMarks, isLimitedEngagement } from "@/lib/grades";
 import { liveEtaLabel } from "@/lib/timing";
 
 type Claim = {
@@ -14,6 +15,8 @@ type Progress = { done?: number; total?: number; label?: string } | null;
 type Grade = {
   status: string; progress: Progress; claimed_at: string | null; finished_at: string | null;
   retry_due_at: string | null;
+  retry_passes?: number | null;
+  results?: { blocked_probes?: string[] | null; retry_blocked_initial?: number | null; ranking?: unknown } | Record<string, unknown>[] | null;
 };
 type Entry = {
   project_url: string; app_url: string | null; skip_reason: string | null; grade_id: string | null;
@@ -290,14 +293,26 @@ export default function EventActions({
                       runId={r.id}
                       canGrade={r.status === "ready" || r.status === "grading"}
                       onGraded={() => void load()}
-                      entries={entries.map((e): FieldEntry => ({
-                        project_url: e.project_url,
-                        skip_reason: e.skip_reason,
-                        grade_id: e.grade_id,
-                        status: gradeOf(e)?.status ?? null,
-                        progress: gradeOf(e)?.progress ?? null,
-                        retryDueAt: gradeOf(e)?.retry_due_at ?? null,
-                      }))}
+                      entries={entries.map((e): FieldEntry => {
+                        const g = gradeOf(e);
+                        const res = Array.isArray(g?.results) ? g?.results[0] : g?.results;
+                        const r = (res ?? {}) as { blocked_probes?: string[] | null; retry_blocked_initial?: number | null; ranking?: unknown };
+                        return {
+                          project_url: e.project_url,
+                          skip_reason: e.skip_reason,
+                          grade_id: e.grade_id,
+                          status: g?.status ?? null,
+                          progress: g?.progress ?? null,
+                          retryDueAt: g?.retry_due_at ?? null,
+                          marks: recoveryMarks({
+                            retryDueAt: g?.retry_due_at,
+                            retryPasses: g?.retry_passes,
+                            initial: r.retry_blocked_initial,
+                            blocked: (r.blocked_probes ?? []).length,
+                            limitedEngagement: isLimitedEngagement(r.ranking),
+                          }),
+                        };
+                      })}
                     />
                   )}
                 </li>

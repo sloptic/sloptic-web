@@ -435,11 +435,8 @@ function Withheld({ view, blocked, now }: { view: GradeView; blocked: string[]; 
         <p>
           {onset !== null
             ? `A bot challenge stopped the grade at check ${onset} of ${battery}.`
-            : "A bot challenge stopped the grade before enough checks ran to score it."}
+            : "A bot challenge stopped the grade before any check ran."}
         </p>
-        {blockedCategories(blocked) && (
-          <p className="fineprint">Untested: {blockedCategories(blocked)}.</p>
-        )}
         <p className="fineprint">
           {retry ??
             "Grading again later may get through."}

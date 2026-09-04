@@ -1,6 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { RecoveryMarks } from "@/lib/grades";
+
+/** The recovery superscripts next to a report link: N recovered nothing across the passes, P
+ *  recovered some, L marks the grader's limited-engagement note. Titles carry the meaning; the
+ *  letters stay quiet enough to sit beside any row. */
+function RecoverySup({ marks }: { marks?: RecoveryMarks | null }) {
+  if (!marks) return null;
+  return (
+    <>
+      {marks.none && (
+        <sup className="prov-mark" title="The retries recovered nothing: a challenge held every time.">
+          N
+        </sup>
+      )}
+      {marks.partial && (
+        <sup className="prov-mark" title="The retries recovered some blocked checks, not all.">
+          P
+        </sup>
+      )}
+      {marks.limited && (
+        <sup className="prov-mark" title="Limited engagement: fewer than 40 checks applied.">
+          L
+        </sup>
+      )}
+    </>
+  );
+}
 
 export type FieldEntry = {
   project_url: string;
@@ -12,6 +39,8 @@ export type FieldEntry = {
   /** When the retry over the challenge-blocked checks is due, on grades whose score is
    *  provisional. Null when nothing is pending. */
   retryDueAt?: string | null;
+  /** What the challenge-recovery passes did, when there is something to say. */
+  marks?: RecoveryMarks | null;
 };
 
 /** The status cell for a grade that is running: a real progress bar (checks run of the battery) and
@@ -297,6 +326,7 @@ export default function FieldTable({
                     <>
                       <a href={`/grade/${e.grade_id}`}>report</a>
                       {e.retryDueAt && <RetryDue at={e.retryDueAt} />}
+                      {!e.retryDueAt && <RecoverySup marks={e.marks} />}
                     </>
                   ) : canGrade && runId ? (
                     <button
@@ -319,6 +349,11 @@ export default function FieldTable({
 
       {rows.some((e) => e.retryDueAt) && (
         <p className="fineprint prov-note">B: a challenge-blocked check is being retried. The score may change.</p>
+      )}
+      {rows.some((e) => !e.retryDueAt && e.marks && (e.marks.none || e.marks.partial || e.marks.limited)) && (
+        <p className="fineprint prov-note">
+          N: the retries recovered nothing. P: partially recovered. L: limited engagement.
+        </p>
       )}
 
       {rows.length > PAGE && (

@@ -1,6 +1,32 @@
 "use client";
 
 import { useState } from "react";
+import type { RecoveryMarks } from "@/lib/grades";
+
+/** The recovery letters, same rule as the field's. The score cell shows them right of the number;
+ *  N and P render only once no retry is pending (B owns the cell while a pass is still booked). */
+function RecoverySup({ marks }: { marks?: RecoveryMarks | null }) {
+  if (!marks) return null;
+  return (
+    <>
+      {!marks.retry && marks.none && (
+        <sup className="prov-mark" title="The retries recovered nothing: a challenge held every time.">
+          N
+        </sup>
+      )}
+      {!marks.retry && marks.partial && (
+        <sup className="prov-mark" title="The retries recovered some blocked checks, not all.">
+          P
+        </sup>
+      )}
+      {marks.limited && (
+        <sup className="prov-mark" title="Limited engagement: fewer than 40 checks applied.">
+          L
+        </sup>
+      )}
+    </>
+  );
+}
 
 export type BoardRow = {
   name: string;
@@ -14,14 +40,17 @@ export type BoardRow = {
   /** Findings that gate absolutely. Null when the grade predates the field. */
   catastrophic: number | null;
   /** A challenge-blocked check is being retried, so this score can still move. Shown as a
-   *  superscript B, explained once under the table. */
+   *  superscript B, explained once under the table. N and P say what the passes achieved once
+   *  they are done; L marks the grader's limited-engagement note. */
   provisional: boolean;
+  marks: RecoveryMarks;
 };
 
 /** Graded but produced no score: unreachable, or reached but blocked before any check ran. Kept in
  *  the table under everything else, because an organizer needs to see WHICH entries produced nothing
- *  and WHY, and a separate section below the fold buries that. `note` carries the reason. */
-export type DnfRow = { name: string; project_url: string; note: string };
+ *  and WHY, and a separate section below the fold buries that. `note` carries the reason, `marks`
+ *  the recovery letters when the no-score row is a challenge story. */
+export type DnfRow = { name: string; project_url: string; note: string; marks?: RecoveryMarks | null };
 
 type Key = "rank" | "name" | "slop" | "ratio" | "lighthouse" | "exposure" | "catastrophic";
 
@@ -112,6 +141,7 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
                       B
                     </sup>
                   )}
+                  <RecoverySup marks={r.marks} />
                 </td>
                 <td>{r.ratio === null ? "-" : `${r.ratio.toFixed(1)}%`}</td>
                 <td>{fmt(r.exposure)}</td>
@@ -129,7 +159,10 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
                   <th scope="row">
                     <a href={d.project_url} target="_blank" rel="noopener noreferrer">{d.name}</a>
                   </th>
-                  <td colSpan={5}>{d.note}</td>
+                  <td colSpan={5}>
+                    {d.note}
+                    <RecoverySup marks={d.marks} />
+                  </td>
                   <td />
                 </tr>
               ))}
@@ -139,6 +172,11 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
       </div>
       {rows.some((r) => r.provisional) && (
         <p className="fineprint prov-note">B: a challenge-blocked check is being retried. The score may change.</p>
+      )}
+      {rows.some((r) => !r.provisional && (r.marks.none || r.marks.partial || r.marks.limited)) && (
+        <p className="fineprint prov-note">
+          N: the retries recovered nothing. P: partially recovered. L: limited engagement.
+        </p>
       )}
       {sorted.length > PAGE && (
         <div className="pager">
