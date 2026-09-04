@@ -454,9 +454,26 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
               <div className="sample-axis" data-axis={row.id} key={row.id}>
                 <span className="sample-axis-name">{row.label}</span>
                 <span className="sample-axis-track">
-                  <span className="seg failed" style={{ flexGrow: row.failed }} />
-                  <span className="seg clean" style={{ flexGrow: Math.max(0, row.applied - row.failed) }} />
-                  <span className="seg na" style={{ flexGrow: Math.max(0, row.possible - row.applied) }} />
+                  {/* points mode rescales the bar: slop carried against the axis's ceiling, and the
+                      survived remainder. The did-not-apply segment disappears, because points have
+                      no attribution to checks that never ran. Grades without stored potential keep
+                      the check-count bar. */}
+                  <span
+                    className="seg failed"
+                    style={{ flexGrow: axisView === "slop" && row.potential !== null ? row.slop : row.failed }}
+                  />
+                  <span
+                    className="seg clean"
+                    style={{
+                      flexGrow:
+                        axisView === "slop" && row.potential !== null
+                          ? Math.max(0, row.potential - row.slop)
+                          : Math.max(0, row.applied - row.failed),
+                    }}
+                  />
+                  {!(axisView === "slop" && row.potential !== null) && (
+                    <span className="seg na" style={{ flexGrow: Math.max(0, row.possible - row.applied) }} />
+                  )}
                 </span>
                 <span className="sample-axis-val">
                   {axisView === "checks" ? (
@@ -488,9 +505,13 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
                 </span>
               </>
             ) : (
-              <span className="legend-note">
-                slop carried / most this axis could have carried, had every applicable check fired.
-              </span>
+              <>
+                <span className="key failed" aria-hidden /> carried
+                <span className="key clean" aria-hidden /> survived
+                <span className="legend-note">
+                  slop carried, against the most this axis could have carried had every applicable check fired.
+                </span>
+              </>
             )}
           </p>
           <div className="band-bottom">
