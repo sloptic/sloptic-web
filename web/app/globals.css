@@ -3189,20 +3189,34 @@ h1.report-url {
    Findings and evidence stay below, unchanged; nothing up here explains a fault. */
 .score-band {
   display: flex;
-  gap: 1.6rem;
-  align-items: center;
+  gap: 1.4rem 2rem;
+  align-items: flex-end;
   flex-wrap: wrap;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 1rem 1.2rem;
+  padding: 1.1rem 1.2rem 1.2rem;
   max-width: var(--measure);
+}
+/* The axes block carries its own view switch: check counts or slop points. */
+.score-axes-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  margin: 0 0 0.4rem;
+}
+.score-axes-head .mode-toggle span {
+  padding: 0.1rem 0.5rem;
+  font-size: 0.72rem;
 }
 .score-big {
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 2.1rem;
+  font-size: clamp(3.2rem, 9vw, 4.8rem);
   font-weight: 600;
-  line-height: 1;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
 }
 .score-big small {
   display: block;

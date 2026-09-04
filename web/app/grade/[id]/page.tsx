@@ -292,10 +292,14 @@ type AreaRow = {
   applied: number;
   possible: number;
   slop: number;
+  potential: number | null;
 };
 
 function Report({ view, now, onResume }: { view: GradeView; now: number; onResume: () => void }) {
   const r = view.result!;
+  // The band's readout: check counts, or the slop points each axis actually carried. The bars stay
+  // check-based in both, since "applied" is a count and points have no applied/available split.
+  const [axisView, setAxisView] = useState<"checks" | "slop">("checks");
 
   // Did the probe loop actually run? The grader writes coverage.probes_total only once it reaches
   // the battery, and outcomes only for probes that ran. Neither, plus blocked probes, means a bot
@@ -347,6 +351,8 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
           : PASSIVE_BY_AREA[id] ?? 0,
       // an axis with nothing wrong is absent from axis_slop entirely, not zero
       slop: r.axis_slop?.[id as keyof typeof r.axis_slop] ?? 0,
+      // what the axis would have cost if every applicable check had fired; the slop view's ceiling
+      potential: r.axis_potential?.[id as keyof typeof r.axis_potential] ?? null,
     }));
 
     // Prefer the OUTCOMES for what passed: they record what each check actually measured, which is
@@ -425,6 +431,22 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
           </div>
         )}
         <div className="score-axes">
+          <div className="score-axes-head">
+            <span className="mode-toggle" aria-label="axis readout">
+              <span
+                className={axisView === "checks" ? "on" : ""}
+                onClick={() => setAxisView("checks")}
+              >
+                checks
+              </span>
+              <span
+                className={axisView === "slop" ? "on" : ""}
+                onClick={() => setAxisView("slop")}
+              >
+                slop points
+              </span>
+            </span>
+          </div>
           <div className="sample-axes">
             {rows.map((row) => (
               <div className="sample-axis" data-axis={row.id} key={row.id}>
@@ -435,20 +457,39 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
                   <span className="seg na" style={{ flexGrow: Math.max(0, row.possible - row.applied) }} />
                 </span>
                 <span className="sample-axis-val">
-                  {row.failed}
-                  <span className="of">/{row.applied}</span>
-                  <span className="of dim">/{row.possible}</span>
+                  {axisView === "checks" ? (
+                    <>
+                      {row.failed}
+                      <span className="of">/{row.applied}</span>
+                      <span className="of dim">/{row.possible}</span>
+                    </>
+                  ) : (
+                    <>
+                      {fmtScore(row.slop)}
+                      <span className="of dim">
+                        / {row.potential !== null ? fmtScore(row.potential) : "?"} pts
+                      </span>
+                    </>
+                  )}
                 </span>
               </div>
             ))}
           </div>
           <p className="sample-legend">
-            <span className="key failed" aria-hidden /> failed
-            <span className="key clean" aria-hidden /> passed
-            <span className="key na" aria-hidden /> did not apply
-            <span className="legend-note">
-              failed / applied / available. {totalApplied} of {totalPossible} applied.
-            </span>
+            {axisView === "checks" ? (
+              <>
+                <span className="key failed" aria-hidden /> failed
+                <span className="key clean" aria-hidden /> passed
+                <span className="key na" aria-hidden /> did not apply
+                <span className="legend-note">
+                  failed / applied / available. {totalApplied} of {totalPossible} applied.
+                </span>
+              </>
+            ) : (
+              <span className="legend-note">
+                slop carried / most this axis could have carried, had every applicable check fired.
+              </span>
+            )}
           </p>
         </div>
         <div className="score-chips">
