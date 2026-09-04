@@ -718,13 +718,6 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
   // Records written before sloptic 2.2.0 carry no contribution, and every grade stored today is one
   // of those. Detect that rather than rendering a column of zeros that claims to sum to the score.
   const scored = findings.every((f) => typeof f.contribution === "number");
-  // A finding priced above 0 that contributes 0 got there one of two ways, and they are different
-  // facts about the app. Either the same flaw is already priced on another row (its variant group
-  // lost), or its category is so crowded that decay took it below a tenth. Telling a reader the
-  // wrong one is worse than saying nothing, so work out which rather than guessing.
-  const pricedGroups = new Set(
-    findings.filter((f) => (f.contribution ?? 0) > 0 && f.variant_group_id).map((f) => f.variant_group_id)
-  );
   const sorted = [...groups.values()].sort((a, b) =>
     scored ? b.contribution - a.contribution : (b.f.penalty ?? 0) - (a.f.penalty ?? 0)
   );
@@ -750,15 +743,11 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
   return (
     <>
       <h2>What failed ({sorted.length})</h2>
-      {/* Said before the list, because the numbers beside each row are prices and a reader will
-          otherwise add them. They do not sum to the score: one flaw counts once however many places
-          it appears, and repeats within a category count less each time. The three axis subtotals
-          above ARE the decomposition, and those do sum exactly. */}
-      <p className="section-intro">
-        {scored
-          ? "Open a category for details."
-          : "Open a category for details."}
-      </p>
+      {/* Said before the list, because the numbers beside each row invite adding. On scored grades
+          they are contributions: rows sum to their category header and the headers sum to the score.
+          On grades recorded before contributions existed they are prices and do NOT sum; the axis
+          subtotals above are the only exact split there. */}
+      <p className="section-intro">Open a category for details.</p>
       <div className="sample-findings">
         {cats.map((cat) => (
           <details className="cat-group" data-axis={cat.area} key={cat.slug}>
@@ -793,48 +782,11 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
                       {/* The CONTRIBUTION, not the price, so the column is an honest addition. The two
                           are never shown side by side: four defense in depth probes are re-priced upward
                           when a vulnerability they would have contained also fires, so a row can
-                          legitimately contribute more than its penalty, which reads as a bug next to it.
-                          The price and the reason they differ live in the expanded detail instead. */}
+                          legitimately contribute more than its penalty, which reads as a bug next to
+                          a column that claims to add up. */}
                       <span className="finding-pen">{scored ? contribution.toFixed(1) : f.penalty}</span>
                     </summary>
                     <div className="finding-expand">
-                      {scored && (
-                        <div className="row2">
-                          <span className="term">What it added</span>
-                          <p className="desc">
-                            {contribution === 0 ? (
-                              (f.penalty ?? 0) === 0 ? (
-                                <>
-                                  Nothing, and it never could. This check reports what it saw without pricing
-                                  it, so it is here for information only.
-                                </>
-                              ) : f.variant_group_id && pricedGroups.has(f.variant_group_id) ? (
-                                <>
-                                  Nothing. The same underlying fault is already priced on another row, and one
-                                  fault counts once however many ways it shows up.
-                                </>
-                              ) : (
-                                <>
-                                  Nothing, though the fault is worth {f.penalty} on its own. This category
-                                  already carries heavier findings, and each further repeat in a category
-                                  counts less than the one before, so by this one there is nothing left.
-                                </>
-                              )
-                            ) : (
-                              <>
-                                {contribution.toFixed(1)} of the score, where the fault is worth{" "}
-                                {f.penalty} on its own
-                                {targets.length > 1 ? ` and was found on ${targets.length} paths` : ""}.{" "}
-                                {contribution > (f.penalty ?? 0)
-                                  ? "It counts for more than its own price because a vulnerability it would have contained also fired, so the defense being missing is worth more here than in the abstract."
-                                  : contribution < (f.penalty ?? 0)
-                                    ? "It counts for less than its price because repeats within one category decay: the worst counts in full and each further one counts less."
-                                    : "Nothing damped it, so it counts in full."}
-                              </>
-                            )}
-                          </p>
-                        </div>
-                      )}
                       {entry?.expected && (
                         <div className="row2">
                           <span className="term">What should we see</span>
