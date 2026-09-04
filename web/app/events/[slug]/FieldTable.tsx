@@ -249,7 +249,11 @@ export default function FieldTable({
             <tr>
               {canGrade && runId && selectable.length > 0 && <th className="pick-col" />}
               {(["name", "status"] as const).map((k) => (
-                <th key={k} aria-sort={sort.key === k ? (sort.asc ? "ascending" : "descending") : "none"}>
+                <th
+                  key={k}
+                  className={k === "name" ? "col-name" : undefined}
+                  aria-sort={sort.key === k ? (sort.asc ? "ascending" : "descending") : "none"}
+                >
                   <button type="button" className="col-sort" onClick={() => click(k)}>
                     {k === "name" ? "submission" : "status"}
                     <span className="col-arrow" aria-hidden>

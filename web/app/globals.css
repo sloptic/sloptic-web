@@ -3044,3 +3044,10 @@ a.mast-user:hover {
   font-weight: 400;
   margin-left: 0.25rem;
 }
+
+/* The submission header reads left like the names under it. The table's default is right-aligned
+   cells with only :first-child left, and the grading checkbox column takes that slot, so the name
+   header needs the alignment stated (the body names hold left by being flex). */
+.count-table .col-name {
+  text-align: left;
+}
