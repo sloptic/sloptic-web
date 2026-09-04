@@ -177,7 +177,7 @@ export default function EventActions({
   function refresh(r: Run) {
     return act(async () => {
       await post("/api/events/run/refresh", { id: r.id });
-      return "Reading the gallery again. New entries land in the field as they resolve.";
+      return null;
     });
   }
 

@@ -37,11 +37,6 @@ class Field:
     #: than no board.
     complete: bool
     detail: str
-    #: What this resolve saw change, counted against what the cache held beforehand: submissions the
-    #: gallery listed that we had never fetched, and known ones whose app links differ from the
-    #: cached copy. Meaningful mainly for an explicit refresh; a first resolve counts everything new.
-    new: int = 0
-    modified: int = 0
 
 
 def _pick_app_url(hrefs: list[str]) -> tuple[str | None, str | None]:
@@ -78,14 +73,14 @@ class _FieldCache(devpost.IngestCache):
     The ordinary path's cost is that an EDITED submission keeps its stale cached links for ever.
     A REFRESH (an organizer pressing the button because they expect the field to have changed) is
     the one moment staleness matters, so it flips every link key to a miss: each submission is
-    fetched again and compared against the snapshot taken before the pass started, which is what
-    makes "X new, Y modified" a measurement rather than a guess.
+    fetched again and the cache ends the pass holding what is true now. What changed is counted by
+    the CALLER against the run's own prior field rows, which is the comparison an organizer means,
+    and one a cold cache cannot lie about.
     """
 
     def __init__(self, path, refresh: bool = False):
         super().__init__(path)
         self.refresh = refresh
-        self._previous = dict(self.mem)     # everything known BEFORE this pass touched the cache
 
     def has(self, key):
         k = str(key)
@@ -98,14 +93,6 @@ class _FieldCache(devpost.IngestCache):
     def put(self, key, val):
         if not str(key).startswith("page:"):
             super().put(key, val)
-
-    def previous(self, project_url):
-        """The links this project had before the pass started, under either key space."""
-        for prefix in ("hrefs:", "links:"):
-            v = self._previous.get(f"{prefix}{project_url}")
-            if v is not None:
-                return v
-        return None
 
 
 def resolve(slug: str, limit: int = 1000, on_progress=None, refresh: bool = False) -> Field:
@@ -124,14 +111,8 @@ def resolve(slug: str, limit: int = 1000, on_progress=None, refresh: bool = Fals
         cache = _FieldCache(pathlib.Path(config.DEVPOST_CACHE_DIR) / f"{slug}.jsonl", refresh=refresh)
     except Exception:  # noqa: BLE001
         cache = None
-    new = modified = 0
     try:
         for project_url, hrefs in devpost.submissions(slug, cache=cache):
-            previous = cache.previous(project_url) if cache is not None else None
-            if previous is None:
-                new += 1
-            elif sorted(previous) != sorted(hrefs):
-                modified += 1
             app_url, why = _pick_app_url(list(hrefs))
             entries.append(Entry(project_url, app_url, why))
             if on_progress is not None and len(entries) % 10 == 0:
@@ -148,4 +129,4 @@ def resolve(slug: str, limit: int = 1000, on_progress=None, refresh: bool = Fals
     except Exception as e:  # noqa: BLE001
         complete = False
         detail = f"worker error: {type(e).__name__}: {e}"
-    return Field(entries, complete, detail, new, modified)
+    return Field(entries, complete, detail)

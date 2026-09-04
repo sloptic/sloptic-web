@@ -457,6 +457,17 @@ def set_run_priority(conn: psycopg.Connection, run_id: str, priority: int) -> No
     conn.execute("UPDATE event_runs SET priority = %s WHERE id = %s;", (priority, run_id))
 
 
+def field_prior(conn: psycopg.Connection, run_id: str) -> dict:
+    """The run's current field rows: project_url -> (app_url, skip_reason). A refresh compares its
+    fresh resolve against this, so "new" and "modified" describe the FIELD the organizer saw, not a
+    cache that may only have started existing this very pass."""
+    rows = conn.execute(
+        "SELECT project_url, app_url, skip_reason FROM event_entries WHERE run_id = %s;",
+        (run_id,),
+    ).fetchall()
+    return {r["project_url"]: (r["app_url"], r["skip_reason"]) for r in rows}
+
+
 def save_field(conn: psycopg.Connection, run_id: str, entries: list, complete: bool,
                detail: str, refresh_counts: tuple[int, int] | None = None) -> None:
     """Store the resolved field and mark the run ready for the organizer to look at.

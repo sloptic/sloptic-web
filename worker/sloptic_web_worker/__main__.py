@@ -292,6 +292,7 @@ def process_event_runs(conn) -> int:
 
     try:
         # Report the count as it climbs, so a big gallery does not read as a stalled page.
+        prior = db.field_prior(conn, run.id)
         field = resolve_event.resolve(
             run.slug, on_progress=lambda n: db.note_resolve_progress(conn, run.id, n),
             refresh=run.refresh_requested,
@@ -302,11 +303,20 @@ def process_event_runs(conn) -> int:
         print(f"[run]   {run.slug}: failed to resolve", flush=True)
         return 1
     gradeable = sum(1 for e in field.entries if e.skip_reason is None)
-    counts = (field.new, field.modified) if run.refresh_requested else None
+    # A refresh describes itself against the field the organizer last saw: entries the gallery now
+    # lists that were not there, and known ones whose grade target or eligibility moved. Counted
+    # from rows, not the cache, so a cold cache cannot call all 194 "new".
+    counts = None
+    new = modified = 0
+    if run.refresh_requested:
+        fresh = {e.project_url: (e.app_url, e.skip_reason) for e in field.entries}
+        new = sum(1 for u in fresh if u not in prior)
+        modified = sum(1 for u, v in fresh.items() if u in prior and prior[u] != v)
+        counts = (new, modified)
     db.save_field(conn, run.id, field.entries, field.complete, field.detail, counts)
     print(f"[run]   {run.slug}: {len(field.entries)} entries, {gradeable} gradeable, "
           f"complete={field.complete}"
-          + (f", {field.new} new, {field.modified} modified" if counts else ""), flush=True)
+          + (f", {new} new, {modified} modified" if counts else ""), flush=True)
     return 1
 
 
