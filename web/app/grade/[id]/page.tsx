@@ -189,11 +189,13 @@ export default function GradePage({ params }: { params: { id: string } }) {
           track(data.status === "done" ? "grade_finished" : "grade_failed");
         }
         if (data.status === "queued" || data.status === "running") {
+          clearTimeout(timer);
           timer = setTimeout(poll, POLL_MS);
         } else if (data.retry_due_at) {
           // Done, but a blocked tail is booked for another pass. Keep polling, slowly, so the "next
           // attempt in about N minutes" line moves and the report updates itself the moment the pass
           // recovers the tail.
+          clearTimeout(timer);
           timer = setTimeout(poll, RETRY_POLL_MS);
         }
       } catch {
@@ -254,12 +256,28 @@ export default function GradePage({ params }: { params: { id: string } }) {
     );
   }
 
-  if (view.status === "failed") {
+  if (view.status === "failed" || view.status === "cancelled") {
     return (
       <section className="report">
         {crumb}
         <h1>{view.url}</h1>
         <p className="error">{view.error || "The target did not present a gradeable surface."}</p>
+      </section>
+    );
+  }
+
+  // A done grade whose results row is gone has been through retention: the grade row is kept, the
+  // report is not. Rendering Report here would dereference null; the honest page is the promise
+  // the retention copy made, kept.
+  if (view.status === "done" && !view.result) {
+    return (
+      <section className="report">
+        {crumb}
+        <h1>{view.url}</h1>
+        <p className="error">This report has expired.</p>
+        <p className="section-intro">
+          Anonymous reports are kept for {view.retain_days ?? 30} days. Grade the app again for a fresh one.
+        </p>
       </section>
     );
   }

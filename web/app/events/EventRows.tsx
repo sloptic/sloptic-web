@@ -12,8 +12,15 @@ type Run = {
   slug: string;
   status: "resolving" | "ready" | "grading" | "done" | "failed" | "cancelled";
   entries_found: number | null;
-  event_entries: { grade_id: string | null; skip_reason: string | null }[];
+  event_entries: { grade_id: string | null; skip_reason: string | null; grades?: { status?: string } | { status?: string }[] | null }[] | null;
 };
+
+const gradeOf = (e: NonNullable<Run["event_entries"]>[number]) =>
+  (Array.isArray(e.grades) ? e.grades[0] : e.grades) ?? null;
+/** Graded means a finished report, not a link: a regrade repoints links at queue time, which once
+ *  made every row of a regrading field claim to be graded on the day it was queued. */
+const doneCount = (entries: NonNullable<Run["event_entries"]>) =>
+  entries.filter((e) => gradeOf(e)?.status === "done").length;
 type Verified = { slug: string; expires_at: string };
 
 const POLL_MS = 5000;
@@ -29,14 +36,16 @@ function when(iso: string): string {
 function state(v: Verified | undefined, c: Claim | undefined, runs: Run[]): { chip: string; line: string } {
   const live = runs.find((r) => r.status === "resolving" || r.status === "grading");
   if (live) {
-    const done = live.event_entries?.filter((e) => e.grade_id).length ?? 0;
+    const done = live.event_entries ? doneCount(live.event_entries) : 0;
     if (live.status === "resolving") {
       return {
         chip: "resolving",
         line: live.entries_found ? `${live.entries_found} entries found so far` : "reading the gallery",
       };
     }
-    const running = live.event_entries?.some((e) => e.grade_id && !e.skip_reason) ?? false;
+    const running = live.event_entries?.some(
+      (e) => !e.skip_reason && ["queued", "running"].includes(gradeOf(e)?.status ?? "")
+    ) ?? false;
     return done === 0 && !running
       ? { chip: "queued", line: "waiting behind another run" }
       : { chip: "grading", line: `${done} graded so far` };
@@ -48,7 +57,7 @@ function state(v: Verified | undefined, c: Claim | undefined, runs: Run[]): { ch
   }
   const done = runs.find((r) => r.status === "done");
   if (done) {
-    const n = done.event_entries?.filter((e) => e.grade_id).length ?? 0;
+    const n = done.event_entries ? doneCount(done.event_entries) : 0;
     return { chip: "graded", line: `${n} entries graded` };
   }
   if (v) return { chip: "verified", line: `re-prove by ${when(v.expires_at)}` };

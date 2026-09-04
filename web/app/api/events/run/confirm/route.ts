@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { currentUser } from "@/lib/auth";
 import { randomUUID } from "node:crypto";
 import { normalizeTarget } from "@/lib/origin";
+import { egressPrecheck } from "@/lib/egress";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,12 +35,15 @@ export async function POST(req: NextRequest) {
   const db = supabaseAdmin();
   const { data: run } = await db
     .from("event_runs")
-    .select("id, slug, mode, status, override")
+    .select("id, slug, mode, status, override, paused")
     .eq("id", body.id ?? "")
     .eq("account_id", user.id)
     .maybeSingle();
 
   if (!run) return NextResponse.json({ error: "No such run." }, { status: 404 });
+  if (run.paused) {
+    return NextResponse.json({ error: "This run is paused. Resume grading first." }, { status: 409 });
+  }
   // Ready is the approval gate; grading is allowed again so a mid-drain refresh's new entries can
   // be bulk-queued instead of one grade-now at a time.
   if (run.status !== "ready" && run.status !== "grading") {
@@ -56,7 +60,24 @@ export async function POST(req: NextRequest) {
     .eq("run_id", run.id)
     .is("skip_reason", null);
   if (!regrade) entriesQuery = entriesQuery.is("grade_id", null);
-  const { data: entries } = await entriesQuery.limit(MAX_ENTRIES);
+  const { data: entryRows, error: entriesErr } = await entriesQuery.limit(MAX_ENTRIES);
+  if (entriesErr) return NextResponse.json({ error: "Could not read the field." }, { status: 500 });
+
+  // A regrade re-queues only entries whose existing grade has FINISHED (done, failed, or
+  // cancelled). One still queued or running would be double-queued: two batteries at the same app,
+  // twice the traffic, twice the budget, one board.
+  let entries = entryRows ?? [];
+  if (regrade && entries.length > 0) {
+    const linked = entries.map((e) => e.grade_id).filter((id): id is string => Boolean(id));
+    const { data: statuses } = await db
+      .from("grades")
+      .select("id, status")
+      .in("id", linked.length ? linked : ["00000000-0000-0000-0000-000000000000"]);
+    const finished = new Set(
+      (statuses ?? []).filter((g) => ["done", "failed", "cancelled"].includes(g.status)).map((g) => g.id)
+    );
+    entries = entries.filter((e) => !e.grade_id || finished.has(e.grade_id));
+  }
 
   if (!entries || entries.length === 0) {
     return NextResponse.json(
@@ -70,9 +91,14 @@ export async function POST(req: NextRequest) {
   // event is over a hundred, taking long enough that closing the tab could abort the handler partway
   // and leave a field half queued.
   const bad: string[] = [];
-  const rows = entries.flatMap((e) => {
+  const rows = (await Promise.all(entries.map(async (e) => {
     try {
       const target = normalizeTarget(e.app_url ?? "");
+      const blocked = await egressPrecheck(target.host);
+      if (blocked) {
+        bad.push(e.id);
+        return [];
+      }
       return [{
         id: randomUUID(),
         entry_id: e.id,
@@ -87,7 +113,7 @@ export async function POST(req: NextRequest) {
       bad.push(e.id);
       return [];
     }
-  });
+  }))).flat();
 
   if (rows.length === 0) {
     return NextResponse.json({ error: "Nothing in this field can be graded." }, { status: 409 });
@@ -111,8 +137,9 @@ export async function POST(req: NextRequest) {
     await db.from("grades").update({ retry_due_at: null }).in("id", superseded);
   }
 
-  // Link and flip in parallel. A link that survived the screen but will not normalize is that
-  // entry's problem, so it is marked and the rest proceed.
+  // Link and flip in parallel. A link that survived the screen but will not normalize (or fails
+  // the egress precheck) is that entry's problem, so it is marked and the rest proceed. The run
+  // flip is guarded on the state its check read, so a cancel landing mid-flight wins.
   await Promise.all([
     ...rows.map((g) => db.from("event_entries").update({ grade_id: g.id }).eq("id", g.entry_id)),
     ...bad.map((id) =>
@@ -120,7 +147,8 @@ export async function POST(req: NextRequest) {
     ),
     db.from("event_runs")
       .update({ status: "grading", started_at: new Date().toISOString(), paused: false })
-      .eq("id", run.id),
+      .eq("id", run.id)
+      .in("status", ["ready", "grading"]),
   ]);
   const queued = rows.length;
 

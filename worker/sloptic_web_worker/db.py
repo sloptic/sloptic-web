@@ -69,6 +69,11 @@ def expire_queued_jobs(conn: psycopg.Connection) -> int:
            AND submitted_at < now() - make_interval(secs => CASE WHEN event_run_id IS NULL
                                                                 THEN %(timeout)s
                                                                 ELSE %(event_timeout)s END)
+           -- A paused run holds its grades on purpose; expiry may not fail them out from under it.
+           -- A cancelled run's stragglers age out here, since nothing will ever claim them.
+           AND NOT EXISTS (
+                 SELECT 1 FROM event_runs r
+                  WHERE r.id = grades.event_run_id AND (r.paused OR r.status = 'cancelled'))
      RETURNING 1;
         """,
         {"timeout": config.QUEUE_TIMEOUT_SECONDS,
@@ -91,7 +96,7 @@ def reap_stale_jobs(conn: psycopg.Connection) -> int:
              WHERE status = 'running'
                AND claimed_at < now() - make_interval(secs => %(stale)s)
         ), requeued AS (
-            UPDATE grades SET status = 'queued', claimed_at = NULL
+            UPDATE grades SET status = 'queued', claimed_at = NULL, submitted_at = now()
              WHERE id IN (SELECT id FROM stale) AND attempts < %(max_attempts)s
          RETURNING 1
         ), abandoned AS (
@@ -147,6 +152,13 @@ def claim_job(conn: psycopg.Connection, lanes: set[str] | None = None) -> Job | 
                   AND NOT EXISTS (
                         SELECT 1 FROM event_runs r
                          WHERE r.id = grades.event_run_id AND r.paused)
+                  AND NOT EXISTS (
+                        SELECT 1 FROM event_runs r
+                         WHERE r.id = grades.event_run_id AND r.status = 'cancelled')
+                  -- An event grade without an entry link lost its link to a regrade, a cancel, or a
+                  -- resolver pass that removed its entry mid-enqueue. It is not claimable.
+                  AND (event_run_id IS NULL
+                       OR EXISTS (SELECT 1 FROM event_entries e WHERE e.grade_id = grades.id))
                 -- A person waiting on ONE grade goes before an event grinding through hundreds.
                 -- Without this a 400 app field takes the whole worker for most of a day and every
                 -- anonymous submission behind it ages out at the queue timeout, so the site would
@@ -266,8 +278,10 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
 
 
 def mark_failed(conn: psycopg.Connection, job_id: str, message: str) -> None:
+    # Guarded on status: the child may have committed its result a breath before the supervisor's
+    # (one poll stale) harvest decided it had timed out. A finished grade is never a failure.
     conn.execute(
-        "UPDATE grades SET status = 'failed', finished_at = now(), error = %s WHERE id = %s;",
+        "UPDATE grades SET status = 'failed', finished_at = now(), error = %s WHERE id = %s AND status = 'running';",
         (message[:1000], job_id),
     )
 
@@ -540,7 +554,10 @@ def save_field(conn: psycopg.Connection, run_id: str, entries: list, complete: b
                       WHERE event_entries.grade_id IS NULL;""",
                 (run_id, e.project_url, e.app_url, e.skip_reason),
             )
-        if entries:
+        # Prune only what a COMPLETE listing contradicts. A partial one (Devpost stopped answering)
+        # is short by an unknown amount: deleting the entries it failed to see would erase teams
+        # from the field on a WAF's whim.
+        if entries and complete:
             conn.execute(
                 """DELETE FROM event_entries WHERE run_id = %s AND grade_id IS NULL
                      AND project_url <> ALL(%s);""",
@@ -548,12 +565,13 @@ def save_field(conn: psycopg.Connection, run_id: str, entries: list, complete: b
             )
         conn.execute(
             """UPDATE event_runs
-                  SET status = 'ready', entries_found = %(n)s, gallery_complete = %(c)s,
+                  SET status = CASE WHEN status = 'grading' THEN 'grading' ELSE 'ready' END,
+                      entries_found = %(n)s, gallery_complete = %(c)s,
                       detail = left(%(d)s, 2000), resolved_at = now(),
                       refresh_requested = false,
                       refresh_new_submissions = %(rn)s,
                       refresh_modified_submissions = %(rm)s
-                WHERE id = %(id)s;""",
+                WHERE id = %(id)s AND status = 'resolving';""",
             {"n": len(entries), "c": complete, "d": detail, "id": run_id,
              "rn": refresh_counts[0] if refresh_counts else None,
              "rm": refresh_counts[1] if refresh_counts else None},
@@ -581,7 +599,7 @@ def settle_finished_runs(conn: psycopg.Connection) -> int:
         """
         UPDATE event_runs r
            SET status = 'done', finished_at = now()
-         WHERE r.status = 'grading'
+         WHERE r.status IN ('grading', 'ready')
            AND NOT EXISTS (
                  SELECT 1 FROM grades g
                   WHERE g.event_run_id = r.id AND g.status IN ('queued', 'running'))
@@ -725,6 +743,8 @@ def claim_retry(conn: psycopg.Connection, lock_s: float) -> Retry | None:
                         SELECT 1 FROM event_runs r2
                          WHERE r2.id = g2.event_run_id
                            AND (r2.paused OR r2.status = 'cancelled'))
+                  AND (g2.event_run_id IS NULL
+                       OR EXISTS (SELECT 1 FROM event_entries e WHERE e.grade_id = g2.id))
                 ORDER BY g2.retry_due_at
                 FOR UPDATE OF g2 SKIP LOCKED
                 LIMIT 1
@@ -750,7 +770,8 @@ def load_result(conn: psycopg.Connection, grade_id: str) -> dict | None:
     row = conn.execute(
         """SELECT mode, catalog_version, passive_probe_count, slop_score, axis_slop, coverage,
                   platform, surface, findings, card, outcomes, axis_potential, lighthouse_score,
-                  blocked_probes, incomplete_axes, percentile, percentile_band, curve_version, ranking
+                  blocked_probes, incomplete_axes, percentile, percentile_band, curve_version, ranking,
+                  bot_challenge, challenge_stage, retry_blocked_initial, challenge_onset_index
              FROM results WHERE grade_id = %s;""",
         (grade_id,),
     ).fetchone()

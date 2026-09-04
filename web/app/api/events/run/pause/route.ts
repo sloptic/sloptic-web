@@ -34,7 +34,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Only a grading run can be paused." }, { status: 409 });
   }
 
-  const { error } = await db.from("event_runs").update({ paused }).eq("id", run.id);
+  const { error } = await db
+    .from("event_runs")
+    .update({ paused })
+    .eq("id", run.id)
+    .eq("status", "grading");
   if (error) return NextResponse.json({ error: "Could not pause it." }, { status: 500 });
   return NextResponse.json({ paused });
 }

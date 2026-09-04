@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabase";
 import { currentUser } from "@/lib/auth";
 import { normalizeTarget } from "@/lib/origin";
+import { egressPrecheck } from "@/lib/egress";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,13 +28,16 @@ export async function POST(req: NextRequest) {
   const db = supabaseAdmin();
   const { data: run } = await db
     .from("event_runs")
-    .select("id, slug, mode, status")
+    .select("id, slug, mode, status, paused")
     .eq("id", body.runId ?? "")
     .eq("account_id", user.id)
     .maybeSingle();
   if (!run) return NextResponse.json({ error: "No such run." }, { status: 404 });
   if (!["ready", "grading"].includes(run.status)) {
     return NextResponse.json({ error: `This run is ${run.status}.` }, { status: 409 });
+  }
+  if (run.paused) {
+    return NextResponse.json({ error: "This run is paused. Resume grading first." }, { status: 409 });
   }
 
   const wanted = body.projectUrls ?? (body.projectUrl ? [body.projectUrl] : []);
@@ -53,9 +57,14 @@ export async function POST(req: NextRequest) {
   }
 
   const bad: string[] = [];
-  const rows = entries.flatMap((e) => {
+  const rows = (await Promise.all(entries.map(async (e) => {
     try {
       const target = normalizeTarget(e.app_url ?? "");
+      const blocked = await egressPrecheck(target.host);
+      if (blocked) {
+        bad.push(e.id);
+        return [];
+      }
       return [{
         id: randomUUID(),
         entry_id: e.id,
@@ -70,7 +79,7 @@ export async function POST(req: NextRequest) {
       bad.push(e.id);
       return [];
     }
-  });
+  }))).flat();
 
   if (rows.length) {
     const { error } = await db.from("grades").insert(rows.map(({ entry_id, ...g }) => g));
@@ -94,7 +103,8 @@ export async function POST(req: NextRequest) {
     await db
       .from("event_runs")
       .update({ status: "grading", started_at: new Date().toISOString() })
-      .eq("id", run.id);
+      .eq("id", run.id)
+      .eq("status", "ready");
   }
   return NextResponse.json({ queued: rows.length });
 }

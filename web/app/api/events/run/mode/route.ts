@@ -33,6 +33,12 @@ export async function POST(req: NextRequest) {
     .eq("account_id", user.id)
     .maybeSingle();
   if (!run) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (run.status !== "ready" && run.status !== "done") {
+    return NextResponse.json(
+      { error: `That run is ${run.status}. Only a ready run can switch in place, and a finished one forks.` },
+      { status: 409 }
+    );
+  }
   if (run.mode === mode) {
     return NextResponse.json({ error: `Already a ${mode} run.` }, { status: 409 });
   }
@@ -84,7 +90,7 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       );
     }
-    const { error } = await db.from("event_runs").update({ mode }).eq("id", run.id);
+    const { error } = await db.from("event_runs").update({ mode }).eq("id", run.id).eq("status", "ready");
     if (error) return NextResponse.json({ error: "Could not switch it." }, { status: 500 });
     return NextResponse.json({ flipped: true, mode });
   }

@@ -33,6 +33,7 @@ type Row = {
   pendingRetry: boolean;
   // How many checks had run when the challenge tripped, for the withheld note.
   onset: number | null;
+  botChallenge: boolean;
   // A challenge cut this battery below the keepable fraction: a real PARTIAL score that must not
   // rank against complete batteries, the same rule that keeps it off the percentile curve.
   limited: boolean;
@@ -74,8 +75,8 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
       ? db.from("grades").select("id, status, retry_due_at, retry_passes").in("id", ids)
       : Promise.resolve({ data: [] as { id: string; status: string; retry_due_at: string | null; retry_passes?: number | null }[] }),
     ids.length
-      ? db.from("results").select("grade_id, slop_score, axis_slop, coverage, blocked_probes, retry_blocked_initial, challenge_onset_index, challenge_stage, ranking, lighthouse_score").in("grade_id", ids)
-      : Promise.resolve({ data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; coverage: Record<string, unknown> | null; blocked_probes: string[] | null; retry_blocked_initial?: number | null; challenge_onset_index: number | null; challenge_stage: string | null; ranking: Record<string, unknown>; lighthouse_score: number | null }[] }),
+      ? db.from("results").select("grade_id, slop_score, axis_slop, coverage, blocked_probes, retry_blocked_initial, challenge_onset_index, challenge_stage, bot_challenge, ranking, lighthouse_score").in("grade_id", ids)
+      : Promise.resolve({ data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; coverage: Record<string, unknown> | null; blocked_probes: string[] | null; retry_blocked_initial?: number | null; challenge_onset_index: number | null; challenge_stage: string | null; bot_challenge?: boolean | null; ranking: Record<string, unknown>; lighthouse_score: number | null }[] }),
   ]);
   const grades = gradesRes.data;
   const results = resultsRes.data;
@@ -115,6 +116,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         gated: rk.has_catastrophe === true,
         measured: Number((r?.coverage as { probes_total?: number } | null)?.probes_total ?? 0) > 0,
         blocked: (r?.blocked_probes ?? []).length,
+        botChallenge: r?.bot_challenge === true,
         pendingRetry: retrying.has(e.grade_id as string),
         onset: typeof r?.challenge_onset_index === "number" ? r.challenge_onset_index : null,
         limited: r?.challenge_stage === "limited",
@@ -189,7 +191,9 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         ? r.onset !== null
           ? `no score (stopped at check ${r.onset} of ${battery})`
           : `no score (a bot challenge blocked every check${r.marks.none ? ", and the retries recovered nothing" : ""})`
-        : "no score (the app had nothing to grade)",
+        : r.botChallenge
+          ? "no score (a bot challenge blocked every check)"
+          : "no score (the app had nothing to grade)",
       marks: r.marks,
     })),
   ];

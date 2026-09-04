@@ -247,6 +247,15 @@ def process_retries(conn) -> int:
     except Exception as e:  # noqa: BLE001
         traceback.print_exc()
         print(f"[retry] {r.grade_id}: pass failed: {type(e).__name__}: {e}", flush=True)
+        # A crashing pass must be bounded like a blocked one: claim_retry counts it (passes was
+        # incremented on the claim) but books no verdict, so without this the due date simply
+        # returns every lock interval, for ever. Out of passes means stop asking.
+        if r.passes >= config.RETRY_BLOCKED_MAX_PASSES:
+            db.clear_retry(conn, r.grade_id)
+            print(f"[retry] {r.grade_id}: out of passes after repeated failures, stopping", flush=True)
+        else:
+            db.schedule_retry(conn, r.grade_id, r.blocked,
+                              config.RETRY_BLOCKED_NEXT_DELAY_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
         return 1
 
     stored = db.load_result(conn, r.grade_id)
@@ -287,10 +296,15 @@ def process_event_runs(conn) -> int:
         return 0
     # Urgency first: the state is one API call and it decides where this run's grades sit in the
     # queue, so it has to be known before any of them are enqueued.
-    w = verify_event.window_state(run.slug)
-    db.set_run_priority(conn, run.id, verify_event.priority_of(w.state))
-
     try:
+        # Inside the guard ON PURPOSE: these run after the claim marked started_at, and a raise
+        # here (a dropped connection is the realistic one) used to wedge the run in `resolving`
+        # for ever, since only the resolver ever re-arms started_at and only the resolver is
+        # re-claimed. fail_run is reached from here, which is the honest exit.
+        w = verify_event.window_state(run.slug)
+        db.set_run_priority(conn, run.id, verify_event.priority_of(w.state))
+
+
         # Report the count as it climbs, so a big gallery does not read as a stalled page.
         prior = db.field_prior(conn, run.id)
         field = resolve_event.resolve(

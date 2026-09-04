@@ -42,7 +42,7 @@ function RunningCell({ gradeId, progress }: { gradeId: string | null; progress: 
 /** The provisional marker on a report whose challenge-blocked checks are being retried: a
  *  superscript B and, in plain text, how long until that retry lands. The field polls every few
  *  seconds, so the minutes fall on their own. */
-function RetryDue({ at }: { at: string }) {
+function RetryDue({ at, held }: { at: string; held?: boolean }) {
   const ms = Date.parse(at) - Date.now();
   const mins = Math.ceil(ms / 60000);
   return (
@@ -51,7 +51,7 @@ function RetryDue({ at }: { at: string }) {
       <sup className="prov-mark" title="A challenge-blocked check is being retried. The score may change.">
         B
       </sup>{" "}
-      {ms > 45_000 ? `${mins} min` : "shortly"}
+      {held ? "held" : ms > 45_000 ? `${mins} min` : "shortly"}
     </span>
   );
 }
@@ -93,12 +93,15 @@ export default function FieldTable({
   runId,
   canGrade,
   onGraded,
+  paused,
 }: {
   entries: FieldEntry[];
   runId?: string;
   /** Whether one-at-a-time grading is offered. Off once the run is finished. */
   canGrade?: boolean;
   onGraded?: () => void;
+  /** A paused run holds its retries: the countdown reads held instead of counting down. */
+  paused?: boolean;
 }) {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   // Remember whether the field was expanded, keyed to this run, so clicking into an app and hitting
@@ -312,7 +315,7 @@ export default function FieldTable({
                   {e.grade_id ? (
                     <>
                       <a href={`/grade/${e.grade_id}`}>report</a>
-                      {e.retryDueAt && <RetryDue at={e.retryDueAt} />}
+                      {e.retryDueAt && <RetryDue at={e.retryDueAt} held={paused} />}
                       {!e.retryDueAt && <RecoverySup marks={e.marks} />}
                     </>
                   ) : canGrade && runId && !e.skip_reason && !e.status ? (

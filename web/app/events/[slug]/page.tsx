@@ -20,7 +20,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
       .eq("account_id", user.id).eq("kind", "organizer_event").eq("scope", params.slug)
       .is("revoked_at", null).maybeSingle(),
     db.from("event_claims").select("id, slug, token, status, check_status, check_detail, checked_at")
-      .eq("account_id", user.id).eq("slug", params.slug).neq("status", "revoked"),
+      .eq("account_id", user.id).eq("slug", params.slug).order("issued_at", { ascending: false }),
     db.from("event_claims").select("window_open_at_verification")
       .eq("account_id", user.id).eq("slug", params.slug).eq("status", "verified"),
     db.from("event_runs").select("id")
@@ -41,7 +41,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
       : Promise.resolve({ count: 0 }),
     runsForAccount(user.id, params.slug).catch(() => []),
   ]);
-  const claimRow = (claimRows ?? [])[0] ?? null;
+  const claimRow = (claimRows ?? []).find((c) => c.status !== "revoked") ?? null;
   const graded = gradedRes.count ?? 0;
 
   const admin = isAdmin(user.email);

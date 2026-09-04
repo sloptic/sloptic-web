@@ -1,6 +1,6 @@
 // Shapes shared across the API and UI. Mirrors shared/contract.md.
 
-export type GradeStatus = "queued" | "running" | "done" | "failed";
+export type GradeStatus = "queued" | "running" | "done" | "failed" | "cancelled";
 
 /** Why a queued grade is waiting. Absent unless it is actually waiting on something.
  *  `stalled` means no worker has checked in recently, i.e. nothing is running at all. */

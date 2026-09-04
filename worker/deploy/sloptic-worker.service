@@ -66,6 +66,10 @@ ExecStart=/home/ian/sloptic-web/worker/.venv/bin/python -m sloptic_web_worker
 
 # A nologin system user has no HOME, but npx (Lighthouse) and playwright both need writable caches.
 Environment=HOME=/var/lib/sloptic
+# The Devpost ingest cache writes here: under ProtectHome=read-only the repo-relative default
+# (worker/.devpost-cache) is unwritable, and resolve_event fails open to cache=None, silently
+# re-fetching every submission on every resolve.
+Environment=DEVPOST_CACHE_DIR=/var/lib/sloptic/devpost-cache
 Environment=XDG_CACHE_HOME=/var/lib/sloptic/.cache
 Environment=npm_config_cache=/var/lib/sloptic/.npm
 Environment=PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright

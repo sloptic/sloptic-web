@@ -50,7 +50,10 @@ function runLine(r: Run): string {
         return `paused, ${queuedCount(r)} waiting, ${runningCount(r)} running`;
       // A run confirmed while another is still going sits at zero for hours. Saying it is queued is
       // the difference between waiting and looking broken.
-      if (inFlightCount(r) === 0) return `grading, ${finished} of ${gradeable} graded`;
+      if (inFlightCount(r) === 0)
+        return finishedCount(r) === finished
+          ? `grading, ${finished} of ${gradeable} graded`
+          : `grading, ${finished} of ${gradeable} graded, ${finishedCount(r) - finished} could not be reached`;
       if (finished === 0 && runningCount(r) === 0)
         return `queued with ${inFlightCount(r)} entries waiting, another run is grading first`;
       return `grading, ${finished} of ${gradeable} done, ${runningCount(r)} running`;
@@ -113,9 +116,11 @@ export default function EventActions({
 
   useEffect(() => {
     // Any live run (even one sitting ready) can change behind the page: the worker resolves, a
-    // refresh lands, states flip. A finished run cannot, so it stops polling.
+    // refresh lands, states flip. A finished run can too, one way: its retry passes land after
+    // settle, turning B into N/P/F. Those are polled at the same cadence; nothing else polls.
     const liveRun = runs.find((r) => ["resolving", "ready", "grading"].includes(r.status));
-    if (!liveRun && claim?.status !== "pending") return;
+    const recovering = runs.some((r) => r.event_entries.some((e) => gradeOf(e)?.retry_due_at));
+    if (!liveRun && !recovering && claim?.status !== "pending") return;
     const t = setInterval(() => void load(), checking ? CHECK_POLL_MS : POLL_MS);
     return () => clearInterval(t);
   }, [runs, claim, load, checking]);
@@ -150,6 +155,12 @@ export default function EventActions({
   const pending = claim?.status === "pending";
   const history = runs.filter((r) => r !== live);
   const lastRun = runs[0];
+  // The field stays mounted for a finished run while its recovery passes are outstanding: the
+  // letters land there, and unmounting it the moment the run settles is how B froze at "shortly".
+  const fieldRun =
+    live ??
+    runs.find((r) => r.status === "done" && r.event_entries.some((e) => gradeOf(e)?.retry_due_at)) ??
+    null;
 
   /** The estimate under the card. Ready means the whole ungraded field if it is confirmed; grading
    *  means what is in flight, since apps nobody has ticked yet wait on a person, not the worker. */
@@ -234,7 +245,7 @@ export default function EventActions({
       {/* THE CURRENT RUN. One card names the state and offers only what that state allows: the mode
           toggle when nothing is measured, the confirm button when the field is approved, a refresh
           when the gallery could have grown. */}
-      {(live || ((verified || canOverride) && !live)) && (
+      {(live || ((verified || canOverride || claim?.status === "verified") && !live)) && (
         <section className="section attached">
           <div className="run-card">
             {live ? (
@@ -434,12 +445,13 @@ export default function EventActions({
       )}
 
       {/* The live run's field sits with its card; history rows never carry one. */}
-      {live && live.event_entries.length > 0 && (
+      {fieldRun && fieldRun.event_entries.length > 0 && (
         <FieldTable
-          runId={live.id}
-          canGrade={live.status === "ready" || live.status === "grading"}
+          runId={fieldRun.id}
+          paused={fieldRun.paused}
+          canGrade={fieldRun.status === "ready" || fieldRun.status === "grading"}
           onGraded={() => void load()}
-          entries={live.event_entries.map((e): FieldEntry => ({
+          entries={fieldRun.event_entries.map((e): FieldEntry => ({
             project_url: e.project_url,
             skip_reason: e.skip_reason,
             grade_id: e.grade_id,
@@ -475,7 +487,7 @@ export default function EventActions({
                   <td className="num">{doneCount(r)} / {gradeableOf(r).length}</td>
                   <td>{r.gallery_complete === false ? "short" : r.gallery_complete === true ? "complete" : "unknown"}</td>
                   <td>
-                    {["grading", "done"].includes(r.status) && (
+                    {r.status !== "resolving" && r.status !== "ready" && (
                       <><a href={`/events/${slug}/${r.id}`}>board</a>{refreshable(r) ? ", " : ""}</>
                     )}
                     {refreshable(r) && (

@@ -46,27 +46,39 @@ export async function POST(req: NextRequest) {
   // Mark, unlink, and mark the run. Unlinking only entries whose grade is NOT running keeps the
   // in-flight ones attached, so their reports land on the field they were graded for.
   if (queuedIds.length > 0) {
-    const { error: gErr } = await db
+    // The eq("status","queued") is the race guard: the claim loop is a single statement and can
+    // flip a grade to running between this route's snapshot and this write. Postgres re-checks the
+    // predicate at execution, so a just-claimed grade keeps running instead of being marked
+    // cancelled under a child that is about to land a done report on it.
+    const { data: cancelledRows, error: gErr } = await db
       .from("grades")
       .update({ status: "cancelled", finished_at: new Date().toISOString(), error: "cancelled by the organizer" })
-      .in("id", queuedIds);
+      .in("id", queuedIds)
+      .eq("status", "queued")
+      .select("id");
     if (gErr) return NextResponse.json({ error: "Could not cancel the queue." }, { status: 500 });
-    const { data: linked } = await db
-      .from("event_entries")
-      .select("id, grade_id")
-      .eq("run_id", run.id)
-      .in("grade_id", queuedIds);
-    if (linked?.length) {
-      await db.from("event_entries").update({ grade_id: null }).in(
-        "id",
-        linked.map((l) => l.id)
-      );
+    const cancelledIds = (cancelledRows ?? []).map((g) => g.id);
+    if (cancelledIds.length > 0) {
+      const { data: linked } = await db
+        .from("event_entries")
+        .select("id")
+        .eq("run_id", run.id)
+        .in("grade_id", cancelledIds);
+      if (linked?.length) {
+        await db.from("event_entries").update({ grade_id: null }).in(
+          "id",
+          linked.map((l) => l.id)
+        );
+      }
     }
   }
+  // Booked retries die with the run, matching the worker's own cancel_run.
+  await db.from("grades").update({ retry_due_at: null }).eq("event_run_id", run.id);
   const { error } = await db
     .from("event_runs")
     .update({ status: "cancelled", paused: false, finished_at: new Date().toISOString() })
-    .eq("id", run.id);
+    .eq("id", run.id)
+    .in("status", ["ready", "grading"]);
   if (error) return NextResponse.json({ error: "Could not cancel the run." }, { status: 500 });
   return NextResponse.json({ cancelled: true, dequeued: queuedIds.length });
 }
