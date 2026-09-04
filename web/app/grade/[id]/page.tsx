@@ -756,8 +756,8 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
           above ARE the decomposition, and those do sum exactly. */}
       <p className="section-intro">
         {scored
-          ? "Each category's number is that family's share of the score, and its rows add up to it. Open a category for its findings, and a row for what the fault is worth on its own."
-          : "Each number is what that fault is worth on its own. They do not add up to the score: repeats of one fault count less each time, so the axis totals above are the real split. Open a category for details."}
+          ? "Open a category for details."
+          : "Open a category for details."}
       </p>
       <div className="sample-findings">
         {cats.map((cat) => (
