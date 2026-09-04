@@ -84,8 +84,6 @@ export default function EventActions({
 }) {
   const [claim, setClaim] = useState<Claim | null>(initialClaim ?? null);
   const [runs, setRuns] = useState<Run[]>(initialRuns ?? []);
-  // Seeds present means the server already answered, so the first client fetch would be a repeat.
-  const [seeded] = useState(initialRuns !== undefined);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   // The checked_at we had when Check now was pressed. A check is finished when the row carries a
@@ -105,17 +103,16 @@ export default function EventActions({
     if (r) setRuns(r.runs ?? []);
   }, [slug]);
 
-  // Skip the first fetch entirely when the server seeded the data; polling takes over from there.
-  useEffect(() => {
-    if (seeded) return;
-    void load();
-  }, [load, seeded]);
+  // The seed is for the first paint only: one fetch on mount replaces it with live truth, so a
+  // page opened on a ready run does not sit on the render-time snapshot for ever.
+  useEffect(() => { void load(); }, [load]);
   const checking = checkingFrom !== undefined && claim?.checked_at === checkingFrom;
 
   useEffect(() => {
-    const moving = runs.some((r) => r.status === "resolving" || r.status === "grading") ||
-      claim?.status === "pending";
-    if (!moving) return;
+    // Any live run (even one sitting ready) can change behind the page: the worker resolves, a
+    // refresh lands, states flip. A finished run cannot, so it stops polling.
+    const liveRun = runs.find((r) => ["resolving", "ready", "grading"].includes(r.status));
+    if (!liveRun && claim?.status !== "pending") return;
     const t = setInterval(() => void load(), checking ? CHECK_POLL_MS : POLL_MS);
     return () => clearInterval(t);
   }, [runs, claim, load, checking]);
@@ -163,7 +160,7 @@ export default function EventActions({
     if (remaining <= 0) return null;
     return (
       liveEtaLabel(remaining, r.mode, durations) +
-      (r.priority === 0 ? ", priority grading active" : r.priority === 2 ? ", standard grading active" : "")
+      (r.priority === 0 ? ", priority grading active" : "")
     );
   }
 
