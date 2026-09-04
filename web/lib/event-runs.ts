@@ -53,7 +53,7 @@ const RUN_SELECT =
   "id, slug, mode, status, override, admin, priority, entries_found, gallery_complete, detail, created_at, resolved_at, " +
   "event_entries(project_url, app_url, skip_reason, grade_id, " +
   "grades(status, progress, claimed_at, finished_at, retry_due_at, retry_passes, " +
-  "results(blocked_probes, retry_blocked_initial, ranking->reporting)))";
+  "results(blocked_probes, retry_blocked_initial, challenge_stage, ranking->reporting)))";
 
 /** PostgREST returns an embedded one-to-one as an object on some versions and an array on others. */
 function one<T>(v: T | T[] | null | undefined): T | null {
@@ -65,6 +65,7 @@ function toGrade(g: Record<string, unknown> | null | undefined): Grade | null {
   const res = (one(g.results as Record<string, unknown> | Record<string, unknown>[]) ?? {}) as {
     blocked_probes?: string[] | null;
     retry_blocked_initial?: number | null;
+    challenge_stage?: string | null;
     reporting?: { status?: string } | null;
   };
   return {
@@ -79,7 +80,8 @@ function toGrade(g: Record<string, unknown> | null | undefined): Grade | null {
       retryPasses: typeof g.retry_passes === "number" ? g.retry_passes : 0,
       initial: res.retry_blocked_initial,
       blocked: (res.blocked_probes ?? []).length,
-      limitedEngagement: res.reporting?.status === "limited_engagement",
+      // One L for both causes: the app's surface was small, or a challenge cut the battery short.
+      limitedEngagement: res.reporting?.status === "limited_engagement" || res.challenge_stage === "limited",
     }),
   };
 }

@@ -125,7 +125,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
           retryPasses: gradesById.get(e.grade_id as string)?.retry_passes,
           initial: r?.retry_blocked_initial,
           blocked: (r?.blocked_probes ?? []).length,
-          limitedEngagement: isLimitedEngagement(rk),
+          limitedEngagement: isLimitedEngagement(rk) || r?.challenge_stage === "limited",
         }),
       };
     });
@@ -136,8 +136,12 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
   // The grader's own rank key, in the order the page claims: slop, then whether a gating finding
   // fired, then the worst single finding, then exposure survived, then breadth of coverage. Sorting
   // on slop alone would leave the explanation above describing something the table does not do.
+  // A challenge-cut battery ranks too, carrying L: its score is a real measurement of what ran, and
+  // an organizer wants every app placed; the L says the battery behind the number was partial, so
+  // nobody reads it as comparable without noticing. (Its percentile is still absent: the grader's
+  // curve keeps partial batteries out, so the tiebreak columns read "-" and it sorts by slop.)
   const ranked = rows
-    .filter((r) => r.slop !== null && !r.gated && r.measured && !r.limited)
+    .filter((r) => r.slop !== null && !r.gated && r.measured)
     .sort(
       (a, b) =>
         (a.slop as number) - (b.slop as number) ||
@@ -147,12 +151,10 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         (b.categories ?? 0) - (a.categories ?? 0)
     );
   const gated = rows.filter((r) => r.gated);
-  // Reached and answered, but not a complete measurement: a challenge blocked the whole battery
-  // (nothing ran), or cut it below the keepable fraction (a partial score). Not a DNF -- the app was
-  // up -- and not comparable to complete scores, so both sit off the ranking, the score stated where
-  // there is one.
+  // Reached and answered, but NOTHING was measured: a challenge blocked the whole battery. Not a
+  // DNF -- the app was up -- and there is no score to rank, so the reason is stated instead.
   const withheld = rows.filter(
-    (r) => r.slop !== null && !r.gated && (!r.measured || r.limited)
+    (r) => r.slop !== null && !r.gated && !r.measured
   );
   // A grade that failed is not still running. It has finished and produced nothing, usually because
   // the deployment has since gone down, and calling it in progress leaves a board that never
@@ -183,13 +185,11 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
     ...withheld.map((r) => ({
       name: r.name,
       project_url: r.project_url,
-      note: !r.measured
-        ? r.blocked > 0
-          ? r.onset !== null
-            ? `no score (stopped at check ${r.onset} of ${battery})`
-            : `no score (a bot challenge blocked every check${r.marks.none ? ", and the retries recovered nothing" : ""})`
-          : "no score (the app had nothing to grade)"
-        : `partial score ${fmt(r.slop)} (a challenge blocked ${r.blocked} of ${battery} checks)`,
+      note: r.blocked > 0
+        ? r.onset !== null
+          ? `no score (stopped at check ${r.onset} of ${battery})`
+          : `no score (a bot challenge blocked every check${r.marks.none ? ", and the retries recovered nothing" : ""})`
+        : "no score (the app had nothing to grade)",
       marks: r.marks,
     })),
   ];
@@ -208,6 +208,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
           {pending.length > 0 ? ` ${pending.length} still running.` : ""}
           {failed.length > 0 ? ` ${failed.length} could not be reached.` : ""}
           {withheld.length > 0 ? ` ${withheld.length} interrupted by a bot challenge.` : ""}
+          {rows.some((r) => r.limited) ? ` ${rows.filter((r) => r.limited).length} on partial batteries, marked L.` : ""}
         </p>
       </div>
 

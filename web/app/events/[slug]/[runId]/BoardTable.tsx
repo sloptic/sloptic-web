@@ -25,7 +25,7 @@ function RecoverySup({ marks }: { marks?: RecoveryMarks | null }) {
         </sup>
       )}
       {marks.limited && (
-        <sup className="prov-mark" title="Limited engagement: fewer than 40 checks applied.">
+        <sup className="prov-mark" title="Limited: fewer than 40 checks applied, or a challenge cut the battery short.">
           L
         </sup>
       )}
@@ -180,7 +180,7 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
       )}
       {rows.some((r) => !r.provisional && (r.marks.none || r.marks.partial || r.marks.full || r.marks.limited)) && (
         <p className="fineprint prov-note">
-          N: the retries recovered nothing. P: partially recovered. F: fully recovered. L: limited engagement.
+          N: the retries recovered nothing. P: partially recovered. F: fully recovered. L: limited battery.
         </p>
       )}
       {sorted.length > PAGE && (

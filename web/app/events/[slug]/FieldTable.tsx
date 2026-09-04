@@ -26,7 +26,7 @@ function RecoverySup({ marks }: { marks?: RecoveryMarks | null }) {
         </sup>
       )}
       {marks.limited && (
-        <sup className="prov-mark" title="Limited engagement: fewer than 40 checks applied.">
+        <sup className="prov-mark" title="Limited: fewer than 40 checks applied, or a challenge cut the battery short.">
           L
         </sup>
       )}
@@ -357,7 +357,7 @@ export default function FieldTable({
       )}
       {rows.some((e) => !e.retryDueAt && e.marks && (e.marks.none || e.marks.partial || e.marks.full || e.marks.limited)) && (
         <p className="fineprint prov-note">
-          N: the retries recovered nothing. P: partially recovered. F: fully recovered. L: limited engagement.
+          N: the retries recovered nothing. P: partially recovered. F: fully recovered. L: limited battery.
         </p>
       )}
 
