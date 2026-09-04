@@ -551,6 +551,49 @@ def cancel_run(conn: psycopg.Connection, run_id: str) -> int:
     return n
 
 
+def running_on_cancelled_runs(conn: psycopg.Connection) -> list[str]:
+    """Grade ids still marked running on a run the organizer has cancelled.
+
+    Cancel used to let these finish: a grade is minutes from landing and killing the child loses
+    the work. But those finishing children hold concurrency slots, and an organizer who cancels and
+    immediately starts a fresh run watches the new one starve behind the OLD run's stragglers for
+    their whole remaining wall clock. Cancel now means stop now: the supervisor kills these
+    children (see the loop), and the grade is marked cancelled with its entry unlinked, so the app
+    is gradeable again under whichever run comes next.
+    """
+    rows = conn.execute(
+        """
+        SELECT g.id
+          FROM grades g
+          JOIN event_runs r ON r.id = g.event_run_id
+         WHERE g.status = 'running' AND r.status = 'cancelled';
+        """
+    ).fetchall()
+    return [str(r["id"]) for r in rows]
+
+
+def mark_cancelled(conn: psycopg.Connection, grade_id: str) -> None:
+    """Mark a killed grade cancelled, guarded on running: if the child landed its result in the
+    breath before the kill, the report wins and nothing is marked."""
+    conn.execute(
+        """UPDATE grades
+              SET status = 'cancelled', finished_at = now(), error = 'cancelled by the organizer'
+             WHERE id = %s AND status = 'running';""",
+        (grade_id,),
+    )
+
+
+def unlink_entries_of(conn: psycopg.Connection, grade_ids: list[str]) -> None:
+    """Detach entries from killed grades, so those apps are gradeable again."""
+    if not grade_ids:
+        return
+    conn.execute(
+        """UPDATE event_entries SET grade_id = NULL
+            WHERE grade_id = ANY(%s);""",
+        (grade_ids,),
+    )
+
+
 def field_prior(conn: psycopg.Connection, run_id: str) -> dict:
     """The run's current field rows: project_url -> (app_url, skip_reason). A refresh compares its
     fresh resolve against this, so "new" and "modified" describe the FIELD the organizer saw, not a

@@ -496,6 +496,20 @@ def main() -> None:
                     print(f"[keep]  dropped {dropped} expired report(s), "
                           f"forgot {forgotten} submitter IP hash(es)", flush=True)
 
+            # A cancelled run's in-flight children are killed, not mourned: they hold concurrency
+            # slots a fresh run is starving behind, and the organizer's cancel was an instruction
+            # about traffic, not a suggestion for later. Each killed grade is marked cancelled with
+            # its entry unlinked, so the app is gradeable again under the next run.
+            doomed = db.running_on_cancelled_runs(conn)
+            if doomed:
+                for run in running[:]:
+                    if run.job.id in doomed:
+                        _kill(run)
+                        running.remove(run)
+                        db.mark_cancelled(conn, run.job.id)
+                        print(f"[kill]  {run.job.id}: its run was cancelled", flush=True)
+                db.unlink_entries_of(conn, doomed)
+
             # Reap what finished and kill what ran long, BEFORE claiming, so a freed slot is filled
             # on the same pass.
             worked = harvest(conn, rep, running)
