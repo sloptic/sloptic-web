@@ -6,6 +6,7 @@ with the Supabase service role, so RLS does not apply.
 
 import json
 from dataclasses import dataclass
+from datetime import datetime
 
 import psycopg
 from psycopg.rows import dict_row
@@ -80,6 +81,35 @@ def expire_queued_jobs(conn: psycopg.Connection) -> int:
          "event_timeout": config.EVENT_QUEUE_TIMEOUT_SECONDS},
     ).fetchall()
     return len(row or [])
+
+
+def reap_abandoned_at_boot(conn: psycopg.Connection, boot: datetime) -> int:
+    """Requeue every grade still marked running from before this supervisor started.
+
+    A deploy restarts the service, and systemd takes the whole cgroup: the grade children die hard,
+    unable to write a goodbye, so their rows sit at status 'running' with frozen progress. The
+    regular reaper would eventually requeue each one as its claim aged past the stale window, but
+    that leaves every grade from the old life frozen for up to STALE_JOB_SECONDS after every deploy.
+    At boot the answer is unambiguous: nothing running was claimed by THIS supervisor, and the
+    supervisor that claimed them no longer exists, so they are requeued at once (attempts still
+    count, and a paused run still holds them).
+
+    SINGLE-WORKER assumption, stated loudly: with two boxes, B's boot would requeue A's live
+    children. The deployment is one worker; revisit this guard before that ever changes.
+    """
+    row = conn.execute(
+        """
+        WITH requeued AS (
+            UPDATE grades
+               SET status = 'queued', claimed_at = NULL, submitted_at = now()
+             WHERE status = 'running' AND claimed_at < %s
+             RETURNING 1
+        )
+        SELECT count(*) AS n FROM requeued;
+        """,
+        (boot,),
+    ).fetchone()
+    return int(row["n"])
 
 
 def reap_stale_jobs(conn: psycopg.Connection) -> int:

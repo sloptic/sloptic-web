@@ -28,6 +28,7 @@ import threading
 import traceback
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from . import config, db, grader, resolve_event, verify_event
 from .egress import install as install_egress
@@ -458,6 +459,15 @@ def main() -> None:
     running: list[_Running] = []
     last_reap = 0.0
     last_halt = ""
+
+    # Boot reaping: any grade still 'running' was claimed by the supervisor this process replaced,
+    # and its children died with it. Requeue immediately rather than making each one wait out the
+    # stale window after every deploy.
+    booted = datetime.now(timezone.utc)
+    n = db.reap_abandoned_at_boot(conn, booted)
+    if n:
+        print(f"[boot]   requeued {n} grade(s) abandoned by the previous supervisor", flush=True)
+
     while True:
         try:
             # Reclaim jobs a killed worker abandoned, and fail ones nobody ever started. This is
