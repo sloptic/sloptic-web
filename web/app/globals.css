@@ -3189,13 +3189,12 @@ h1.report-url {
    Findings and evidence stay below, unchanged; nothing up here explains a fault. */
 .score-band {
   display: flex;
-  gap: 1rem 1.3rem;
-  align-items: flex-end;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: stretch;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 0.85rem 1rem 0.9rem;
+  padding: 0.6rem 1rem 0.9rem;
   max-width: var(--measure);
 }
 /* The top row: the score sits beside the view switch, vertically centred against it, and the bars
@@ -3205,10 +3204,14 @@ h1.report-url {
   align-items: center;
   gap: 1.3rem;
   width: 100%;
+  /* the auto margins split whatever space is left, so the row rides the middle between the box's
+     top edge and the first divider of the axes below */
+  margin: auto 0;
+  padding: 0.25rem 0;
 }
 .band-top .grow { flex: 1; }
 .band-top .mode-toggle { flex: none; }
-.score-axes { width: 100%; margin-top: 0.7rem; }
+.score-axes { width: 100%; }
 .band-bottom {
   display: flex;
   justify-content: space-between;
