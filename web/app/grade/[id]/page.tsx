@@ -756,15 +756,21 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
           above ARE the decomposition, and those do sum exactly. */}
       <p className="section-intro">
         {scored
-          ? "Each number is what that finding added to the score, so the column adds up to it. Open one for what the fault is worth on its own, and why the two differ."
-          : "Each number is what that fault is worth on its own. They do not add up to the score: repeats of one fault count less each time, so the axis totals above are the real split. Open one for details."}
+          ? "Each category's number is that family's share of the score, and its rows add up to it. Open a category for its findings, and a row for what the fault is worth on its own."
+          : "Each number is what that fault is worth on its own. They do not add up to the score: repeats of one fault count less each time, so the axis totals above are the real split. Open a category for details."}
       </p>
       <div className="sample-findings">
         {cats.map((cat) => (
-          <div className="cat-group" data-axis={cat.area} key={cat.slug}>
-            <p className="cat-head">
-              {cat.name} <span className="cat-count">{cat.items.length}</span>
-            </p>
+          <details className="cat-group" data-axis={cat.area} key={cat.slug}>
+            <summary className="cat-head">
+              <span className="cat-arrow" aria-hidden>
+                ▸
+              </span>
+              <span className="cat-title">
+                {cat.name} <span className="cat-count">{cat.items.length}</span>
+              </span>
+              {scored && <span className="cat-score">{cat.total.toFixed(1)}</span>}
+            </summary>
             {cat.items.map(({ f, targets, contribution }) => {
                 const entry = card[f.probe_id];
                 const ev = evidencePairs(f.evidence as Record<string, unknown> | undefined);
@@ -872,7 +878,7 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
                   </details>
                 );
                   })}
-          </div>
+          </details>
         ))}
       </div>
     </>
@@ -909,13 +915,18 @@ function Passed({ items }: { items: PassedItem[] }) {
   return (
     <>
       <h2>Passes ({items.length})</h2>
-      <p className="section-intro">Open one for what it measured.</p>
+      <p className="section-intro">Open a category for what its checks measured.</p>
       <div className="sample-findings">
         {cats.map((cat) => (
-          <div className="cat-group" data-axis={cat.area} key={cat.slug}>
-            <p className="cat-head">
-              {cat.name} <span className="cat-count">{cat.items.length}</span>
-            </p>
+          <details className="cat-group" data-axis={cat.area} key={cat.slug}>
+            <summary className="cat-head">
+              <span className="cat-arrow" aria-hidden>
+                ▸
+              </span>
+              <span className="cat-title">
+                {cat.name} <span className="cat-count">{cat.items.length}</span>
+              </span>
+            </summary>
             {cat.items.map((p) => {
                 const ev = evidencePairs(p.evidence);
                 const targets = [...new Set(p.targets)];
@@ -950,7 +961,7 @@ function Passed({ items }: { items: PassedItem[] }) {
                   </details>
                 );
                   })}
-          </div>
+          </details>
         ))}
       </div>
     </>

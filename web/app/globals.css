@@ -3051,3 +3051,33 @@ a.mast-user:hover {
 .count-table .col-name {
   text-align: left;
 }
+
+/* Category groups are collapsible, so the header row is a summary: arrow, name and count on the
+   left, and for scored grades the family's share of the score right-aligned. The rows beneath a
+   header add up to its number (contributions are additive within a family), so the column of
+   numbers is the score split by fault family. */
+.cat-group > summary.cat-head {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+.cat-group > summary.cat-head::-webkit-details-marker {
+  display: none;
+}
+.cat-arrow {
+  display: inline-block;
+  font-size: 0.7rem;
+  color: var(--muted);
+  transition: transform 120ms ease;
+}
+.cat-group[open] > summary .cat-arrow {
+  transform: rotate(90deg);
+}
+.cat-score {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
