@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { track } from "@vercel/analytics";
 import type { GradeView, GradeResult, Finding, Coverage, GradeProgress, CardEntry, Outcome } from "@/lib/types";
 import { AREA_LABELS, AREAS, PASSIVE_BY_AREA, TOTALS, categoryName, describeCategory, describeProbe, type Area } from "@/lib/checks";
 import { daysUntil } from "@/lib/retention";
@@ -115,6 +116,8 @@ export default function GradePage({ params }: { params: { id: string } }) {
     // grade finished. Retry server errors with backoff, give up only on a real "not found" or after
     // the retries run out.
     let fails = 0;
+    // Track the terminal state once per view: the funnel event is the OUTCOME, not the polls.
+    let terminal = false;
 
     async function poll() {
       try {
@@ -137,6 +140,11 @@ export default function GradePage({ params }: { params: { id: string } }) {
 
         fails = 0;
         setView(data);
+        // One funnel event per view, on the outcome: the polls before it are just waiting.
+        if (!terminal && (data.status === "done" || data.status === "failed")) {
+          terminal = true;
+          track(data.status === "done" ? "grade_finished" : "grade_failed");
+        }
         if (data.status === "queued" || data.status === "running") {
           timer = setTimeout(poll, POLL_MS);
         } else if (data.retry_due_at) {

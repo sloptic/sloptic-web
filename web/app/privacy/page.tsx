@@ -27,9 +27,11 @@ export default function PrivacyPage() {
       <section className="section">
         <h2 className="section-head">What we do not collect</h2>
         <p className="section-intro">
-          Worth saying first, because it is unusual. Sloptic runs no analytics, no advertising, and no
-          third party scripts. There is no tracking pixel and no session recorder. Fonts are served
-          from our own domain, so visiting the site makes no request to anyone else. We do not sell or share personal data.
+          Worth saying first, because it is unusual. Sloptic runs no advertising, no tracking pixels,
+          no session recorder, and no third-party request of any kind. The one measurement we take is
+          analytics on our own domain: page paths, referrers, country, and device class, counted
+          cookielessly by our host with no fingerprinting, no cross-site tracking, and no IP storage.
+          The URL you submit never appears in analytics. We do not sell or share personal data.
         </p>
       </section>
 
@@ -61,6 +63,11 @@ export default function PrivacyPage() {
                 <td>2 days</td>
               </tr>
               <tr>
+                <th scope="row">page views and a few product events (a grade submitted, a grade finished)</th>
+                <td>knowing what is used, and what kinds of people use Sloptic</td>
+                <td>held by Vercel, aggregated, cookieless: no cookies, no IP storage, no cross-site tracking</td>
+              </tr>
+              <tr>
                 <th scope="row">your email address</th>
                 <td>only if you make an account, to sign you in</td>
                 <td>until you delete the account</td>
@@ -87,9 +94,9 @@ export default function PrivacyPage() {
       <section className="section">
         <h2 className="section-head">Cookies</h2>
         <p className="section-intro">
-          One kind: the session cookie that keeps you signed in. There are no advertising or analytics
-          cookies. Signing out clears it. Your browser also keeps a local list of grades you ran, which
-          stays in your browser, is never sent to us, and is cleared with your site data.
+          One kind: the session cookie that keeps you signed in. There are no advertising cookies, and
+          the analytics is cookieless. Signing out clears it. Your browser also keeps a local list of
+          grades you ran, which stays in your browser, is never sent to us, and is cleared with your site data.
         </p>
       </section>
 
@@ -102,7 +109,10 @@ export default function PrivacyPage() {
           </li>
           <li>
             <span className="k">Vercel</span>
-            <span className="v">hosting for the website, which sees ordinary web request logs.</span>
+            <span className="v">
+              hosting for the website, and the cookieless page analytics: paths, referrers, country,
+              device class, and a few product events. No cookies, no IP storage, no cross-site tracking.
+            </span>
           </li>
           <li>
             <span className="k">our own hardware</span>

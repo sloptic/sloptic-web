@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import ThemeToggle from "./ThemeToggle";
 import NavMenu from "./NavMenu";
 import MobileNav from "./MobileNav";
@@ -48,6 +49,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+        {/* Cookieless, same-origin page analytics: paths, referrers, country, device class. The one
+            measurement the privacy policy names, and the only script the site carries. */}
+        <Analytics />
         <header className="masthead">
           <a className="wordmark" href="/">
             sloptic
