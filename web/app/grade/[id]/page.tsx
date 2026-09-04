@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { track } from "@vercel/analytics";
 import type { GradeView, GradeResult, Finding, Coverage, GradeProgress, CardEntry, Outcome } from "@/lib/types";
 import { AREA_LABELS, AREAS, PASSIVE_BY_AREA, TOTALS, categoryName, describeCategory, describeProbe, type Area } from "@/lib/checks";
@@ -86,6 +86,45 @@ function runningLabel(p: GradeProgress | null | undefined, name: string | null):
   return p.label || "reading the app";
 }
 
+/** Resume a paused run, for the organizer who paused it. Rendered wherever the pause changes what
+ *  the page would otherwise say (a held retry, a queued grade that is not moving). */
+function ResumeRun({ event, onResumed }: { event: NonNullable<GradeView["event"]>; onResumed: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  if (!event.canResume) return null;
+  return (
+    <span className="resume-run">
+      {" "}
+      <button
+        className="link-button"
+        type="button"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setErr(null);
+          try {
+            const res = await fetch("/api/events/run/pause", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ id: event.runId, paused: false }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Could not resume.");
+            onResumed();
+          } catch (e) {
+            setErr(e instanceof Error ? e.message : "Could not resume.");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? "resuming" : "Resume grading"}
+      </button>
+      {err && <span className="report-keep-err"> {err}</span>}
+    </span>
+  );
+}
+
 /** The event run that queued this grade, when one did. A grade reached from an event's field has no
  *  other way back, and the event page resolves for the organizer, who is the viewer this button is
  *  for. Rendered above the header on every state, since a running grade is followed from the field
@@ -103,6 +142,9 @@ export default function GradePage({ params }: { params: { id: string } }) {
   const [error, setError] = useState<string | null>(null);
   // Ticks once a second so the elapsed clock moves between polls, which are 3s apart.
   const [now, setNow] = useState(() => Date.now());
+  // The live poll, exposed so a resume action can ask for fresh truth immediately instead of
+  // waiting out the (slow) retry poll interval.
+  const pollRef = useRef<() => void>(() => {});
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
@@ -158,6 +200,7 @@ export default function GradePage({ params }: { params: { id: string } }) {
         if (active) timer = setTimeout(poll, POLL_MS * Math.min(++fails, 4));
       }
     }
+    pollRef.current = poll;
     poll();
     return () => {
       active = false;
@@ -199,6 +242,11 @@ export default function GradePage({ params }: { params: { id: string } }) {
         )}
         {stalled ? (
           <p className="note">No grader is running.</p>
+        ) : view.event?.paused ? (
+          <p className="note">
+            This grade&apos;s run is paused by the organizer; it holds its place.
+            <ResumeRun event={view.event} onResumed={() => pollRef.current()} />
+          </p>
         ) : (
           <p className="note">This takes a few minutes. This page updates itself.</p>
         )}
@@ -216,7 +264,7 @@ export default function GradePage({ params }: { params: { id: string } }) {
     );
   }
 
-  return <Report view={view} now={now} />;
+  return <Report view={view} now={now} onResume={() => pollRef.current()} />;
 }
 
 type AreaRow = {
@@ -228,7 +276,7 @@ type AreaRow = {
   slop: number;
 };
 
-function Report({ view, now }: { view: GradeView; now: number }) {
+function Report({ view, now, onResume }: { view: GradeView; now: number; onResume: () => void }) {
   const r = view.result!;
 
   // Did the probe loop actually run? The grader writes coverage.probes_total only once it reaches
@@ -239,7 +287,8 @@ function Report({ view, now }: { view: GradeView; now: number }) {
   const ranAnything = (r.coverage?.probes_total ?? 0) > 0 || (r.outcomes?.length ?? 0) > 0;
   const withheld =
     !ranAnything && (blockedProbes.length > 0 || r.bot_challenge === true || r.challenge_stage === "entry");
-  if (withheld) return <Withheld view={view} blocked={blockedProbes} now={now} />;
+  if (withheld)
+    return <Withheld view={view} blocked={blockedProbes} now={now} onResume={onResume} />;
   // r.challenge_onset_index: how far the grade got before the challenge, for the withheld note.
 
   // Everything the bars need, derived from the record: what fired, what applied, and what this mode
@@ -397,6 +446,8 @@ function Report({ view, now }: { view: GradeView; now: number }) {
         retryPasses={view.retry_passes}
         initial={r.retry_blocked_initial}
         now={now}
+        event={view.event}
+        onResume={onResume}
       />
 
       {r.ranking?.reference ? (
@@ -426,7 +477,7 @@ function Report({ view, now }: { view: GradeView; now: number }) {
 /** A grade a bot challenge stopped before anything ran. The app answered, so it is not a DNF, but
  *  its protection blocked every check, so there is no measurement. The one thing this must not do is
  *  show the 0 as a score: a withheld grade read as a clean one is the whole failure. */
-function Withheld({ view, blocked, now }: { view: GradeView; blocked: string[]; now: number }) {
+function Withheld({ view, blocked, now, onResume }: { view: GradeView; blocked: string[]; now: number; onResume: () => void }) {
   const retry = retryStatus(view.retry_due_at, view.retry_passes, blocked.length, now);
   // How far the grade got before the challenge tripped. The grader withholds anything whose onset
   // landed before 60% of the battery, so "nothing ran" would be a lie for a grade cut down at, say,
@@ -448,8 +499,14 @@ function Withheld({ view, blocked, now }: { view: GradeView; blocked: string[]; 
             : "A bot challenge stopped the grade before any check ran."}
         </p>
         <p className="fineprint">
-          {retry ??
-            "Grading again later may get through."}
+          {view.event?.paused ? (
+          <>
+            Paused. The retry runs when grading resumes.
+            <ResumeRun event={view.event} onResumed={onResume} />
+          </>
+        ) : (
+          (retry ?? "Grading again later may get through.")
+        )}
         </p>
       </div>
       <ReportKeep view={view} />
@@ -467,6 +524,8 @@ function ChallengeNote({
   retryPasses,
   initial,
   now,
+  event,
+  onResume,
 }: {
   blocked: string[];
   retryDueAt?: string | null;
@@ -474,6 +533,8 @@ function ChallengeNote({
   /** How many were blocked when recovery began, so a partial recovery reads as "recovered P of M". */
   initial?: number | null;
   now: number;
+  event?: GradeView["event"];
+  onResume: () => void;
 }) {
   if (!blocked || blocked.length === 0) {
     // Fully recovered: the pass cleared every blocked check, so the report reads clean and this is
@@ -505,7 +566,14 @@ function ChallengeNote({
             : `None of the ${initial} blocked checks recovered yet.`}
         </p>
         {cats && <p className="fineprint">Still blocked: {cats}.</p>}
-        {retry && <p className="fineprint">{retry}</p>}
+        {event?.paused ? (
+          <p className="fineprint">
+            Paused. The retry runs when grading resumes.
+            {event && <ResumeRun event={event} onResumed={onResume} />}
+          </p>
+        ) : (
+          retry && <p className="fineprint">{retry}</p>
+        )}
       </div>
     );
   }
@@ -515,7 +583,14 @@ function ChallengeNote({
         A challenge interrupted {remaining} {remaining === 1 ? "check" : "checks"}.
       </p>
       {cats ? <p>Blocked: {cats}.</p> : <p>The app&apos;s protection blocked part of the run.</p>}
-      {retry && <p className="fineprint">{retry}</p>}
+      {event?.paused ? (
+        <p className="fineprint">
+          Paused. The retry runs when grading resumes.
+          {event && <ResumeRun event={event} onResumed={onResume} />}
+        </p>
+      ) : (
+        retry && <p className="fineprint">{retry}</p>
+      )}
     </div>
   );
 }

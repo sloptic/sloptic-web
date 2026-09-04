@@ -180,5 +180,5 @@ export interface GradeView {
   /** How many recovery passes have already run. */
   retry_passes?: number;
   /** The event run that queued this grade, when an event did. Null for a grade submitted here. */
-  event?: { slug: string } | null;
+  event?: { slug: string; runId: string; paused: boolean; canResume: boolean } | null;
 }

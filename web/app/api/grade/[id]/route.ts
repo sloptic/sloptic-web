@@ -65,15 +65,27 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     result = (r as GradeResult) ?? null;
   }
 
-  // The event run that queued this grade, so the report can link back to the event it serves.
-  // Only the slug travels: the event page itself gates on the organizer's account, and the grade
-  // link is shareable in a way the event is not, so provenance is named for everyone and the way
-  // back works for whoever can follow it.
-  let event: { slug: string } | null = null;
+  // The event run that queued this grade, so the report can link back to the event it serves and
+  // reflect the run's pause. Only the slug travels as provenance; paused travels so a held retry
+  // can say so, and canResume so the resume button shows for the organizer alone. The grade link
+  // is shareable in a way the event is not, so everyone sees the state and only the owner acts.
+  let event: { slug: string; runId: string; paused: boolean; canResume: boolean } | null = null;
   const runId = (grade as { event_run_id?: string | null }).event_run_id;
   if (runId) {
-    const { data: run } = await db.from("event_runs").select("slug").eq("id", runId).maybeSingle();
-    if (run) event = { slug: run.slug };
+    const viewer = await currentUser();
+    const { data: run } = await db
+      .from("event_runs")
+      .select("id, slug, paused, account_id")
+      .eq("id", runId)
+      .maybeSingle();
+    if (run) {
+      event = {
+        slug: run.slug,
+        runId: run.id,
+        paused: run.paused === true,
+        canResume: viewer !== null && viewer.id === run.account_id,
+      };
+    }
   }
 
   // While queued, work out WHY the user is waiting. A queue that is merely busy and a system with
