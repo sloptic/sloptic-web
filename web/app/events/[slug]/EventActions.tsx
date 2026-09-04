@@ -41,7 +41,7 @@ function runLine(r: Run): string {
     case "ready":
       return r.event_entries.length === 0
         ? "ready, nothing in the gallery yet"
-        : `ready, ${r.event_entries.length} entries, ${gradeable} gradeable`;
+        : `ready, ${r.event_entries.length} entries`;
     case "grading": {
       const inFlight = inFlightCount(r);
       // A run confirmed while another is still going sits at zero for hours. Saying it is queued is
@@ -251,7 +251,10 @@ export default function EventActions({
                   {etaOf(live) && <span className="st">{etaOf(live)}</span>}
                 </div>
 
-                {live.status === "ready" && live.event_entries.length > 0 && (
+                {live.status === "ready" && live.event_entries.length > 0 && (() => {
+                  const toGrade = gradeableOf(live).length - gradedCount(live);
+                  const graded = gradedCount(live);
+                  return (
                   <div className="run-controls">
                     <span className="mode-toggle" aria-label="battery for this run">
                       <span
@@ -280,19 +283,32 @@ export default function EventActions({
                         active
                       </span>
                     </span>
-                    <button className="button" type="button" disabled={busy}
-                            onClick={() => void act(async () => {
-                              const d = await post("/api/events/run/confirm", { id: live.id });
-                              return `Queued ${d.queued}.`;
-                            })}>
-                      Grade {gradeableOf(live).length} entries
-                    </button>
+                    {toGrade > 0 && (
+                      <button className="button" type="button" disabled={busy}
+                              onClick={() => void act(async () => {
+                                const d = await post("/api/events/run/confirm", { id: live.id });
+                                return `Queued ${d.queued}.`;
+                              })}>
+                        Grade {toGrade} entries
+                      </button>
+                    )}
+                    {graded > 0 && (
+                      <button className={"button" + (toGrade > 0 ? " secondary" : "")} type="button" disabled={busy}
+                              title={`Queue fresh grades for all ${graded} graded entries under this run's battery. The board follows the new reports.`}
+                              onClick={() => void act(async () => {
+                                const d = await post("/api/events/run/confirm", { id: live.id, regrade: true });
+                                return `Queued ${d.queued} regrades.`;
+                              })}>
+                        Regrade {graded} graded
+                      </button>
+                    )}
                     <button className="button secondary" type="button" disabled={busy}
                             onClick={() => refresh(live)}>
                       Refresh gallery
                     </button>
                   </div>
-                )}
+                  );
+                })()}
 
                 {live.status === "grading" && (
                   <div className="run-controls">
@@ -324,7 +340,16 @@ export default function EventActions({
                 {live.event_entries.length > 0 && (
                   <div className="chips">
                     <span className="tag">{live.event_entries.length} entries</span>
-                    <span className="tag">{gradeableOf(live).length} gradeable</span>
+                    {(() => {
+                      const toGrade = gradeableOf(live).length - gradedCount(live);
+                      const graded = gradedCount(live);
+                      return (
+                        <>
+                          {toGrade > 0 && <span className="tag">{toGrade} to grade</span>}
+                          {graded > 0 && <span className="tag">{graded} graded</span>}
+                        </>
+                      );
+                    })()}
                     {skipChips(live).map((c) => (
                       <span className="tag" key={c.label}>{c.label}</span>
                     ))}

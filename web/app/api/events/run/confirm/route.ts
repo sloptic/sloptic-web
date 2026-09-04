@@ -10,16 +10,21 @@ export const dynamic = "force-dynamic";
 /** A ceiling on one run, so a mistake cannot enqueue thousands. Well above a real hackathon field. */
 const MAX_ENTRIES = 600;
 
-// POST /api/events/run/confirm  { id }  ->  queue the gradeable entries.
+// POST /api/events/run/confirm  { id, regrade? }  ->  queue the gradeable entries.
 //
 // This is the authorization step. Everything before it only looked at a gallery; this points traffic
 // at other people's apps, which is why it acts on a field the organizer has seen rather than on
 // whatever the resolver finds at the time.
+//
+// `regrade` re-queues entries that already have a grade: the typical case is a run switched from
+// passive to active after some reports landed, and the organizer wants one battery across the
+// board. The entry's link is repointed at the new grade when it is queued, so the board follows the
+// freshest measurement; the old reports stay at their own links.
 export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
 
-  let body: { id?: string };
+  let body: { id?: string; regrade?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -42,16 +47,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { data: entries } = await db
+  const regrade = body.regrade === true;
+  let entriesQuery = db
     .from("event_entries")
     .select("id, app_url")
     .eq("run_id", run.id)
-    .is("skip_reason", null)
-    .is("grade_id", null)
-    .limit(MAX_ENTRIES);
+    .is("skip_reason", null);
+  if (!regrade) entriesQuery = entriesQuery.is("grade_id", null);
+  const { data: entries } = await entriesQuery.limit(MAX_ENTRIES);
 
   if (!entries || entries.length === 0) {
-    return NextResponse.json({ error: "Nothing in this field can be graded." }, { status: 409 });
+    return NextResponse.json(
+      { error: regrade ? "Nothing to regrade." : "Nothing left to grade." },
+      { status: 409 }
+    );
   }
 
   // One insert for the whole field, with ids generated here so the entries can be linked without
