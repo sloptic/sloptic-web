@@ -201,6 +201,36 @@ export default function EventActions({
           </button>
         )}
 
+        {/* The battery, after the field is known. Nothing graded yet flips the run in place; the
+            active side needs what starting active would have needed. */}
+        {live?.status === "ready" && live.event_entries.every((e) => !e.grade_id) && (
+          <button
+            className="button secondary"
+            type="button"
+            disabled={busy || (live.mode === "passive" && !canActive)}
+            title={live.mode === "passive" && !canActive ? "Active grading needs the disclosure verified before the deadline." : undefined}
+            onClick={() => void act(async () => {
+              const target = live.mode === "passive" ? "active" : "passive";
+              await post("/api/events/run/mode", { id: live.id, mode: target });
+              return `Switched to ${target}.`;
+            })}
+          >
+            Switch to {live.mode === "passive" ? "active" : "passive"}
+          </button>
+        )}
+
+        {/* Late submissions: re-read the gallery on the cached submissions, fetching only new or
+            changed ones. Graded entries keep their reports either way. */}
+        {live && ["ready", "grading"].includes(live.status) && (
+          <button className="button secondary" type="button" disabled={busy}
+                  onClick={() => void act(async () => {
+                    await post("/api/events/run/refresh", { id: live.id });
+                    return "Reading the gallery again. New entries land in the field as they resolve.";
+                  })}>
+            Refresh gallery
+          </button>
+        )}
+
       </div>
       {note && <p className="section-intro">{note}</p>}
 

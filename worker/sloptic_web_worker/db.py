@@ -459,17 +459,29 @@ def save_field(conn: psycopg.Connection, run_id: str, entries: list, complete: b
                detail: str) -> None:
     """Store the resolved field and mark the run ready for the organizer to look at.
 
+    MERGE, not replace, so a re-resolve (the refresh button) cannot orphan graded work: an entry
+    that already has a grade keeps its row untouched, an ungraded one takes the fresh app_url and
+    skip decision, and an entry the gallery no longer lists is dropped only if nothing was ever
+    graded on it. A fresh run's table is empty, so the first resolve behaves exactly like an insert.
+
     `gallery_complete` travels with it rather than being inferred from a count: a short list and a
     short list we know about are different facts, and only one of them is safe to rank.
     """
     with conn.transaction():
-        conn.execute("DELETE FROM event_entries WHERE run_id = %s;", (run_id,))
         for e in entries:
             conn.execute(
                 """INSERT INTO event_entries (run_id, project_url, app_url, skip_reason)
                    VALUES (%s, %s, %s, %s)
-                   ON CONFLICT (run_id, project_url) DO NOTHING;""",
+                   ON CONFLICT (run_id, project_url) DO UPDATE
+                        SET app_url = EXCLUDED.app_url, skip_reason = EXCLUDED.skip_reason
+                      WHERE event_entries.grade_id IS NULL;""",
                 (run_id, e.project_url, e.app_url, e.skip_reason),
+            )
+        if entries:
+            conn.execute(
+                """DELETE FROM event_entries WHERE run_id = %s AND grade_id IS NULL
+                     AND project_url <> ALL(%s);""",
+                (run_id, [e.project_url for e in entries]),
             )
         conn.execute(
             """UPDATE event_runs
