@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       db.from("event_entries").update({ skip_reason: "unusable link" }).eq("id", id)
     ),
     db.from("event_runs")
-      .update({ status: "grading", started_at: new Date().toISOString() })
+      .update({ status: "grading", started_at: new Date().toISOString(), paused: false })
       .eq("id", run.id),
   ]);
   const queued = rows.length;

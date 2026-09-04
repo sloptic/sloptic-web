@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   // measurements, not guesses.
   const { error } = await db
     .from("event_runs")
-    .update({ status: "resolving", started_at: null, finished_at: null, refresh_requested: true })
+    .update({ status: "resolving", started_at: null, finished_at: null, refresh_requested: true, paused: false })
     .eq("id", run.id);
   if (error) return NextResponse.json({ error: "Could not start the refresh." }, { status: 500 });
   return NextResponse.json({ refreshing: true });

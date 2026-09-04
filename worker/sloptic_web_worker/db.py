@@ -143,6 +143,10 @@ def claim_job(conn: psycopg.Connection, lanes: set[str] | None = None) -> Job | 
                   -- stop a person's single grade, and the reverse.
                   AND ((%(public)s AND event_run_id IS NULL)
                        OR (%(event)s AND event_run_id IS NOT NULL))
+                  -- A paused run holds its place: nothing of it is claimed, nothing of it is lost.
+                  AND NOT EXISTS (
+                        SELECT 1 FROM event_runs r
+                         WHERE r.id = grades.event_run_id AND r.paused)
                 -- A person waiting on ONE grade goes before an event grinding through hundreds.
                 -- Without this a 400 app field takes the whole worker for most of a day and every
                 -- anonymous submission behind it ages out at the queue timeout, so the site would
@@ -455,6 +459,46 @@ def note_resolve_progress(conn: psycopg.Connection, run_id: str, found: int) -> 
 
 def set_run_priority(conn: psycopg.Connection, run_id: str, priority: int) -> None:
     conn.execute("UPDATE event_runs SET priority = %s WHERE id = %s;", (priority, run_id))
+
+
+def cancel_run(conn: psycopg.Connection, run_id: str) -> int:
+    """Stop a run: its queued grades become 'cancelled', the entries they belonged to are unlinked
+    (so those apps are gradeable again), and the run is marked cancelled. Grades already RUNNING
+    are left alone on purpose: a grade is minutes from landing, killing the child mid-flight buys
+    nothing, and the run no longer references them once marked. Returns how many were dequeued."""
+    with conn.transaction():
+        row = conn.execute(
+            """
+            WITH dequeued AS (
+                UPDATE grades
+                   SET status = 'cancelled', finished_at = now(),
+                       error = 'cancelled by the organizer'
+                 WHERE event_run_id = %s AND status = 'queued'
+                 RETURNING id
+            )
+            SELECT count(*) AS n FROM dequeued;
+            """,
+            (run_id,),
+        ).fetchone()
+        n = int(row["n"])
+        conn.execute(
+            """
+            UPDATE event_entries e
+               SET grade_id = NULL
+             WHERE e.run_id = %s
+               AND e.grade_id IS NOT NULL
+               AND NOT EXISTS (
+                     SELECT 1 FROM grades g WHERE g.id = e.grade_id AND g.status = 'running');
+            """,
+            (run_id,),
+        )
+        conn.execute(
+            """UPDATE event_runs
+                   SET status = 'cancelled', paused = false, finished_at = now()
+                 WHERE id = %s;""",
+            (run_id,),
+        )
+    return n
 
 
 def field_prior(conn: psycopg.Connection, run_id: str) -> dict:

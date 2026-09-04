@@ -17,10 +17,13 @@ const POLL_MS = 4000;
 const CHECK_POLL_MS = 1500;
 const gradeOf = (e: Entry) => (Array.isArray(e.grades) ? e.grades[0] : e.grades) ?? null;
 const gradeableOf = (r: Run) => r.event_entries.filter((e) => !e.skip_reason);
-const gradedCount = (r: Run) => r.event_entries.filter((e) => e.grade_id).length;
+const ungradedCount = (r: Run) =>
+  r.event_entries.filter((e) => !e.skip_reason && !e.grade_id).length;
+const doneCount = (r: Run) => r.event_entries.filter((e) => gradeOf(e)?.status === "done").length;
 const runningCount = (r: Run) => r.event_entries.filter((e) => gradeOf(e)?.status === "running").length;
-const inFlightCount = (r: Run) =>
-  r.event_entries.filter((e) => ["queued", "running"].includes(gradeOf(e)?.status ?? "")).length;
+const queuedCount = (r: Run) => r.event_entries.filter((e) => gradeOf(e)?.status === "queued").length;
+const inFlightCount = (r: Run) => queuedCount(r) + runningCount(r);
+const finishedCount = (r: Run) => r.event_entries.filter((e) => ["done", "failed"].includes(gradeOf(e)?.status ?? "")).length;
 
 function checkLine(c: Claim): string {
   if (!c.checked_at) return "Waiting for the first check.";
@@ -34,7 +37,7 @@ function checkLine(c: Claim): string {
  *  that state actually offers. */
 function runLine(r: Run): string {
   const gradeable = gradeableOf(r).length;
-  const finished = gradedCount(r);
+  const finished = doneCount(r);
   switch (r.status) {
     case "resolving":
       return `reading the gallery${r.entries_found ? `, ${r.entries_found} found so far` : ""}`;
@@ -42,15 +45,15 @@ function runLine(r: Run): string {
       return r.event_entries.length === 0
         ? "ready, nothing in the gallery yet"
         : `ready, ${r.event_entries.length} entries`;
-    case "grading": {
-      const inFlight = inFlightCount(r);
+    case "grading":
+      if (r.paused)
+        return `paused, ${queuedCount(r)} waiting, ${runningCount(r)} running`;
       // A run confirmed while another is still going sits at zero for hours. Saying it is queued is
       // the difference between waiting and looking broken.
-      if (inFlight === 0) return `grading, ${finished} of ${gradeable} graded`;
+      if (inFlightCount(r) === 0) return `grading, ${finished} of ${gradeable} graded`;
       if (finished === 0 && runningCount(r) === 0)
-        return `queued with ${inFlight} entries waiting, another run is grading first`;
+        return `queued with ${inFlightCount(r)} entries waiting, another run is grading first`;
       return `grading, ${finished} of ${gradeable} done, ${runningCount(r)} running`;
-    }
     case "done":
       return `done, ${finished} graded`;
     case "failed":
@@ -156,8 +159,8 @@ export default function EventActions({
       .filter((g) => g?.status === "done" && g.claimed_at && g.finished_at)
       .map((g) => (Date.parse(g!.finished_at!) - Date.parse(g!.claimed_at!)) / 1000)
       .filter((d) => d > 0 && d < 3600);
-    const remaining = r.status === "ready" ? gradeableOf(r).length - gradedCount(r) : inFlightCount(r);
-    if (remaining <= 0) return null;
+    const remaining = r.status === "ready" ? ungradedCount(r) : inFlightCount(r);
+    if (remaining <= 0 || r.paused) return null;
     return (
       liveEtaLabel(remaining, r.mode, durations) +
       (r.priority === 0 ? ", priority grading active" : "")
@@ -252,8 +255,8 @@ export default function EventActions({
                 </div>
 
                 {live.status === "ready" && live.event_entries.length > 0 && (() => {
-                  const toGrade = gradeableOf(live).length - gradedCount(live);
-                  const graded = gradedCount(live);
+                  const toGrade = ungradedCount(live);
+                  const graded = doneCount(live);
                   return (
                   <div className="run-controls">
                     <span className="mode-toggle" aria-label="battery for this run">
@@ -311,12 +314,44 @@ export default function EventActions({
                 })()}
 
                 {live.status === "grading" && (
-                  <div className="run-controls">
-                    <button className="button secondary" type="button" disabled={busy}
-                            onClick={() => refresh(live)}>
-                      Refresh gallery
-                    </button>
-                  </div>
+                  <>
+                    <span className="progress-track" aria-hidden>
+                      <span
+                        className="progress-fill"
+                        style={{
+                          width: `${Math.round(
+                            (doneCount(live) /
+                              Math.max(1, doneCount(live) + inFlightCount(live))) * 100
+                          )}%`,
+                        }}
+                      />
+                    </span>
+                    <div className="run-controls">
+                      <button className="button secondary" type="button" disabled={busy}
+                              onClick={() => void act(async () => {
+                                await post("/api/events/run/pause", { id: live.id, paused: !live.paused });
+                                return live.paused ? "Grading resumed." : "Grading paused. Queued grades hold their place.";
+                              })}>
+                        {live.paused ? "Resume grading" : "Pause grading"}
+                      </button>
+                      <button className="button secondary" type="button" disabled={busy}
+                              onClick={() => refresh(live)}>
+                        Refresh gallery
+                      </button>
+                      <button className="button secondary" type="button" disabled={busy}
+                              onClick={() => {
+                                if (!window.confirm(
+                                  `Cancel this run? The ${queuedCount(live)} queued grades stop and their apps become gradeable again. Grades already running finish.`
+                                )) return;
+                                void act(async () => {
+                                  await post("/api/events/run/cancel", { id: live.id });
+                                  return "Run cancelled.";
+                                });
+                              }}>
+                        Cancel run
+                      </button>
+                    </div>
+                  </>
                 )}
 
                 {live.refresh_new_submissions !== null && (
@@ -341,8 +376,8 @@ export default function EventActions({
                   <div className="chips">
                     <span className="tag">{live.event_entries.length} entries</span>
                     {(() => {
-                      const toGrade = gradeableOf(live).length - gradedCount(live);
-                      const graded = gradedCount(live);
+                      const toGrade = ungradedCount(live);
+                      const graded = doneCount(live);
                       return (
                         <>
                           {toGrade > 0 && <span className="tag">{toGrade} to grade</span>}
@@ -426,7 +461,7 @@ export default function EventActions({
                     {r.admin ? <span className="tag"> admin</span> : r.override ? <span className="tag"> override</span> : null}
                   </td>
                   <td className="num">{r.entries_found ?? r.event_entries.length}</td>
-                  <td className="num">{gradedCount(r)} / {gradeableOf(r).length}</td>
+                  <td className="num">{doneCount(r)} / {gradeableOf(r).length}</td>
                   <td>{r.gallery_complete === false ? "short" : r.gallery_complete === true ? "complete" : "unknown"}</td>
                   <td>
                     {["grading", "done"].includes(r.status) && (

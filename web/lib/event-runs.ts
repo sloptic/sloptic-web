@@ -45,6 +45,8 @@ export type Run = {
   detail: string | null;
   created_at: string;
   resolved_at: string | null;
+  /** A paused run's queued grades hold their place; the worker claims none of them. */
+  paused: boolean;
   /** What the last refresh changed, when this run has been refreshed. Null until then. */
   refresh_new_submissions: number | null;
   refresh_modified_submissions: number | null;
@@ -57,7 +59,7 @@ const RUN_SELECT =
   "event_entries(project_url, app_url, skip_reason, grade_id, " +
   "grades(status, progress, claimed_at, finished_at, retry_due_at, retry_passes, " +
   "results(blocked_probes, retry_blocked_initial, challenge_stage, ranking->reporting)))" +
-  ", refresh_new_submissions, refresh_modified_submissions";
+  ", refresh_new_submissions, refresh_modified_submissions, paused";
 
 /** PostgREST returns an embedded one-to-one as an object on some versions and an array on others. */
 function one<T>(v: T | T[] | null | undefined): T | null {
@@ -105,6 +107,7 @@ function toRun(row: Record<string, unknown>): Run {
     detail: (row.detail as string | null) ?? null,
     created_at: String(row.created_at),
     resolved_at: (row.resolved_at as string | null) ?? null,
+    paused: row.paused === true,
     refresh_new_submissions: (row.refresh_new_submissions as number | null) ?? null,
     refresh_modified_submissions: (row.refresh_modified_submissions as number | null) ?? null,
     event_entries: entries.map((e) => ({
