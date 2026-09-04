@@ -52,7 +52,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     // report on a database that predates the column. The withheld/interrupted note derives from
     // blocked_probes + coverage + outcomes, which are all present here either way.
     const RESULT_COLS =
-      "mode, catalog_version, passive_probe_count, slop_score, axis_slop, coverage, platform, surface, findings, card, outcomes, percentile, percentile_band, curve_version, ranking, blocked_probes, incomplete_axes";
+      "mode, catalog_version, passive_probe_count, slop_score, axis_slop, axis_potential, coverage, platform, surface, findings, card, outcomes, percentile, percentile_band, curve_version, ranking, blocked_probes, incomplete_axes";
     let { data: r, error: rErr } = await db
       .from("results")
       .select(`${RESULT_COLS}, bot_challenge, challenge_stage, retry_blocked_initial, challenge_onset_index`)

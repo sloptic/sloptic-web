@@ -427,6 +427,7 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
                 supply the direction, and this exact ambiguity already shipped once, with the same row
                 reading 19 in one place and 81st in another. */}
             cleaner than <b>{Math.round(r.ranking.cleaner_than_pct)}%</b>
+            {r.ranking?.reference ? "*" : null}
             <span>of {r.mode === "active" ? "actively" : "passively"} graded apps</span>
           </div>
         )}
@@ -466,9 +467,9 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
                   ) : (
                     <>
                       {fmtScore(row.slop)}
-                      <span className="of dim">
-                        / {row.potential !== null ? fmtScore(row.potential) : "?"} pts
-                      </span>
+                      {row.potential !== null && (
+                        <span className="of dim"> / {fmtScore(row.potential)} pts</span>
+                      )}
                     </>
                   )}
                 </span>
@@ -491,6 +492,9 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
               </span>
             )}
           </p>
+          {r.ranking?.reference ? (
+            <p className="band-footnote">* compared against {r.ranking.reference}.</p>
+          ) : null}
         </div>
         <div className="score-chips">
           <span className="tag">{r.mode ?? "passive"}</span>
@@ -508,10 +512,6 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
         event={view.event}
         onResume={onResume}
       />
-
-      {r.ranking?.reference ? (
-        <p className="rank-reference">Compared against {r.ranking.reference}.</p>
-      ) : null}
 
       <RankDetail r={r} />
 

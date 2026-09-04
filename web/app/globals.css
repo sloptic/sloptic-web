@@ -3248,3 +3248,10 @@ h1.report-url {
   gap: 0.3rem;
   align-items: flex-end;
 }
+
+/* The reference the placement is measured against, named inside the box it qualifies. */
+.band-footnote {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
