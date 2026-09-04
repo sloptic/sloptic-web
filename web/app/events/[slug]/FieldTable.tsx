@@ -155,6 +155,8 @@ export default function FieldTable({
   }
 
   const [page, setPage] = useState(0);
+  // A search over the submission name: the fastest way through a 200-entry field on a phone.
+  const [query, setQuery] = useState("");
   // Two boxes over one field, so they read as a union: tick nothing and you see everything, tick
   // both and you also see everything, since eligible and skipped are the two halves. A pair of
   // checkboxes that can select nothing at all would just be a way to empty the table.
@@ -168,7 +170,9 @@ export default function FieldTable({
     showEligible === showSkipped
       ? entries
       : entries.filter((e) => (showSkipped ? e.skip_reason : !e.skip_reason));
-  const rows = [...filtered].sort((a, b) => {
+  const q = query.trim().toLowerCase();
+  const searched = q ? filtered.filter((e) => projectName(e.project_url).toLowerCase().includes(q)) : filtered;
+  const rows = [...searched].sort((a, b) => {
     const dir = sort.asc ? 1 : -1;
     if (sort.key === "name") return projectName(a.project_url).localeCompare(projectName(b.project_url)) * dir;
     return (statusKey(a) - statusKey(b)) * dir ||
@@ -208,6 +212,16 @@ export default function FieldTable({
     >
       <summary>the field ({entries.length})</summary>
 
+      <input
+        className="field-search"
+        type="search"
+        placeholder="search submissions"
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setPage(0);
+        }}
+      />
       <div className="field-filters">
         <label className="field-filter">
           <input

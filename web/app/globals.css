@@ -3302,3 +3302,20 @@ h1.report-url {
   /* the didn't-finish list drops its two-column spread */
   .dnf-list li { flex-direction: column; gap: 0.15rem; align-items: flex-start; }
 }
+
+/* The field's search box: quiet, monospace, the full width it sits in. */
+.field-search {
+  width: 100%;
+  margin: 0.4rem 0 0.55rem;
+  padding: 0.45rem 0.6rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.87rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+.field-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
