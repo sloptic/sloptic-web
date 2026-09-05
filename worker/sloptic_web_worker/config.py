@@ -139,6 +139,21 @@ SITE_ORIGIN = os.environ.get("SITE_ORIGIN", "https://sloptic.org")
 
 # How long an event grant lasts before it must be re-proven. Matches the owner tier: an event changes
 # hands, an organizer moves on, and a grant nobody re-checks is a standing authorization nobody owns.
+# Resolvers for the ownership TXT check, deliberately NOT the box's own.
+#
+# Proof of control should not be decided by whatever resolver a network happens to hand out. The
+# worker box's router defers to an ISP resolver that answers FORMERR for every name that does not
+# exist, instead of NXDOMAIN, which is the same family of behaviour as the NXDOMAIN hijacking ISPs
+# are known for: a resolver that invents answers for absent names is the wrong thing to ask whether
+# an absent record is absent. Let's Encrypt runs its own resolvers for the same reason.
+#
+# These are queried directly. Nothing else on the box changes, no DHCP or system DNS is touched, and
+# no egress rule is needed: the sandbox drops INTERNAL destinations for the worker and these are
+# public. Set to "system" to fall back to the box's own resolver.
+VERIFY_DNS_RESOLVERS = [
+    s.strip() for s in os.environ.get("VERIFY_DNS_RESOLVERS", "1.1.1.1,8.8.8.8").split(",") if s.strip()
+]
+
 GRANT_DAYS = int(os.environ.get("GRANT_DAYS", "90"))
 
 # How long a claim keeps waiting for its token to appear before it is failed. Generous: an organizer

@@ -234,107 +234,6 @@ class TestTheDnsQueryItself:
 
         assert seen["name"] == "_sloptic.example.com."
 
-    def test_a_stub_that_answers_formerr_is_retried_over_tcp(self, monkeypatch):
-        """FORMERR means the resolver could not parse what we SENT, so each rung changes how we ask.
-
-        The box's systemd-resolved answers FORMERR to a UDP query and kept doing so after the
-        no-EDNS retry, which blocked every DNS proof on the service. TCP sidesteps the UDP framing
-        the first two rungs share, and the sandbox already permits TCP 53 to the local stub, so it
-        stays inside the boundary rather than widening it.
-        """
-        import dns.resolver
-
-        tried = []
-
-        class FakeResolver:
-            def __init__(self):
-                self.edns = True
-
-            def use_edns(self, value):
-                self.edns = value
-
-            def resolve(self, name, rdtype, lifetime=None, tcp=False):
-                tried.append(("tcp" if tcp else ("edns" if self.edns is not False else "no-edns")))
-                if not tcp:
-                    raise dns.resolver.NoNameservers("FORMERR")
-                return ["answered over tcp"]
-
-        monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
-
-        assert verify_domain._query_txt("_sloptic.example.com.") == ["answered over tcp"]
-        assert tried == ["edns", "no-edns", "tcp"]
-
-    def test_a_real_absence_is_not_retried_three_times(self, monkeypatch):
-        # NXDOMAIN is an ANSWER, and the same one however we ask. Escalating past it would turn one
-        # honest "no such record" into three queries and hide it behind a resolver-failure message.
-        import dns.resolver
-
-        calls = []
-
-        class FakeResolver:
-            def use_edns(self, value):
-                pass
-
-            def resolve(self, name, rdtype, lifetime=None, tcp=False):
-                calls.append(1)
-                raise dns.resolver.NXDOMAIN("no such name")
-
-        monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
-        factor = verify_domain.check_dns("example.com", "tok")
-
-        assert factor.status == "not_found"
-        assert len(calls) == 1
-
-    def test_every_rung_failing_is_blocked_and_says_what_was_tried(self, monkeypatch):
-        # Never "not_found": an owner must not be told their record is missing because our resolver
-        # is unhappy. The attempts travel in the detail so a blocked claim can be diagnosed.
-        import dns.resolver
-
-        class FakeResolver:
-            def use_edns(self, value):
-                pass
-
-            def resolve(self, name, rdtype, lifetime=None, tcp=False):
-                raise dns.resolver.NoNameservers("FORMERR")
-
-        monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
-        factor = verify_domain.check_dns("example.com", "tok")
-
-        assert factor.status == "blocked"
-        assert "tcp" in factor.detail
-
-    def test_a_resolver_that_cannot_parse_edns_is_retried_without_it(self, monkeypatch):
-        """The box's systemd-resolved answered FORMERR to dnspython's default EDNS query.
-
-        That surfaced as NoNameservers, which blocked every DNS proof on the service. The sandbox
-        allows DNS to the local stub only (egress.nft), and widening a security boundary for a client
-        quirk would be the wrong trade, so the retry lives in the client.
-        """
-        import dns.resolver
-
-        calls = []
-
-        class FakeResolver:
-            def __init__(self):
-                self.edns = True
-
-            def use_edns(self, value):
-                self.edns = value
-
-            def resolve(self, name, rdtype, lifetime=None, tcp=False):
-                calls.append(self.edns)
-                if self.edns is not False:
-                    raise dns.resolver.NoNameservers("FORMERR")
-                return ["answered once EDNS was off"]
-
-        monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
-        monkeypatch.setattr(dns.resolver, "resolve",
-                            lambda *a, **k: FakeResolver().resolve(*a, **k))
-
-        assert verify_domain._query_txt("_sloptic.example.com.") == ["answered once EDNS was off"]
-        # Tried with EDNS, then again without: the fallback is a retry, not the default.
-        assert calls == [True, False]
-
 
 class TestPlatformSubdomainsAtGradeTime:
     def test_a_grant_for_a_platform_subdomain_does_not_authorise_an_active_grade(self, conn, account):
@@ -442,3 +341,120 @@ class TestStaleClaimsAreSweptUp:
         from sloptic_web_worker import __main__ as supervisor
 
         assert "expire_stale_domain_claims" in inspect.getsource(supervisor)
+
+
+class TestWhichResolverDecidesAProof:
+    def test_the_proof_is_put_to_public_resolvers_before_the_box_s_own(self, monkeypatch):
+        """Proof of control is a question about the PUBLIC DNS.
+
+        The worker box's router defers to an ISP resolver that answers FORMERR for every name that
+        does not exist, rather than NXDOMAIN. That is the same family of behaviour as the NXDOMAIN
+        hijacking ISPs are known for, and a resolver that invents answers for absent names is the
+        wrong thing to ask whether an absent record is absent. A split-horizon or poisoned local
+        resolver could also confirm a proof the rest of the world cannot see.
+        """
+        import dns.resolver
+
+        asked = []
+
+        class FakeResolver:
+            def __init__(self):
+                self.nameservers = ["from-the-network"]
+                self.lifetime = None
+
+            def resolve(self, name, rdtype, lifetime=None):
+                asked.append(list(self.nameservers))
+                return ["answer"]
+
+        monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
+        monkeypatch.setattr(verify_domain.config, "VERIFY_DNS_RESOLVERS", ["9.9.9.9", "1.1.1.1"])
+
+        assert verify_domain._query_txt("_sloptic.example.com.") == ["answer"]
+        assert asked == [["9.9.9.9"]]
+
+    def test_a_resolver_that_cannot_answer_is_skipped_rather_than_believed(self, monkeypatch):
+        import dns.resolver
+
+        asked = []
+
+        class FakeResolver:
+            def __init__(self):
+                self.nameservers = ["from-the-network"]
+                self.lifetime = None
+
+            def resolve(self, name, rdtype, lifetime=None):
+                asked.append(list(self.nameservers))
+                if self.nameservers == ["9.9.9.9"]:
+                    raise dns.resolver.NoNameservers("FORMERR")
+                return ["answer from the second"]
+
+        monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
+        monkeypatch.setattr(verify_domain.config, "VERIFY_DNS_RESOLVERS", ["9.9.9.9", "1.1.1.1"])
+
+        assert verify_domain._query_txt("_sloptic.example.com.") == ["answer from the second"]
+        assert asked == [["9.9.9.9"], ["1.1.1.1"]]
+
+    def test_a_real_absence_is_believed_from_the_first_resolver(self, monkeypatch):
+        # NXDOMAIN is an answer, and an honest resolver gives the same one. Asking the rest would
+        # turn one true "no such record" into three queries.
+        import dns.resolver
+
+        calls = []
+
+        class FakeResolver:
+            def __init__(self):
+                self.nameservers = []
+                self.lifetime = None
+
+            def resolve(self, name, rdtype, lifetime=None):
+                calls.append(1)
+                raise dns.resolver.NXDOMAIN("no such name")
+
+        monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
+        monkeypatch.setattr(verify_domain.config, "VERIFY_DNS_RESOLVERS", ["9.9.9.9", "1.1.1.1"])
+        factor = verify_domain.check_dns("example.com", "tok")
+
+        assert factor.status == "not_found"
+        assert len(calls) == 1
+
+    def test_the_box_s_own_resolver_is_the_last_resort_not_the_first(self, monkeypatch):
+        # A network that blocks public DNS must still work, so the system resolver is tried last
+        # rather than not at all.
+        import dns.resolver
+
+        asked = []
+
+        class FakeResolver:
+            def __init__(self):
+                self.nameservers = ["from-the-network"]
+                self.lifetime = None
+
+            def resolve(self, name, rdtype, lifetime=None):
+                asked.append(list(self.nameservers))
+                if self.nameservers != ["from-the-network"]:
+                    raise dns.resolver.LifetimeTimeout("blocked")
+                return ["the system resolver answered"]
+
+        monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
+        monkeypatch.setattr(verify_domain.config, "VERIFY_DNS_RESOLVERS", ["9.9.9.9"])
+
+        assert verify_domain._query_txt("_sloptic.example.com.") == ["the system resolver answered"]
+        assert asked == [["9.9.9.9"], ["from-the-network"]]
+
+    def test_nothing_answering_is_blocked_and_names_what_was_tried(self, monkeypatch):
+        import dns.resolver
+
+        class FakeResolver:
+            def __init__(self):
+                self.nameservers = []
+                self.lifetime = None
+
+            def resolve(self, name, rdtype, lifetime=None):
+                raise dns.resolver.NoNameservers("FORMERR")
+
+        monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
+        monkeypatch.setattr(verify_domain.config, "VERIFY_DNS_RESOLVERS", ["9.9.9.9"])
+        factor = verify_domain.check_dns("example.com", "tok")
+
+        assert factor.status == "blocked"
+        assert "9.9.9.9" in factor.detail and "system" in factor.detail

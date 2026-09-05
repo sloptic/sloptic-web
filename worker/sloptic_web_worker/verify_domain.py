@@ -23,7 +23,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from . import egress
+from . import config, egress
 
 WELL_KNOWN = "/.well-known/sloptic-verification.txt"
 DNS_LABEL = "_sloptic"
@@ -104,45 +104,41 @@ def check_file(origin: str, token: str) -> Factor:
 
 
 def _query_txt(name: str):
-    """TXT lookup, escalating through the ways a local stub can fail to parse a query.
+    """TXT lookup, asked of resolvers chosen for this job rather than of whatever the network hands us.
 
-    The sandbox permits DNS to the LOCAL resolver only (worker/deploy/egress.nft allows 127.0.0.53
-    and the bridge gateway, and drops the rest of port 53). That is deliberate and not something to
-    widen for a client quirk, so every fallback here has to stay inside it.
+    Proof of control is a question about the public DNS, so it is put to public resolvers
+    (config.VERIFY_DNS_RESOLVERS) before the box's own. This is not only a workaround for one bad
+    router: a resolver that mangles or hijacks answers for names that do not exist is exactly the
+    wrong oracle for "is this record absent", and a split-horizon or poisoned local resolver could
+    otherwise confirm a proof that the rest of the world cannot see.
 
-    The worker box's systemd-resolved answers FORMERR, which dnspython surfaces as NoNameservers and
-    which blocked every DNS proof on the service. FORMERR means the resolver could not parse what we
-    sent, so each rung changes HOW we ask rather than who we ask:
+    The first REAL answer wins, and NXDOMAIN and NoAnswer are real answers. A resolver that errors or
+    times out is skipped rather than believed. The system resolver is the last resort, so a network
+    that blocks public DNS still works, and if nothing answers the caller reports blocked and names
+    what was tried.
 
-      1. the default, EDNS included
-      2. without EDNS, for a stub that cannot parse the extension
-      3. over TCP, which sidesteps the UDP framing the first two share
-
-    Raises the LAST failure when all three fail, and check_dns reports that as blocked, never as
-    absence: an owner must not be told their record is missing because our resolver is unhappy.
+    dnspython retries a truncated UDP answer over TCP by itself, so there is no manual ladder here.
     """
     import dns.resolver
 
-    attempts = []
-    for label, build in (
-        ("edns", lambda r: r),
-        ("no-edns", lambda r: (r.use_edns(False), r)[1]),
-        ("tcp", lambda r: (r.use_edns(False), r)[1]),
-    ):
-        resolver = build(dns.resolver.Resolver())
+    servers = list(config.VERIFY_DNS_RESOLVERS)
+    attempts: list[str] = []
+    last: Exception | None = None
+
+    for server in servers + ["system"]:
+        resolver = dns.resolver.Resolver()
+        if server != "system":
+            resolver.nameservers = [server]
         resolver.lifetime = _TIMEOUT
         try:
-            return resolver.resolve(name, "TXT", lifetime=_TIMEOUT, tcp=(label == "tcp"))
+            return resolver.resolve(name, "TXT", lifetime=_TIMEOUT)
         except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
-            # A real answer, and the same one however we asked. Let check_dns report absence.
-            raise
-        except Exception as e:  # noqa: BLE001
-            attempts.append(f"{label}: {type(e).__name__}")
+            raise                       # a real answer, and the same from any honest resolver
+        except Exception as e:          # noqa: BLE001 - could not ask THIS one; try the next
+            attempts.append(f"{server}: {type(e).__name__}")
             last = e
 
-    # Every rung failed. Carry what was tried, so the next person reading a blocked claim can see it
-    # was not one unlucky query.
-    raise dns.resolver.NoNameservers(f"tried {', '.join(attempts)}") from last
+    raise dns.resolver.NoNameservers(f"no resolver answered ({', '.join(attempts)})") from last
 
 
 def check_dns(host: str, token: str) -> Factor:
