@@ -150,8 +150,14 @@ describe("the id in the URL, on both verbs", () => {
     expect(status).toBe(404);
   });
 
-  it.fails("answers a malformed id with a 404 on DELETE", async () => {
-    db.failures.push({ table: "grades", kind: "select", error: { code: "22P02", message: "invalid input syntax for type uuid" } });
-    expect((await del("nope")).status).toBe(404);
+  // Not a 404, deliberately, and not the 500 it used to be either. DELETE already answers "already
+  // gone" with 200 for an id that names no grade, because that is the outcome the caller asked for,
+  // and a malformed id names no grade in exactly the same way.
+  it("answers a malformed id the way it answers an id that is already gone", async () => {
+    const { status, body } = await read(await del("nope"));
+    expect(status).toBe(200);
+    expect(body.deleted).toBe(true);
+    // Never reached the database: a non-uuid cannot match a uuid column, so asking is pointless.
+    expect(db.calls).toHaveLength(0);
   });
 });

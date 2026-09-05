@@ -300,7 +300,9 @@ describe("POST /api/events/run/confirm: races", () => {
     expect(stored(db, "event_runs", "run-1")?.status).toBe("cancelled");
   });
 
-  it.fails("does not release a pause that landed while it was working", async () => {
+  // A hold placed between confirm's check and its write is newer than anything confirm knows, so
+    // clearing it would resume a queue the organizer had just stopped.
+  it("does not release a pause that landed while it was working", async () => {
     // KNOWN DEFECT (confirm/route.ts:149). The confirm writes paused: false unconditionally, so a
     // hold placed after its own paused check is silently released and the worker starts claiming
     // again. The same bug was fixed in refresh ("the hold outranks the refresh"); the write here
@@ -316,7 +318,9 @@ describe("POST /api/events/run/confirm: races", () => {
 });
 
 describe("POST /api/events/run/confirm: authorizing the active battery", () => {
-  it.fails("refuses to queue active grades for an account with no live grant", async () => {
+  // The last point on the web side before traffic is pointed at other people's apps: a run set
+    // active hours ago can outlive the grant that allowed it.
+  it("refuses to queue active grades for an account with no live grant", async () => {
     // KNOWN DEFECT (confirm/route.ts:24 onward). Confirm is the authorization step by its own doc
     // comment, and it is the only place between the grant check at create time and the traffic
     // itself. It re-reads nothing: a grant expired or revoked while the run sat ready still queues a

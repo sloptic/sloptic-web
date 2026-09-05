@@ -426,15 +426,17 @@ describe("the grading run's controls", () => {
     confirm.mockRestore();
   });
 
-  // Migration 0024 and the cancel route both keep running grades: "a grade is minutes, and killing
-  // children mid-flight is worse than letting them land". The dialog must not promise otherwise.
-  it.fails("does not promise that running grades are stopped, because they are not", () => {
+  // The dialog says running grades are stopped, and they are. 0024's comment and the cancel route's
+  // comment both said otherwise, but both were written before the worker started killing them: see
+  // running_on_cancelled_runs, whose own docstring reads "Cancel used to let these finish ... Cancel
+  // now means stop now". The comments were the stale half, and have since been corrected.
+  it("promises that running grades are stopped, because the worker stops them", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     show({ initialRuns: [grading()] });
     fireEvent.click(button("Cancel run"));
     const text = String(confirm.mock.calls[0][0]);
     confirm.mockRestore();
-    expect(text).not.toMatch(/already running are stopped/);
+    expect(text).toMatch(/already running are stopped/);
   });
 
   it("uses no em dash in the cancel dialog", () => {

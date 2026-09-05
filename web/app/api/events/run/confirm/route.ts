@@ -4,7 +4,7 @@ import { currentUser } from "@/lib/auth";
 import { randomUUID } from "node:crypto";
 import { normalizeTarget } from "@/lib/origin";
 import { egressPrecheck } from "@/lib/egress";
-import { gradingOpen, GRADING_CLOSED_MESSAGE } from "@/lib/flags";
+import { gradingOpen, GRADING_CLOSED_MESSAGE, isAdmin } from "@/lib/flags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,6 +52,29 @@ export async function POST(req: NextRequest) {
   if (!run) return NextResponse.json({ error: "No such run." }, { status: 404 });
   if (run.paused) {
     return NextResponse.json({ error: "This run is paused. Resume grading first." }, { status: 409 });
+  }
+
+  // Re-checked here, not trusted from the run row. This is the last point on the web side before
+  // traffic is pointed at other people's apps, and a run can have been set active hours ago under a
+  // grant that has since expired or been revoked. The worker refuses each entry at grade time
+  // anyway, so without this the board fills with "not authorized to grade actively" instead of
+  // saying so once, here, before anything is queued.
+  if (run.mode === "active") {
+    const { data: grant } = await db
+      .from("grants")
+      .select("scope")
+      .eq("account_id", user.id)
+      .eq("kind", "organizer_event")
+      .eq("scope", run.slug)
+      .is("revoked_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+    if (!grant && !isAdmin(user.email)) {
+      return NextResponse.json(
+        { error: "Your verification for this event has lapsed. Verify it again to grade actively." },
+        { status: 403 }
+      );
+    }
   }
   // Ready is the approval gate; grading is allowed again so a mid-drain refresh's new entries can
   // be bulk-queued instead of one grade-now at a time.
@@ -154,8 +177,11 @@ export async function POST(req: NextRequest) {
     ...bad.map((id) =>
       db.from("event_entries").update({ skip_reason: "unusable link" }).eq("id", id)
     ),
+    // paused is deliberately NOT written here. This route checked the flag on the way in, and a
+    // hold placed between that check and this write is newer than anything confirm knows: clearing
+    // it would resume a queue the organizer had just stopped. Same rule as refresh.
     db.from("event_runs")
-      .update({ status: "grading", started_at: new Date().toISOString(), paused: false })
+      .update({ status: "grading", started_at: new Date().toISOString() })
       .eq("id", run.id)
       .in("status", ["ready", "grading"]),
   ]);

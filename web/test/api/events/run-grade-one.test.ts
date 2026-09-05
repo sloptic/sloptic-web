@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { fakeDb, ONE_LIVE_RUN, type FakeSupabase, type Row } from "../../helpers/supabase";
 import { setDb, setUser, resetRouteMocks, jsonRequest, malformedRequest, read } from "../../helpers/route";
-import { DEFAULTS, ORGANIZER, STRANGER, entry, grade, run, stored } from "./_fixtures";
+import { DEFAULTS, organizerGrant, ORGANIZER, STRANGER, entry, grade, run, stored } from "./_fixtures";
 
 vi.mock("@/lib/supabase", async () => {
   const { getDb } = await import("../../helpers/route");
@@ -129,7 +129,10 @@ describe("POST /api/events/run/grade-one: the drip feed", () => {
   });
 
   it("queues in the run's own tier, lane and account", async () => {
+    // An active run needs the grant present: grade-one re-checks it rather than trusting the row,
+    // since a run set active hours ago can outlive the authorization that allowed it.
     field({ mode: "active" });
+    db.rows("grants").push(organizerGrant());
     await gradeOne({ runId: "run-1", projectUrls: [P1] });
     expect(queuedFor("run-1")[0]).toMatchObject({
       status: "queued",
@@ -219,7 +222,9 @@ describe("POST /api/events/run/grade-one: the run's state", () => {
 });
 
 describe("POST /api/events/run/grade-one: authorizing the active battery", () => {
-  it.fails("refuses to queue active grades for an account with no live grant", async () => {
+  // Same re-check as confirm. The worker refuses each entry anyway, so without this the board fills
+    // with refusals instead of the route saying so once, before anything is queued.
+  it("refuses to queue active grades for an account with no live grant", async () => {
     // KNOWN DEFECT, the same one as confirm: the drip feed reads the run's mode and queues attack
     // traffic on it without re-reading the grant, so a revoked or expired organizer still points
     // active grades at other people's apps and the worker refuses them one at a time

@@ -32,6 +32,10 @@ function isBlockedIPv6(ip: string): boolean {
   if (low.startsWith("fe80")) return true; // link-local
   if (low.startsWith("fc") || low.startsWith("fd")) return true; // unique-local fc00::/7
   if (low.startsWith("::ffff:")) return isBlockedIPv4(low.split(":").pop() || ""); // IPv4-mapped
+  // The deprecated IPv4-compatible form, "::127.0.0.1". Still parses, still routes, and was walking
+  // past a gate that stopped its ::ffff: sibling. The OS tier drops the packet either way; this is
+  // the cheap check in front of it agreeing with itself.
+  if (low.startsWith("::") && low.includes(".")) return isBlockedIPv4(low.slice(2));
   return false;
 }
 

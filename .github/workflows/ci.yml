@@ -1,0 +1,91 @@
+name: CI
+
+# The web suite is fast (seconds), so it runs on everything. The point is that a change which breaks
+# the state machine, the authorization gates or the two-curve rule cannot reach main unnoticed: every
+# one of those has broken here before, and each time it was found by reading rather than by a test.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # 20 is the conservative LTS. Vercel builds this project, so if that ever moves to a
+          # version this does not cover, add it here rather than finding out from a deploy.
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      # No environment is provided on purpose. Every page is force-dynamic and reaches Supabase at
+      # request time, so a build that needs a secret to succeed has moved work to build time that
+      # does not belong there, and this step is where that shows up.
+      - name: Build
+        run: npm run build
+
+  guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # it.fails and it.skip are how a known defect gets recorded here: the test states the correct
+      # behaviour and is marked until the fix lands. That is only honest if the marker is temporary,
+      # so a marker reaching main fails the build. To record a NEW defect, fix it or open an issue;
+      # do not park it in the suite where a green run will imply it is covered.
+      - name: No parked tests
+        run: |
+          if grep -rn "it\.fails(\|it\.skip(\|describe\.skip(\|test\.skip(" web/test; then
+            echo "::error::A parked test reached main. Fix the defect, or delete the test and track it elsewhere."
+            exit 1
+          fi
+          echo "no parked tests"
+
+      # CLAUDE.md: no em dashes, use commas, colons, parentheses, periods. Cheap to check, and it
+      # has regressed by hand several times.
+      - name: House prose rule
+        run: |
+          if grep -rn "—" web/app web/lib --include="*.ts" --include="*.tsx"; then
+            echo "::error::Em dash in source. Use commas, colons, parentheses, periods."
+            exit 1
+          fi
+          echo "no em dashes"
+
+      # A migration number used twice means one of them silently never ran on a database that
+      # already had the other. Numbers are assigned by hand, so this is worth checking.
+      - name: Migration numbers are unique
+        run: |
+          dupes=$(ls supabase/migrations | cut -d_ -f1 | sort | uniq -d)
+          if [ -n "$dupes" ]; then
+            echo "::error::Duplicate migration number(s): $dupes"
+            exit 1
+          fi
+          echo "migration numbers unique"
+
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # The worker has no tests yet, and this is not pretending otherwise. It catches a syntax error
+      # or a bad import reaching the box that actually runs grades, which is worth the ten seconds
+      # until there is a real suite here.
+      - name: Worker compiles
+        run: python -m compileall -q worker/sloptic_web_worker

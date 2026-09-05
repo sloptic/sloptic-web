@@ -67,12 +67,10 @@ describe("a literal address in the submitted URL", () => {
     });
   }
 
-  // FAILS TODAY. lib/egress.ts:34 unwraps only the "::ffff:" IPv4-mapped form, so the deprecated
-  // IPv4-compatible form walks straight past a check that is otherwise thorough. The grader's own
-  // egress module names this and NAT64 (64:ff9b::/96) as open items too, and the OS tier
-  // (worker/deploy/egress.nft) is what actually stops the packet, so this is a hole in the first
-  // gate rather than in the sandbox. It still belongs on the list CLAUDE.md writes out.
-  it.fails("refuses the IPv4-compatible form of loopback", async () => {
+  // The deprecated "::127.0.0.1" form still parses and still routes, and it was walking past the
+    // gate that stops its ::ffff: sibling. The OS tier drops it either way; this is the cheap check
+    // in front agreeing with itself.
+  it("refuses the IPv4-compatible form of loopback", async () => {
     expect(await egressPrecheck("::127.0.0.1")).toMatch(/cannot be graded/);
   });
 });

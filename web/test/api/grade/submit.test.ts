@@ -376,13 +376,22 @@ describe("POST /api/grade, gaps between the contract and the code", () => {
     expect((await submit("http://db.internal./")).status).toBe(400);
   });
 
-  // clientIp() trusts the FIRST x-forwarded-for entry. That is the client on Vercel today, but it is
-  // also the one entry a client can write, so anywhere the header is appended rather than replaced a
-  // caller rotates the prefix and gets a fresh bucket every request. The platform header
-  // (x-vercel-forwarded-for) or the last hop would not be forgeable.
-  it.skip("does not let the caller choose its own rate-limit bucket", async () => {
-    for (let i = 0; i < 5; i++) await submit("https://example.com", "198.51.100.1, 203.0.113.99");
-    const { status } = await read(await submit("https://example.com", "1.2.3.4, 203.0.113.99"));
+  // The bucket comes from the header the PLATFORM writes, not the one the caller can. Vercel
+  // replaces x-forwarded-for today, so reading its first entry is correct there, but it is one
+  // deployment behind a proxy that appends away from being a free bypass: rotate the prefix, get a
+  // fresh bucket. This asserts the precedence rather than the topology, which is the part we
+  // control. Whether a bare x-forwarded-for can be trusted depends on the host, so it is not
+  // asserted here at all.
+  it("buckets on the platform header, not on one the caller can write", async () => {
+    const spend = async (xff: string, platform: string) => {
+      const req = jsonRequest("http://localhost/api/grade", { url: "https://example.com" });
+      req.headers.set("x-forwarded-for", xff);
+      req.headers.set("x-vercel-forwarded-for", platform);
+      return read(await POST(req));
+    };
+    // One real caller behind a rotating claim about who they are.
+    for (let i = 0; i < 5; i++) await spend(`198.51.100.${i}, 203.0.113.99`, "203.0.113.7");
+    const { status } = await spend("10.9.8.7, 203.0.113.99", "203.0.113.7");
     expect(status).toBe(429);
   });
 });
