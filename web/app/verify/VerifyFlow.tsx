@@ -287,8 +287,8 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
             {c.status === "verified" ? (
               <p className="section-intro">
                 Verified{c.verified_at ? ` on ${new Date(c.verified_at).toLocaleDateString()}` : ""}.
-                The full battery runs on this origin for your account. Anyone else who submits it
-                still gets the passive floor.
+                This domain is eligible for active grading for this account only (others can only grade this)
+                domain passively).
                 {c.expires_at ? ` Prove it again by ${new Date(c.expires_at).toLocaleDateString()}.` : ""}
               </p>
             ) : c.status === "pending" ? (
