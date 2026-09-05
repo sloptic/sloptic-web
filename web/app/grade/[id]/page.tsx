@@ -553,6 +553,7 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
         This is a passive grade only, seeing only what a visitor sees. <a href="/verify">Verify the domain</a> for an active grade.
       </p>
 
+      <Surface surface={r.surface ?? null} />
       <Findings findings={r.findings ?? []} card={cardByProbe} />
       <Passed items={passed} />
       {r.platform && Object.keys(r.platform).length > 0 && <Platform platform={r.platform} />}
@@ -859,6 +860,66 @@ function RankDetail({ r }: { r: GradeResult }) {
         </p>
       )}
     </>
+  );
+}
+
+/** What discovery saw on the app: the routes it mapped, the forms and endpoints it found, and the
+ *  capabilities it noticed. Collapsed by default; the numbers live in the summary, the lists inside.
+ *  Routes are capped in the display because a big app's list can run hundreds deep. */
+function Surface({ surface }: { surface: Record<string, unknown> | null }) {
+  if (!surface || Object.keys(surface).length === 0) return null;
+  const num = (k: string): number | null => (typeof surface[k] === "number" ? (surface[k] as number) : null);
+  const routes = num("routes");
+  const forms = num("forms");
+  const endpoints = num("endpoints");
+  const routesList = Array.isArray(surface.routes_list) ? (surface.routes_list as string[]) : [];
+  const landingPath = typeof surface.landing_path === "string" ? surface.landing_path : null;
+  const flags = (
+    [
+      ["login", surface.has_login],
+      ["signup", surface.has_signup],
+      ["upload", surface.has_upload],
+      ["api", surface.has_api],
+      ["password form", surface.has_password_form],
+      ["text input", surface.accepts_text_input],
+      ["catch-all routing", surface.catch_all],
+    ] as [string, unknown][]
+  )
+    .filter(([, v]) => v === true)
+    .map(([k]) => k);
+  if (routes === null && forms === null && endpoints === null && routesList.length === 0 && flags.length === 0)
+    return null;
+
+  const shown = routesList.slice(0, 80);
+  const bits = [
+    routes !== null ? `${routes} routes` : null,
+    forms !== null ? `${forms} forms` : null,
+    endpoints !== null ? `${endpoints} endpoints` : null,
+    landingPath ? `entered at ${landingPath}` : null,
+  ].filter(Boolean);
+
+  return (
+    <details className="surface-block">
+      <summary className="surface-summary">
+        <span className="surface-name">What Sloptic saw</span>
+        <span className="surface-counts">{bits.join(", ")}</span>
+      </summary>
+      <div className="surface-body">
+        {flags.length > 0 && <p className="surface-flags">Saw: {flags.join(", ")}</p>}
+        {shown.length > 0 && (
+          <>
+            <p className="surface-flags">
+              Routes{routesList.length < (routes ?? 0) ? ` (showing ${shown.length} of ${routes})` : ""}:
+            </p>
+            <ul className="surface-routes">
+              {shown.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+    </details>
   );
 }
 

@@ -509,7 +509,7 @@ export default function EventActions({
                       <><a href={`/events/${slug}/${r.id}`}>board</a>{refreshable(r) ? ", " : ""}</>
                     )}
                     {refreshable(r) && (
-                      <button className="linkish" type="button" disabled={busy} onClick={() => refresh(r)}>
+                      <button className="link-button" type="button" disabled={busy} onClick={() => refresh(r)}>
                         refresh
                       </button>
                     )}
