@@ -69,7 +69,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
           <a href={`https://${params.slug}.devpost.com`} rel="noopener noreferrer">
             {params.slug}.devpost.com
           </a>
-          {grant ? ` · verified, re-prove by ${when(grant.expires_at)}` : ""}
+          {grant ? `, verified, re-prove by ${when(grant.expires_at)}` : ""}
         </p>
       </div>
 

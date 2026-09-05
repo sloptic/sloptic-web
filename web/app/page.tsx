@@ -84,7 +84,16 @@ export default function Home() {
   const [open, setOpen] = useState<boolean | null>(null);
   const [openCh, setOpenCh] = useState<string>("security");
   const [unit, setUnit] = useState<"count" | "slop">("count");
+  // Deleting an account lands here with ?deleted=1 and, until now, nothing said so.
+  const [deleted, setDeleted] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("deleted") !== "1") return;
+    setDeleted(true);
+    // Out of the URL once it is read, so a refresh or a shared link does not repeat the news.
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -147,6 +156,11 @@ export default function Home() {
             {busy ? "sending" : "grade it"}
           </button>
         </form>
+        {deleted && (
+          <p className="closed-note" role="status">
+            Your account is deleted. Reports you saved are anonymous now and go in 30 days.
+          </p>
+        )}
         {open === false && (
           <p className="closed-note" role="status">
             Grading is not open yet.

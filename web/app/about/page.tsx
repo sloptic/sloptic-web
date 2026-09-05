@@ -53,7 +53,7 @@ export default function AboutPage() {
           >
             More than half of mobile visitors
           </a>{" "}
-          leave if a page takes more than 3 seconds to load — that's how low the bar for "takes forever" is.
+          leave if a page takes more than 3 seconds to load. That is how low the bar for "takes forever" is.
         </p>
         <p className="section-intro">
           Oh, and concerning the break-ins, {" "}
@@ -129,7 +129,7 @@ export default function AboutPage() {
         <h2 className="section-head">What it can and cannot judge</h2>
         <p className="section-intro">
           Sloptic only judges what is wrong no matter what an app is for. 
-          It does not judge the rest — besides, humans judge them better anyway.
+          It does not judge the rest: humans judge those better anyway.
         </p>
         <div className="judge-grid">
           <div className="judge" data-kind="can">

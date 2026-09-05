@@ -36,7 +36,7 @@ function RunningCell({ gradeId, progress }: { gradeId: string | null; progress: 
         {gradeId ? <a href={`/grade/${gradeId}`}>{text}</a> : text}
         {typeof progress?.slop_preview === "number" && (
           <span className="mono" style={{ color: "var(--muted)", fontSize: "0.8rem" }}>
-            {" "}· {progress.slop_preview.toFixed(1)} slop so far
+            , {progress.slop_preview.toFixed(1)} slop so far
           </span>
         )}
       </span>
@@ -168,7 +168,7 @@ export default function FieldTable({
   const [sort, setSort] = useState<{ key: "name" | "status"; asc: boolean }>({ key: "status", asc: true });
 
   // Three disjoint groups, keyed on grade STATUS: graded means a finished report exists. A link
-  // alone is not a grade — this run held ten failed grades whose links would otherwise have them
+  // alone is not a grade: this run held ten failed grades whose links would otherwise have them
   // counted as graded while the card said 39.
   const anyFilter = showGraded || showUngraded || showSkipped;
   const filtered = !anyFilter
@@ -319,7 +319,7 @@ export default function FieldTable({
           <thead>
             <tr>
               {canGrade && runId && selectable.length > 0 && <th className="pick-col" />}
-              <th className="col-name">
+              <th className="col-name" aria-sort={sort.key === "name" ? (sort.asc ? "ascending" : "descending") : "none"}>
                 <button type="button" className="col-sort" onClick={() => click("name")}>
                   submission
                   <span className="col-arrow" aria-hidden>
@@ -392,7 +392,7 @@ export default function FieldTable({
                       grade now
                     </button>
                   ) : (
-                    "—"
+                    "-"
                   )}
                 </td>
               </tr>

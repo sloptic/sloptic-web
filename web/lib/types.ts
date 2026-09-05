@@ -177,6 +177,8 @@ export interface GradeView {
   progress?: GradeProgress | null;
   /** Whether an account owns this grade. Absent (not false) when the server cannot tell. */
   claimed?: boolean;
+  /** Whether the viewer is the account that saved it. `claimed` says only that someone did. */
+  mine?: boolean;
   /** When the report is deleted, or null once an account keeps it. */
   expires_at?: string | null;
   retain_days?: number;

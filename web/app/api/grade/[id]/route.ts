@@ -60,8 +60,13 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       .maybeSingle();
     if (rErr?.code === "42703") {
       console.warn("results challenge/retry columns missing; falling back (apply migrations 0020, 0021, 0022)");
-      ({ data: r } = await db.from("results").select(RESULT_COLS).eq("grade_id", params.id).maybeSingle());
+      const fb = await db.from("results").select(RESULT_COLS).eq("grade_id", params.id).maybeSingle();
+      r = fb.data as typeof r;
+      rErr = fb.error;
     }
+    // A read that failed is not a report that expired. Falling through with a null result renders
+    // the retention page, which tells someone their report is gone over a database hiccup.
+    if (rErr) return NextResponse.json({ error: "Lookup failed." }, { status: 500 });
     result = (r as GradeResult) ?? null;
   }
 
@@ -92,14 +97,32 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   // nothing running look identical from the outside, and the second is the one worth admitting to.
   let queue: QueueInfo | undefined;
   if (grade.status === "queued") {
+    // Counted the way the worker CLAIMS, not the way the table is ordered. Every public grade goes
+    // before every event grade (see claim_job), so a single submission is not behind an organizer's
+    // 400 app field, and telling someone it is turns a two minute wait into an apparent all day one.
+    // On the event side this counts the public queue plus the same run's own grades ahead: another
+    // event's run can still sit between them, so that number is a floor.
+    const publicAhead = db
+      .from("grades")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "queued")
+      .is("event_run_id", null);
     const [{ data: worker, error: workerErr }, { count: ahead }] = await Promise.all([
       db.from("worker_status").select("last_seen, state").eq("id", "worker").maybeSingle(),
-      db
+      runId
+        ? publicAhead
+        : publicAhead.lt("submitted_at", grade.submitted_at),
+    ]);
+    let aheadTotal = ahead ?? 0;
+    if (runId) {
+      const { count: sameRun } = await db
         .from("grades")
         .select("id", { count: "exact", head: true })
         .eq("status", "queued")
-        .lt("submitted_at", grade.submitted_at),
-    ]);
+        .eq("event_run_id", runId)
+        .lt("submitted_at", grade.submitted_at);
+      aheadTotal += sameRun ?? 0;
+    }
     // Failing to READ the heartbeat is not evidence that no worker exists. A missing grant on the
     // table made every read 403, and reporting that as "nothing is running" told visitors something
     // confidently false while the worker was polling. On an error, say nothing rather than lie: the
@@ -112,10 +135,17 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     queue = {
       worker_alive: workerAlive,
       stalled: !workerAlive,
-      ahead: ahead ?? 0,
+      ahead: aheadTotal,
       waiting_seconds: Math.max(0, Math.round((Date.now() - Date.parse(grade.submitted_at)) / 1000)),
     };
   }
+
+  // Whether the VIEWER owns this report, which is not the same question as whether anyone does.
+  // The footer used to read the second and answer the first, so a link holder was told the report
+  // was saved to their account and then got a 403 from the delete button under it. Only asked when
+  // the report is claimed: an anonymous one is the link holder's to delete.
+  const owner = "account_id" in grade ? ((grade as { account_id?: string | null }).account_id ?? null) : null;
+  const mine = owner === null ? false : (await currentUser())?.id === owner;
 
   const view: GradeView = {
     id: grade.id,
@@ -135,6 +165,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     // When the worker actually claimed the grade. For event grades this can be far later than
     // submitted_at (queue, pauses), and the running timer must start at zero when grading starts.
     claimed_at: (grade as { claimed_at?: string | null }).claimed_at ?? null,
+    mine,
     retry_due_at: (grade as { retry_due_at?: string | null }).retry_due_at ?? null,
     retry_passes: (grade as { retry_passes?: number }).retry_passes ?? 0,
     event,

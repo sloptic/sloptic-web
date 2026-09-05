@@ -727,6 +727,9 @@ function ReportKeep({ view }: { view: GradeView }) {
   // is worse than leaving it out.
   const known = view.claimed !== undefined;
   const days = view.expires_at ? daysUntil(new Date(view.expires_at)) : null;
+  // Someone else's saved report: it does not expire, and the delete button would only 403. The
+  // report itself stays readable, this footer just has nothing true to say about it.
+  if (known && view.claimed && !view.mine) return null;
 
   return (
     <p className="report-keep">

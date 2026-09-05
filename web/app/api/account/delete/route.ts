@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { currentUser } from "@/lib/auth";
+import { currentUser, supabaseSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +21,14 @@ export async function POST() {
     console.error("account delete failed:", error.message);
     return NextResponse.json({ error: "Could not delete the account." }, { status: 500 });
   }
-  // The session cookie now points at a user that no longer exists. Clearing it is the sign-out route's
-  // job, and the client redirects through it; a stale cookie authenticates nothing either way.
+  // The session cookie now points at a user that does not exist. Nothing it can authenticate, but
+  // the masthead reads the cookie, not the account, so leaving it means the site keeps drawing a
+  // signed-in header for a deleted account until the token expires. The client redirects to the
+  // homepage rather than through the sign-out route, so this is where it gets cleared.
+  try {
+    await supabaseSession().auth.signOut();
+  } catch (e) {
+    console.warn("sign-out after account delete failed:", e instanceof Error ? e.message : e);
+  }
   return NextResponse.json({ deleted: true });
 }
