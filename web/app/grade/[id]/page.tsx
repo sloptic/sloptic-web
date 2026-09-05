@@ -174,8 +174,19 @@ export default function GradePage({ params }: { params: { id: string } }) {
           return;
         }
         if (!res.ok) {
+          // A response that is not OUR JSON never reached us: something in between answered instead,
+          // which on a site behind a WAF is usually a challenge page aimed at the background fetch.
+          // Saying "lookup failed" there blames our database for a request it never received, the
+          // same collapse of "could not look" into "it is broken" that this product refuses to make
+          // about the apps it grades. Found by actively grading ourselves and tripping our own CDN,
+          // which turned out to be a better test than any of the ones I wrote.
+          const ours = (res.headers.get("content-type") || "").includes("application/json");
           if (++fails > MAX_POLL_FAILS) {
-            setError(data.error || "Lookup failed.");
+            setError(
+              ours
+                ? data.error || "Lookup failed."
+                : "Something between your browser and Sloptic blocked this request. Reload the page."
+            );
             return;
           }
           timer = setTimeout(poll, POLL_MS * Math.min(fails, 4));
