@@ -79,6 +79,8 @@ export default function EventActions({
   canOverride,
   initialClaim,
   initialRuns,
+  grantExpiry,
+  verifiedLink,
 }: {
   slug: string;
   verified: boolean;
@@ -87,6 +89,11 @@ export default function EventActions({
   canOverride: boolean;
   initialClaim?: Claim | null;
   initialRuns?: Run[];
+  /** The grant's expiry, shown on the verified slip. */
+  grantExpiry?: string | null;
+  /** Where the policy link was found and the text it carries, recorded at verification. Null on
+   *  grants verified before this was captured. */
+  verifiedLink?: { page: string | null; text: string | null } | null;
 }) {
   const [claim, setClaim] = useState<Claim | null>(initialClaim ?? null);
   const [runs, setRuns] = useState<Run[]>(initialRuns ?? []);
@@ -247,6 +254,36 @@ export default function EventActions({
             })}>
               {checking ? "Checking" : "Check now"}
             </button>
+          </div>
+        </section>
+      )}
+
+      {/* A verified event keeps the same slip the pending flow has, telling the organizer their
+          own link back to them: which page it was found on, the text it carries, and how long the
+          grant runs. */}
+      {claim?.status === "verified" && (
+        <section className="section attached">
+          <div className="verdict" data-state="ok">
+            <p className="verdict-label">
+              {claim.checked_at
+                ? `last check ${new Date(claim.checked_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`
+                : "verified"}
+            </p>
+            <p className="verdict-line">
+              {verifiedLink?.page || verifiedLink?.text ? (
+                <>
+                  Link found{verifiedLink?.page ? ` on the ${verifiedLink.page} page` : ""}
+                  {verifiedLink?.text ? `, with text saying "${verifiedLink.text}"` : ""}.
+                </>
+              ) : (
+                claim.check_detail || "Link found."
+              )}
+            </p>
+            {grantExpiry && (
+              <p className="verdict-when">
+                Active until {new Date(grantExpiry).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
+              </p>
+            )}
           </div>
         </section>
       )}

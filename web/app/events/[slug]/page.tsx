@@ -16,7 +16,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
 
   const db = supabaseAdmin();
   const [{ data: grant }, { data: claimRows }, { data: verified }, { data: runRows }] = await Promise.all([
-    db.from("grants").select("granted_at, expires_at")
+    db.from("grants").select("granted_at, expires_at, evidence")
       .eq("account_id", user.id).eq("kind", "organizer_event").eq("scope", params.slug)
       .is("revoked_at", null).maybeSingle(),
     db.from("event_claims").select("id, slug, token, status, check_status, check_detail, checked_at")
@@ -80,6 +80,14 @@ export default async function EventPage({ params }: { params: { slug: string } }
         canOverride={admin || mayOverrideEvents(user.email)}
         initialClaim={claimRow}
         initialRuns={seededRuns}
+        grantExpiry={grant?.expires_at ?? null}
+        verifiedLink={(() => {
+          const ev = (grant?.evidence ?? null) as Record<string, unknown> | null;
+          if (!ev || typeof ev !== "object") return null;
+          const page = typeof ev.page === "string" ? ev.page : null;
+          const text = typeof ev.link_text === "string" ? ev.link_text : null;
+          return page || text ? { page, text } : null;
+        })()}
       />
 
       <DeleteEvent slug={params.slug} runs={runIds.length} graded={graded ?? 0} />

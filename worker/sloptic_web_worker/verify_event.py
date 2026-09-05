@@ -74,6 +74,10 @@ class Outcome:
     verified: bool
     # Why we are not verified yet, in words an organizer can act on. None when verified.
     message: str | None = None
+    # Where our link was found (the event page's name) and the display text the organizer gave it,
+    # set on a match so the verified slip can show the organizer their own link back to them.
+    page: str = ""
+    link_text: str = ""
 
 
 def _token_from_href(href: str, site_host: str) -> str | None:
@@ -119,7 +123,8 @@ def check(slug: str, token: str) -> Outcome:
         # compare_digest even though the token is public: it costs nothing and keeps the habit
         # correct for the next comparison, which may not be.
         if got is not None and hmac.compare_digest(got, token):
-            return Outcome(found.status, f"matched on the {link.page} page; {found.detail}", True)
+            return Outcome(found.status, f"matched on the {link.page} page; {found.detail}", True,
+                           page=link.page, link_text=link.text)
 
     if found.status == "blocked":
         return Outcome("blocked", found.detail, False,

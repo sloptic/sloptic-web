@@ -386,7 +386,8 @@ def record_check(conn: psycopg.Connection, claim_id: str, check_status: str, det
 
 
 def verify_claim(conn: psycopg.Connection, claim: "Claim", detail: str, grant_days: int,
-                 window_open: bool | None = None, event_state: dict | None = None) -> str:
+                 window_open: bool | None = None, event_state: dict | None = None,
+                 page: str = "", link_text: str = "") -> str:
     """Mark a claim verified and write the grant it earns, in one transaction.
 
     Returns 'granted', or 'blocked_on_terms' when the account has not accepted the terms. That gate is
@@ -434,7 +435,8 @@ def verify_claim(conn: psycopg.Connection, claim: "Claim", detail: str, grant_da
                           expires_at = EXCLUDED.expires_at;
             """,
             {"acct": claim.account_id, "scope": claim.slug, "days": grant_days,
-             "ev": json.dumps({"proof": "devpost_event_link", "detail": detail[:2000]})},
+             "ev": json.dumps({"proof": "devpost_event_link", "detail": detail[:2000],
+                               "page": page, "link_text": link_text})},
         )
     return "granted"
 
