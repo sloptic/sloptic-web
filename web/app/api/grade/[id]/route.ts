@@ -152,6 +152,27 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const owner = "account_id" in grade ? ((grade as { account_id?: string | null }).account_id ?? null) : null;
   const mine = owner === null ? false : (await currentUser())?.id === owner;
 
+  // Whether THIS viewer could run the full battery on this origin, asked only where the answer could
+  // change anything: a finished passive grade. Read here to draw a button and for nothing else. The
+  // submit route re-reads the grant, and the worker re-reads it plus both proofs at grade time.
+  let canGradeActively = false;
+  const gradedOrigin = (grade as { origin?: string | null }).origin ?? null;
+  if (grade.status === "done" && result?.mode === "passive" && gradedOrigin) {
+    const viewer = await currentUser();
+    if (viewer) {
+      const { data: grant } = await db
+        .from("grants")
+        .select("scope")
+        .eq("account_id", viewer.id)
+        .eq("kind", "app_origin")
+        .eq("scope", gradedOrigin)
+        .is("revoked_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+      canGradeActively = !!grant;
+    }
+  }
+
   const view: GradeView = {
     id: grade.id,
     status: grade.status,
@@ -174,6 +195,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     // submitted_at (queue, pauses), and the running timer must start at zero when grading starts.
     claimed_at: (grade as { claimed_at?: string | null }).claimed_at ?? null,
     mine,
+    can_grade_actively: canGradeActively,
     retry_due_at: (grade as { retry_due_at?: string | null }).retry_due_at ?? null,
     retry_passes: (grade as { retry_passes?: number }).retry_passes ?? 0,
     event,

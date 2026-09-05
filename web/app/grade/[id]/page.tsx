@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { track } from "@vercel/analytics";
 import type { GradeView, GradeResult, Finding, Coverage, GradeProgress, CardEntry, Outcome } from "@/lib/types";
 import { AREA_LABELS, AREAS, PASSIVE_BY_AREA, TOTALS, categoryName, describeCategory, describeProbe, type Area } from "@/lib/checks";
@@ -295,6 +296,48 @@ export default function GradePage({ params }: { params: { id: string } }) {
   return <Report view={view} now={now} onResume={() => pollRef.current()} />;
 }
 
+/** The offer to run the full battery, shown only to someone who has already verified this origin.
+ *
+ *  Here rather than on the form: the homepage is the anonymous front door, and a battery toggle there
+ *  asks a question almost nobody who sees it can answer. At this point the question is concrete, the
+ *  origin is settled, and the passive result is on screen to be compared against.
+ */
+function GradeActively({ origin }: { origin: string }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  return (
+    <div className="run-controls upgrade-row">
+      <button
+        className="button"
+        type="button"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            const res = await fetch("/api/grade", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ url: origin, mode: "active" }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Could not start it.");
+            router.push(`/grade/${data.id}`);
+          } catch (e) {
+            setError(e instanceof Error ? e.message : "Could not start it.");
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? "starting..." : "Run the full battery"}
+      </button>
+      {error && <span className="report-keep-err">{error}</span>}
+    </div>
+  );
+}
+
 type AreaRow = {
   id: Area;
   label: string;
@@ -430,6 +473,7 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
       {view.origin && view.origin !== view.url.replace(/\/+$/, "") && (
         <p className="section-intro fineprint">Submitted as {view.url}. A grade covers the whole origin.</p>
       )}
+      {view.can_grade_actively && view.origin && <GradeActively origin={view.origin} />}
 
       {/* One band for the whole verdict: score, placement, the bars, and what qualifies it. The
           findings and their evidence stay below, unchanged; nothing up here explains a fault. */}

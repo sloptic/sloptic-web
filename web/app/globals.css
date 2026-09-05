@@ -3504,3 +3504,8 @@ h1.report-url {
 .card[data-state="not_found"] { border-top-color: var(--accent); }
 .card[data-state="blocked"],
 .card[data-state="pending"]   { border-top-color: var(--line-strong); }
+
+/* The offer to run the full battery, under the headline of a passive report that could have one. */
+.upgrade-row {
+  margin: 0.9rem 0 0;
+}

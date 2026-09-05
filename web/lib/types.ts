@@ -182,6 +182,9 @@ export interface GradeView {
   claimed?: boolean;
   /** Whether the viewer is the account that saved it. `claimed` says only that someone did. */
   mine?: boolean;
+  /** Whether this viewer holds a live grant for the graded origin, so the full battery is available
+   *  to them. Present only on a finished passive grade, where it could change anything. */
+  can_grade_actively?: boolean;
   /** When the report is deleted, or null once an account keeps it. */
   expires_at?: string | null;
   retain_days?: number;
