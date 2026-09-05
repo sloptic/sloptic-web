@@ -19,6 +19,7 @@
   --accent: #9e530d;
   --on-accent: #fdfaf2;
 
+  --verified: #3f8a58;
   --security: #a83f2c;
   --qa: #2f6d99;
   --performance: #3f8a58;
@@ -44,6 +45,7 @@
   --accent: #e0902f;
   --on-accent: #14160f;
 
+  --verified: #62b082;
   --security: #d6604a;
   --qa: #5f9dcb;
   --performance: #62b082;
@@ -62,7 +64,8 @@
     --accent: #e0902f;
     --on-accent: #14160f;
 
-    --security: #d6604a;
+    --verified: #62b082;
+  --security: #d6604a;
     --qa: #5f9dcb;
     --performance: #62b082;
   }
@@ -2868,11 +2871,19 @@ a.mast-user:hover {
   border-radius: var(--radius);
   background: var(--surface);
 }
-.verdict[data-state="checking"] { border-left-color: var(--accent); }
-.verdict[data-state="ok"]       { border-left-color: var(--line-strong); }
-.verdict[data-state="not_found"],
+/* The accent bar says where verification stands, in three readings rather than two.
+ *
+ *  Green: the proof holds. Orange: we looked and it is not there, which is the organizer's to fix.
+ *  Grey: nothing is known yet, which covers waiting for the first check, a check in flight, AND the
+ *  two failure states that are OURS. A blocked or errored check means we could not look, and
+ *  colouring that the same as a missing link would blame an organizer for Devpost refusing us,
+ *  which is the exact confusion the tri-state exists to prevent. */
+.verdict[data-state="ok"]        { border-left-color: var(--verified); }
+.verdict[data-state="not_found"] { border-left-color: var(--accent); }
+.verdict[data-state="checking"],
+.verdict[data-state="none"],
 .verdict[data-state="error"],
-.verdict[data-state="blocked"]  { border-left-color: var(--security); }
+.verdict[data-state="blocked"]   { border-left-color: var(--line-strong); }
 .verdict-label {
   margin: 0 0 0.35rem;
   font-family: var(--font-mono);
@@ -3398,6 +3409,10 @@ h1.report-url {
   user-select: all;
 }
 
-/* Each proof carries its own state, so the card says which half is outstanding at a glance. */
-.card[data-state="ok"] { border-color: var(--good, currentColor); }
-.card[data-state="blocked"] { opacity: 0.85; }
+/* Each proof carries its own state, so the card says which half is outstanding at a glance, in the
+   same three readings the event slip uses: green holds, orange is yours to fix, grey is ours. */
+.card[data-state] { border-left-width: 3px; }
+.card[data-state="ok"]        { border-left-color: var(--verified); }
+.card[data-state="not_found"] { border-left-color: var(--accent); }
+.card[data-state="blocked"],
+.card[data-state="pending"]   { border-left-color: var(--line-strong); }
