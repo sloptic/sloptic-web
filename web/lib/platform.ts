@@ -12,38 +12,9 @@
  *  CLAUDE.md is explicit that we never substitute a weaker same-surface proof here: two files at two
  *  paths would be one factor written twice.
  */
-const PLATFORM_SUFFIXES = [
-  "vercel.app",
-  "netlify.app",
-  "netlify.com",
-  "github.io",
-  "gitlab.io",
-  "pages.dev",
-  "workers.dev",
-  "herokuapp.com",
-  "onrender.com",
-  "fly.dev",
-  "railway.app",
-  "up.railway.app",
-  "streamlit.app",
-  "replit.app",
-  "repl.co",
-  "glitch.me",
-  "surge.sh",
-  "firebaseapp.com",
-  "web.app",
-  "appspot.com",
-  "azurewebsites.net",
-  "cloudfront.net",
-  "amplifyapp.com",
-  "deno.dev",
-  "val.run",
-  "ngrok.io",
-  "ngrok-free.app",
-  "trycloudflare.com",
-  "loca.lt",
-  "vercel.sh",
-];
+import suffixList from "@/../shared/platform-suffixes.json";
+
+const PLATFORM_SUFFIXES: string[] = suffixList.suffixes;
 
 /** The platform suffix this host sits under, or null when the host looks like its own domain.
  *

@@ -265,3 +265,111 @@ class TestTheDnsQueryItself:
         assert verify_domain._query_txt("_sloptic.example.com.") == ["answered once EDNS was off"]
         # Tried with EDNS, then again without: the fallback is a retry, not the default.
         assert calls == [True, False]
+
+
+class TestPlatformSubdomainsAtGradeTime:
+    def test_a_grant_for_a_platform_subdomain_does_not_authorise_an_active_grade(self, conn, account):
+        """Structural, and asked again at the last possible moment.
+
+        CLAUDE.md puts platform subdomains on the passive floor because the DNS factor lives in a
+        zone the deployer does not hold, so a grant for one cannot have been earned the way the flow
+        requires. The API refuses these when a claim is made; this catches a grant that predates a
+        suffix being added to the list, or one written by hand.
+        """
+        origin = "https://team.vercel.app"
+        conn.execute(
+            "INSERT INTO grants (account_id, kind, scope, expires_at) "
+            "VALUES (%s, 'app_origin', %s, now() + interval '90 days')",
+            (account, origin),
+        )
+        gid = conn.execute(
+            "INSERT INTO grades (origin, submitted_url, mode, status, account_id) "
+            "VALUES (%s, %s, 'active', 'running', %s) RETURNING id",
+            (origin, origin, account),
+        ).fetchone()["id"]
+
+        ok, why = db.may_grade_actively(conn, str(gid))
+
+        assert ok is False
+        assert "vercel.app" in why
+
+    def test_an_ordinary_domain_with_the_same_grant_is_allowed(self, conn, account):
+        # The guard must refuse the platform case only, not every origin grant.
+        origin = "https://vibemill.dev"
+        conn.execute(
+            "INSERT INTO grants (account_id, kind, scope, expires_at) "
+            "VALUES (%s, 'app_origin', %s, now() + interval '90 days')",
+            (account, origin),
+        )
+        gid = conn.execute(
+            "INSERT INTO grades (origin, submitted_url, mode, status, account_id) "
+            "VALUES (%s, %s, 'active', 'running', %s) RETURNING id",
+            (origin, origin, account),
+        ).fetchone()["id"]
+
+        assert db.may_grade_actively(conn, str(gid)) == (True, "")
+
+
+class TestRecheckingTheProofsAtGradeTime:
+    def _graded(self, conn, account, origin="https://example.com", run=None):
+        return str(conn.execute(
+            "INSERT INTO grades (origin, submitted_url, mode, status, account_id, event_run_id) "
+            "VALUES (%s, %s, 'active', 'running', %s, %s) RETURNING id",
+            (origin, origin, account, run),
+        ).fetchone()["id"])
+
+    def test_a_verified_origin_hands_back_the_proofs_to_re_read(self, conn, account):
+        # A grant lasts 90 days, and inside that window a file can be deleted and a zone rebuilt
+        # while the row still says verified. This is what lets the child ask the origin itself.
+        _claim(conn, account, status="verified", token="sloptic-the-proof")
+        conn.execute("UPDATE domain_claims SET verified_at = now()")
+        gid = self._graded(conn, account)
+
+        assert db.origin_proof_for_grade(conn, gid) == ("example.com", "sloptic-the-proof")
+
+    def test_an_event_grade_has_nothing_to_re_read(self, conn, account):
+        # Its authorization is the organizer's proof on the event pages, re-read on its own timer,
+        # and there is no per-origin file to ask for.
+        _claim(conn, account, status="verified")
+        conn.execute("UPDATE domain_claims SET verified_at = now()")
+        run = str(conn.execute(
+            "INSERT INTO event_runs (account_id, slug, mode, status) "
+            "VALUES (%s, 'hack', 'active', 'grading') RETURNING id", (account,)
+        ).fetchone()["id"])
+        gid = self._graded(conn, account, run=run)
+
+        assert db.origin_proof_for_grade(conn, gid) is None
+
+    def test_a_grant_with_no_claim_behind_it_has_nothing_to_re_read(self, conn, account):
+        # Nothing to re-read is not the same as failing: a grant written outside this flow carries
+        # no token, and inventing a refusal for it would break the organizer and admin paths.
+        gid = self._graded(conn, account)
+
+        assert db.origin_proof_for_grade(conn, gid) is None
+
+    def test_another_account_s_proof_is_not_offered_for_this_grade(self, conn, account):
+        # The proof has to belong to the account being authorised, or Mallory's grade would be
+        # re-checked against Alice's token and pass.
+        _claim(conn, account, status="verified", token="sloptic-alice")
+        conn.execute("UPDATE domain_claims SET verified_at = now()")
+        mallory = str(conn.execute(
+            "INSERT INTO auth.users (email) VALUES ('mallory@example.com') RETURNING id"
+        ).fetchone()["id"])
+        gid = self._graded(conn, mallory)
+
+        assert db.origin_proof_for_grade(conn, gid) is None
+
+
+class TestStaleClaimsAreSweptUp:
+    def test_the_sweep_is_actually_wired_into_the_supervisor(self):
+        """It was written and never called, which is why this test looks at the source.
+
+        Its event twin sits one line above it in the loop, which is exactly how the omission hid: the
+        function existed, the tests exercised it directly, and nothing on the box ever ran it, so a
+        claim nobody proved would re-check every five minutes for ever.
+        """
+        import inspect
+
+        from sloptic_web_worker import __main__ as supervisor
+
+        assert "expire_stale_domain_claims" in inspect.getsource(supervisor)

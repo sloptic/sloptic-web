@@ -24,7 +24,7 @@ import sys
 import time
 from urllib.parse import urlparse
 
-from . import config, db
+from . import config, db, verify_domain
 from .egress import EgressNotReady, guard_target, install as install_egress
 from .grader import Unreachable, run_active_grade, run_passive_grade
 
@@ -76,6 +76,32 @@ def main(argv: list[str]) -> int:
                 db.mark_failed(conn, job.id, f"not authorized to grade actively: {why}")
                 print(f"[deny]  {job.id}: {why}", flush=True)
                 return EXIT_FAILED
+
+            # And the PROOFS themselves, not just the grant that records them. CLAUDE.md: "Both must
+            # be present and re-checked at grade time." A grant lasts 90 days, and in that time a
+            # domain can change hands, a file can be removed, a zone can be rebuilt: the row would
+            # still say verified while the thing it attests to is gone. This is the only moment we
+            # can ask the origin itself, immediately before sending it a payload.
+            #
+            # An event grade is exempt: its authorization is the organizer's proof on the event
+            # pages, which the claim checker re-reads on its own timer, and there is no per-origin
+            # file to ask for.
+            proof = db.origin_proof_for_grade(conn, job.id)
+            if proof is not None:
+                host, token = proof
+                out = verify_domain.check(job.origin, host, token)
+                if not out.verified:
+                    # Refused, not downgraded, and never auto-revoked. A single bad look can be a
+                    # deploy blip or their WAF refusing us, which is not evidence that ownership
+                    # ended; the 90 day expiry is what handles a domain genuinely gone. Failing the
+                    # grade costs a report, where running it would be unauthorized testing.
+                    gone = "not_found" in (out.file.status, out.dns.status)
+                    why = ("the ownership proofs are no longer published"
+                           if gone else "the ownership proofs could not be re-checked")
+                    db.mark_failed(conn, job.id, f"not authorized to grade actively: {why}")
+                    print(f"[deny]  {job.id}: {why} (file={out.file.status} dns={out.dns.status})",
+                          flush=True)
+                    return EXIT_FAILED
 
         # Throttle: on_progress fires twice per probe, so an unthrottled write would be ~90 UPDATEs a
         # grade for a field nothing queries. A PHASE change always gets through, since that is the

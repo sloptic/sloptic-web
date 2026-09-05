@@ -7,11 +7,12 @@ with the Supabase service role, so RLS does not apply.
 import json
 from dataclasses import dataclass
 from datetime import datetime
+from urllib.parse import urlparse
 
 import psycopg
 from psycopg.rows import dict_row
 
-from . import config
+from . import config, platform
 
 
 @dataclass
@@ -415,6 +416,34 @@ def record_domain_check(conn: psycopg.Connection, claim_id: str, file_status: st
         """,
         {"f": file_status, "d": dns_status, "det": detail, "retry": retry_in_s, "id": claim_id},
     )
+
+
+def origin_proof_for_grade(conn: psycopg.Connection, job_id: str) -> tuple[str, str] | None:
+    """The (host, token) this grade's origin was proven with, or None when there is nothing to re-read.
+
+    Exists so the proofs can be re-checked at grade time. CLAUDE.md asks for exactly that ("both must
+    be present and re-checked at grade time"), and until now a grant's own liveness was the whole of
+    the re-verification: a 90 day window inside which the file and the record could both be gone
+    while the row still said verified.
+
+    None for an EVENT grade, deliberately. Its authorization is the organizer's proof on the event
+    pages, which the claim checker re-reads on its own timer, and there is no per-origin file to ask
+    for. None also when no verified claim backs the origin, which means the grant came from somewhere
+    other than this flow and there is nothing here to re-read.
+    """
+    row = conn.execute(
+        """
+        SELECT c.host, c.token
+          FROM grades g
+          JOIN domain_claims c
+            ON c.account_id = g.account_id AND c.origin = g.origin AND c.status = 'verified'
+         WHERE g.id = %s AND g.event_run_id IS NULL
+         ORDER BY c.verified_at DESC NULLS LAST
+         LIMIT 1;
+        """,
+        (job_id,),
+    ).fetchone()
+    return (row["host"], row["token"]) if row else None
 
 
 def verify_domain_claim(conn: psycopg.Connection, claim: DomainClaim, detail: str,
@@ -929,6 +958,16 @@ def may_grade_actively(conn: psycopg.Connection, job_id: str) -> tuple[bool, str
         if row["run_admin"] and email and email in config.ADMIN_ACCOUNTS:
             return True, ""
         return False, f"no live grant for event {row['event_slug']}"
+
+    # Structural, and checked here as well as at claim time. CLAUDE.md puts platform subdomains on
+    # the passive floor because the DNS factor is unavailable in a zone the deployer does not hold,
+    # so a grant for one cannot have been earned the way the flow requires. The API refuses these
+    # when a claim is made; this catches a grant that predates a suffix being added to the list, or
+    # one written by hand, and this function is the last place the question is asked.
+    host = urlparse(row["origin"] or "").hostname or ""
+    suffix = platform.platform_suffix(host)
+    if suffix:
+        return False, f"{suffix} subdomains get the passive floor: the DNS proof needs a zone you hold"
 
     live = conn.execute(
         """

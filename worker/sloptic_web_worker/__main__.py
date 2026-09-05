@@ -551,6 +551,10 @@ def main() -> None:
                 if n:
                     print(f"[event] failed {n} claim(s) whose link never appeared", flush=True)
 
+                n = db.expire_stale_domain_claims(conn, config.CLAIM_EXPIRY_DAYS)
+                if n:
+                    print(f"[owner] failed {n} claim(s) whose proofs never appeared", flush=True)
+
                 # Retention: an unowned report is not kept forever (migration 0009).
                 dropped, forgotten = db.sweep_retention(conn)
                 if dropped or forgotten:
