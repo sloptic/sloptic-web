@@ -373,25 +373,19 @@ describe("POST /api/events/run/mode: switching an existing run to the active bat
     expect(store.rows("event_runs")[0].mode).toBe("passive");
   });
 
+  // 403, not 409: holding no grant is a failure of authorization, not a conflict with the state of
+  // the run. The claim window is the later question, and it is only reached by an account that has
+  // the standing to ask it.
   it("refuses active for an account with no grant and no verified claim", async () => {
     const store = db({ runs: [readyRun()] });
     setDb(store);
     const res = await read(await setMode(jsonRequest("http://x/mode", { id: "run-1", mode: "active" })));
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(403);
     expect(store.rows("event_runs")[0].mode).toBe("passive");
   });
 
-  // FAILS TODAY, both of these. app/api/events/run/mode/route.ts:48 reads the grant but never
-  // requires one: the only active gate it applies is the claim's window flag (line 58), and a claim
-  // row keeps saying `verified` long after the grant it produced has expired or been revoked. So an
-  // account whose authorization has lapsed can still move a run onto the attack battery, which is
-  // the same authority /api/events/run refuses it at line 51. CLAUDE.md: "Grants are time-boxed
-  // (~90 days) and re-verified before an active grade."
-  //
-  // The worker re-checks the live grant per entry (db.may_grade_actively), so the traffic itself is
-  // still held back; what is lost here is the layer, and the product tells the organizer their field
-  // is being actively graded when nothing will grade.
-  it.fails("refuses active on an expired grant, whatever the claim still says", async () => {
+  // CLAUDE.md: grants are time-boxed and re-verified before an active grade.
+  it("refuses active on an expired grant, whatever the claim still says", async () => {
     const store = db({
       grants: [{ account_id: ALICE.id, scope: SLUG, expires_at: LONG_GONE }],
       claims: [ALICE_VERIFIED],
@@ -403,7 +397,8 @@ describe("POST /api/events/run/mode: switching an existing run to the active bat
     expect(store.rows("event_runs")[0].mode).toBe("passive");
   });
 
-  it.fails("refuses active on a revoked grant, whatever the claim still says", async () => {
+  // Revocation has to be immediate and total, which is the whole point of being able to revoke.
+  it("refuses active on a revoked grant, whatever the claim still says", async () => {
     const store = db({
       grants: [{ account_id: ALICE.id, scope: SLUG, expires_at: YEAR_AWAY, revoked_at: LONG_GONE }],
       claims: [ALICE_VERIFIED],

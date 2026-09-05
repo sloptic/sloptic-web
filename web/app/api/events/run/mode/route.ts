@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { currentUser } from "@/lib/auth";
-import { isAdmin } from "@/lib/flags";
+import { isAdmin, mayOverrideEvents } from "@/lib/flags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,26 +55,43 @@ export async function POST(req: NextRequest) {
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
   const admin = !grant && isAdmin(user.email);
-  if (mode === "active" && !admin) {
-    const { data: claim } = await db
-      .from("event_claims")
-      .select("window_open_at_verification")
-      .eq("account_id", user.id)
-      .eq("slug", run.slug)
-      .eq("status", "verified")
-      .maybeSingle();
-    if (claim?.window_open_at_verification !== true) {
+
+  // Only the ACTIVE direction is gated. Going back to passive asks for less than the run already
+  // has, and refusing it would strand an organizer whose verification lapsed mid-run on the louder
+  // battery, which is the wrong way for this to fail.
+  if (mode === "active") {
+    if (run.override && !admin) {
+      return NextResponse.json({ error: "An override run stays passive." }, { status: 409 });
+    }
+    // The grant was read and then used only to decide `admin`, so the only thing in front of the
+    // attack battery was the claim row, and a claim keeps saying "verified" long after the grant it
+    // produced expired or was revoked. /api/events/run refuses at this same authority, and the
+    // worker re-checks per entry, so what was lost is the middle layer: the product told an
+    // organizer their field was being actively graded while the worker refused every entry of it.
+    if (!grant && !admin) {
       return NextResponse.json(
-        {
-          error:
-            "This event was not verified before its submission deadline, so entries get the passive checks only.",
-        },
-        { status: 409 }
+        { error: "Your verification for this event has lapsed. Verify it again to grade actively." },
+        { status: 403 }
       );
     }
-  }
-  if (mode === "active" && run.override && !admin) {
-    return NextResponse.json({ error: "An override run stays passive." }, { status: 409 });
+    if (!admin) {
+      const { data: claim } = await db
+        .from("event_claims")
+        .select("window_open_at_verification")
+        .eq("account_id", user.id)
+        .eq("slug", run.slug)
+        .eq("status", "verified")
+        .maybeSingle();
+      if (claim?.window_open_at_verification !== true) {
+        return NextResponse.json(
+          {
+            error:
+              "This event was not verified before its submission deadline, so entries get the passive checks only.",
+          },
+          { status: 409 }
+        );
+      }
+    }
   }
 
   // Nothing measured yet: flip the run in place.

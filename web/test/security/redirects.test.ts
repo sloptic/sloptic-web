@@ -101,17 +101,14 @@ describe("/signin honours only a same-origin path in `next`", () => {
     });
   }
 
-  // FAILS TODAY. app/signin/page.tsx:22 tests the first two characters of the raw string, but a
-  // browser deletes tab, newline and carriage return from a URL BEFORE parsing it, so "/<TAB>/evil.com"
-  // clears the guard as a path and is then resolved as an authority. The redirect here is relative
-  // (next/navigation's redirect emits the value as given), so nothing else keeps it on our origin.
-  // The tab is the live one: Node emits a tab in a Location header unchanged, while a newline or a
-  // carriage return is refused by header validation and turns into a 500. So one of these three is
-  // an open redirect on the one page whose job is to hand a session to whoever arrives next, and
-  // the other two are a crash on input we should have refused.
+  // A browser deletes tab, newline and carriage return from a URL BEFORE parsing it, so
+  // "/<TAB>/evil.com" clears any check on the first two characters and is then resolved as an
+  // authority. The redirect here is relative (next/navigation's redirect emits the value as given),
+  // so nothing else would keep it on our origin. lib/redirect parses instead of pattern-matching,
+  // and refuses control characters outright.
   // CLAUDE.md: only a same-origin path may be honoured.
   for (const next of HOSTILE.filter((n) => /[\t\n\r]/.test(n))) {
-    it.fails(`refuses to send a visitor off-site for ${JSON.stringify(next)}`, async () => {
+    it(`refuses to send a visitor off-site for ${JSON.stringify(next)}`, async () => {
       const dest = browserResolves(await signInRedirect(next));
       expect(dest.origin).toBe(SITE);
     });

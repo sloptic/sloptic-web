@@ -160,7 +160,9 @@ describe("POST /api/events/run/mode: going active re-checks authorization", () =
     expect(stored(db, "event_runs", "run-1")?.mode).toBe("passive");
   });
 
-  it.fails("refuses when the account no longer holds a live grant", async () => {
+  // The same authority /api/events/run answers at: without this the two routes disagreed about who
+    // may reach the attack battery.
+  it("refuses when the account no longer holds a live grant", async () => {
     // KNOWN DEFECT (mode/route.ts:48 to 78). The route reads the grant and then never tests it: the
     // only gates it applies are the claim window and the override rule, so an account whose grant
     // expired, was revoked, or never existed still takes a run active. Its own doc comment says
