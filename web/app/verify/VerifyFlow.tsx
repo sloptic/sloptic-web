@@ -120,7 +120,7 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
   return (
     <>
       <form className="add-report" onSubmit={start}>
-        <label htmlFor="verify-url">The site you own</label>
+        <label htmlFor="verify-url">Add new domain</label>
         <div className="add-report-row">
           <input
             id="verify-url"

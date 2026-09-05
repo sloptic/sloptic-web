@@ -51,7 +51,7 @@ export default async function AccountPage() {
       <section className="section attached">
         <h2 className="section-head" id="your-grades">Apps you graded</h2>
         <p className="section-intro">
-          Grades saved to this account and any this browser ran but hasn't been saved yet.
+          Grades saved to this account and any unsaved grades from this browser.
         </p>
         <GradeList signedIn />
       </section>
@@ -59,7 +59,7 @@ export default async function AccountPage() {
       <section className="section">
         <h2 className="section-head">Events you grade for</h2>
         <p className="section-intro">
-          Verified events, their runs and their boards live on their own pages.
+          Verified events, their runs, and their boards live on its own pages.
         </p>
         <div className="cta-row">
           <a className="button secondary" href="/events">Your events</a>
@@ -67,17 +67,17 @@ export default async function AccountPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">Domains you own</h2>
+        <h2 className="section-head">Your domains</h2>
         <p className="section-intro">
-          Verifying a domain lets the full battery run on it, for this account only. Anyone else who
-          submits the same URL still gets the passive floor.{" "}
-          <a href="/verify">What verifying involves</a>.
+          Verifying a domain lets you run active tests against it (for this account only). Unverified
+          domains get passive checks only. {" "}
+          <a href="/verify">More about verifying here.</a>.
         </p>
         <VerifyFlow signedIn initialClaims={claims} />
       </section>
 
       <section className="section">
-        <h2 className="section-head">Sign in</h2>
+        <h2 className="section-head">Sign in info</h2>
         <ul className="stat-list">
           <li>
             <span className="k">email</span>
