@@ -299,7 +299,7 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
               // The verification itself stands (it is not revoked over a look), so the history goes
               // in parentheses after: still verified, not gradeable until the proof is back.
               <p className="section-intro">
-                One or more proofs is missing. Please add them back to grade actively.
+                One or more proofs are missing. Please add them back to grade actively.
                 {c.verified_at && (
                   <>
                     {" "}(originally verified on {new Date(c.verified_at).toLocaleDateString()}
