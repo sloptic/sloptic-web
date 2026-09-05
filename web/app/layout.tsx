@@ -23,10 +23,28 @@ const mono = IBM_Plex_Mono({
   variable: "--font-mono",
 });
 
+const DESCRIPTION =
+  "Give Sloptic a live URL and get one number for how well the app holds up, the security, accessibility, and performance floor every app should have. Passive by default.";
+
+// metadataBase is what makes every relative og:url and image absolute. Without it a shared link
+// renders as a bare URL in Slack, Discord and iMessage, which is where report and board links
+// actually travel.
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sloptic.org";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE),
+  // No "%s | Sloptic" template: four pages already carry the name in their own title, and the
+  // template would make them "About Sloptic | Sloptic".
   title: "Sloptic",
-  description:
-    "Give Sloptic a live URL and get one number for how well the app holds up, the security, accessibility, and performance floor every app should have. Passive by default.",
+  description: DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: "Sloptic",
+    title: "Sloptic",
+    description: DESCRIPTION,
+    url: "/",
+  },
+  twitter: { card: "summary", title: "Sloptic", description: DESCRIPTION },
 };
 
 // Apply a stored theme choice before paint so there is no light/dark flash. No stored choice = follow
