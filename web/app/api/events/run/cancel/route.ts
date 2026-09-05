@@ -35,7 +35,11 @@ export async function POST(req: NextRequest) {
     .eq("account_id", user.id)
     .maybeSingle();
   if (!run) return NextResponse.json({ error: "Not found." }, { status: 404 });
-  if (run.status !== "grading" && run.status !== "ready") {
+  // resolving included deliberately. It holds the account's one live slot, no other route releases
+  // it (refresh refuses it, starting a run hands the same one back), and a worker killed mid-resolve
+  // leaves started_at set, which the worker's own claim will not pick up again. Without this an
+  // organizer whose worker rebooted at the wrong moment is locked out of their event for good.
+  if (!["grading", "ready", "resolving"].includes(run.status)) {
     return NextResponse.json({ error: `A ${run.status} run cannot be cancelled.` }, { status: 409 });
   }
 
@@ -81,7 +85,7 @@ export async function POST(req: NextRequest) {
     .from("event_runs")
     .update({ status: "cancelled", paused: false, finished_at: new Date().toISOString() })
     .eq("id", run.id)
-    .in("status", ["ready", "grading"]);
+    .in("status", ["ready", "grading", "resolving"]);
   if (error) return NextResponse.json({ error: "Could not cancel the run." }, { status: 500 });
   return NextResponse.json({ cancelled: true, dequeued: queuedIds.length });
 }

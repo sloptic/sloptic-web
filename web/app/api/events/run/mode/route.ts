@@ -94,6 +94,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // An override run going active is an operator action, and migration 0019 refuses a row that is
+  // override + active without the admin flag set. Recording the privilege the switch was made under
+  // is both what makes the write legal and what keeps the provenance honest: the run is no longer
+  // only what it was created as.
+  const nextAdmin = run.admin || (mode === "active" && run.override === true);
+  if (nextAdmin && !run.admin) {
+    console.warn(`[admin] ${user.email} took override run ${run.id} (${run.slug}) active`);
+  }
+
   // Nothing measured yet: flip the run in place.
   if (run.status === "ready") {
     const { count } = await db
@@ -107,7 +116,11 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       );
     }
-    const { error } = await db.from("event_runs").update({ mode }).eq("id", run.id).eq("status", "ready");
+    const { error } = await db
+      .from("event_runs")
+      .update({ mode, admin: nextAdmin })
+      .eq("id", run.id)
+      .eq("status", "ready");
     if (error) return NextResponse.json({ error: "Could not switch it." }, { status: 500 });
     return NextResponse.json({ flipped: true, mode });
   }
@@ -126,7 +139,7 @@ export async function POST(req: NextRequest) {
         slug: run.slug,
         mode,
         override: run.override,
-        admin: run.admin,
+        admin: nextAdmin,
         status: "ready",
         entries_found: src?.entries_found ?? null,
         gallery_complete: src?.gallery_complete ?? null,
@@ -144,7 +157,14 @@ export async function POST(req: NextRequest) {
       const { error: eErr } = await db
         .from("event_entries")
         .insert(entries.map((e) => ({ run_id: created.id, ...e })));
-      if (eErr) return NextResponse.json({ error: "Could not copy the field." }, { status: 500 });
+      if (eErr) {
+        // Rolled back by hand: PostgREST gives no transaction across two calls, and a half-copied
+        // run would hold the event's one live slot while confirm graded 30 of 60 apps as if that
+        // were the whole field. Migration 0013's point exactly.
+        await db.from("event_entries").delete().eq("run_id", created.id);
+        await db.from("event_runs").delete().eq("id", created.id);
+        return NextResponse.json({ error: "Could not copy the field." }, { status: 500 });
+      }
     }
     return NextResponse.json({ created: created.id, mode });
   }

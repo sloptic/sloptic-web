@@ -176,7 +176,9 @@ describe("POST /api/events/run/mode: going active re-checks authorization", () =
     expect(stored(db, "event_runs", "run-1")?.mode).toBe("passive");
   });
 
-  it.fails("records the privilege the switch was made under", async () => {
+  // Migration 0019 refuses a row that is override + active without the admin flag, so recording
+    // the privilege is both what makes the write legal and what keeps the provenance honest.
+  it("records the privilege the switch was made under", async () => {
     // KNOWN DEFECT (mode/route.ts:93 and 105 to 120). An operator may take an override run active,
     // but neither path writes admin = true: the in-place flip updates mode alone, and the fork
     // copies the source run's admin flag. Both leave override = true with mode = 'active' and
@@ -241,7 +243,9 @@ describe("POST /api/events/run/mode: a finished run forks", () => {
     expect(liveRunCount()).toBe(1);
   });
 
-  it.fails("does not leave a live run standing when the field could not be copied", async () => {
+  // Two writes with no transaction between them, so the first is undone by hand. A live run
+    // holding a partial field is worse than no run: confirm would rank it as the whole event.
+  it("does not leave a live run standing when the field could not be copied", async () => {
     // KNOWN DEFECT (mode/route.ts:105 to 131). The new run is inserted first and the entries second,
     // with no transaction and no cleanup, so a failed copy leaves a live, empty run: it holds the
     // event's one live slot (0025), and confirming it would grade a field of nothing while the

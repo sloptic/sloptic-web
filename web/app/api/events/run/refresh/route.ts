@@ -65,10 +65,19 @@ export async function POST(req: NextRequest) {
   // unclaimed resolving run. refresh_requested switches the worker's resolve into re-check mode:
   // every submission is fetched again and compared with the cache, so the counts it reports are
   // measurements, not guesses.
-  const { error } = await db
+  //
+  // The status predicate is repeated on the WRITE, not just the read above. Without it a cancel
+  // landing between the two would be overwritten and the run would come back to life as resolving,
+  // after the organizer had been told it stopped.
+  const { data: refreshed, error } = await db
     .from("event_runs")
     .update({ status: "resolving", started_at: null, finished_at: null, refresh_requested: true })
-    .eq("id", run.id);
+    .eq("id", run.id)
+    .in("status", REFRESHABLE as unknown as string[])
+    .select("id");
   if (error) return NextResponse.json({ error: "Could not start the refresh." }, { status: 500 });
+  if (!refreshed?.length) {
+    return NextResponse.json({ error: "That run changed while we were reading it. Try again." }, { status: 409 });
+  }
   return NextResponse.json({ refreshing: true });
 }

@@ -34,11 +34,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Only a grading run can be paused." }, { status: 409 });
   }
 
-  const { error } = await db
+  const { data: held, error } = await db
     .from("event_runs")
     .update({ paused })
     .eq("id", run.id)
-    .eq("status", "grading");
+    .eq("status", "grading")
+    .select("id");
   if (error) return NextResponse.json({ error: "Could not pause it." }, { status: 500 });
+  // The write is guarded on status, so it can match nothing: the run finished between the check
+  // above and here. Reporting the hold anyway would draw a pause the worker is not honouring.
+  if (!held?.length) {
+    return NextResponse.json({ error: "That run is no longer grading." }, { status: 409 });
+  }
   return NextResponse.json({ paused });
 }

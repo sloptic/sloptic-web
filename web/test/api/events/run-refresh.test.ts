@@ -130,7 +130,9 @@ describe("POST /api/events/run/refresh", () => {
     expect(stored(db, "event_entries", "entry-1")?.grade_id).toBe("g-1");
   });
 
-  it.fails("loses to a cancel that lands mid-flight", async () => {
+  // The status predicate is repeated on the write, so a cancel in the gap wins instead of being
+    // overwritten by a run coming back to life after the organizer was told it stopped.
+  it("loses to a cancel that lands mid-flight", async () => {
     // KNOWN DEFECT (refresh/route.ts:68 to 71). The write is not guarded on the state its check
     // read, unlike confirm's and cancel's, so a cancel arriving between the two resurrects the run
     // into resolving. The route's own doc comment says a cancelled run stays cancelled, and the

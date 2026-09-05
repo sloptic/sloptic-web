@@ -66,6 +66,19 @@ describe("POST /api/events/run/pause", () => {
     expect(stored(db, "event_runs", "run-1")?.paused).toBe(false);
   });
 
+  // The write is guarded on status, so it can match nothing when the run settles between the check
+  // and the write. Answering with the hold anyway drew a pause the worker was not honouring.
+  it("does not report a hold it did not place", async () => {
+    grading();
+    // Fired on the update, so the read still sees a grading run and only the guarded write misses.
+    interleave(db, "event_runs", "update", () => {
+      stored(db, "event_runs", "run-1")!.status = "done";
+    });
+    const { status } = await read(await call(pause, "pause", { id: "run-1", paused: true }));
+    expect(status).toBe(409);
+    expect(stored(db, "event_runs", "run-1")?.paused).toBe(false);
+  });
+
   it("holds the queue of a grading run", async () => {
     grading();
     const { status, body } = await read(await call(pause, "pause", { id: "run-1", paused: true }));
@@ -267,7 +280,9 @@ describe("POST /api/events/run/cancel", () => {
     expect(body.dequeued).toBe(1);
   });
 
-  it.fails("stops a run that is still resolving", async () => {
+  // A resolving run holds the account's one live slot and no other route releases it, so without
+    // this a worker that died mid-resolve locked the organizer out of their event for good.
+  it("stops a run that is still resolving", async () => {
     // KNOWN DEFECT (cancel/route.ts:35). Migration 0024 opens with "an organizer must be able to
     // stop what they started", and the worker's own cancel_run has no status guard. A resolving run
     // holds the account's one live slot for that event (0025), and no other route will release it:
