@@ -15,12 +15,14 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          # 20 is the conservative LTS. Vercel builds this project, so if that ever moves to a
-          # version this does not cover, add it here rather than finding out from a deploy.
-          node-version: "20"
+          # Not a preference: jsdom declares ^22.22.2 || ^24.15.0 and its undici >=22.19.0. npm only
+          # WARNS when an engine is unmet, so Node 20 installed cleanly here and then threw 35
+          # unhandled errors out of undici at import time. package.json now declares the same floor.
+          # 24 would satisfy it as well, but nothing here has been run on 24, so it is not claimed.
+          node-version: "22"
           cache: npm
           cache-dependency-path: web/package-lock.json
 
@@ -41,7 +43,7 @@ jobs:
   guards:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # it.fails and it.skip are how a known defect gets recorded here: the test states the correct
       # behaviour and is marked until the fix lands. That is only honest if the marker is temporary,
@@ -79,8 +81,8 @@ jobs:
   worker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
