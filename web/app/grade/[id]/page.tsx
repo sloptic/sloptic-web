@@ -5,7 +5,7 @@ import { track } from "@vercel/analytics";
 import type { GradeView, GradeResult, Finding, Coverage, GradeProgress, CardEntry, Outcome } from "@/lib/types";
 import { AREA_LABELS, AREAS, PASSIVE_BY_AREA, TOTALS, categoryName, describeCategory, describeProbe, type Area } from "@/lib/checks";
 import { daysUntil } from "@/lib/retention";
-import { ordinal, recoveryMarks } from "@/lib/grades";
+import { failureText, ordinal, recoveryMarks } from "@/lib/grades";
 import RecoverySup from "@/app/RecoverySup";
 import { forgetGrade } from "@/lib/history";
 
@@ -271,7 +271,7 @@ export default function GradePage({ params }: { params: { id: string } }) {
       <section className="report">
         {crumb}
         <h1>{view.url}</h1>
-        <p className="error">{view.error || "The target did not present a gradeable surface."}</p>
+        <p className="error">{failureText(view.error)}</p>
       </section>
     );
   }
@@ -424,7 +424,12 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
   return (
     <section className="report">
       {view.event && <EventCrumb slug={view.event.slug} />}
-      <h1 className="report-url">{view.url}</h1>
+      <h1 className="report-url">{view.origin ?? view.url}</h1>
+      {/* A grade is pinned to the origin, so a submitted path would be a claim about a page this
+          report never singles out. */}
+      {view.origin && view.origin !== view.url.replace(/\/+$/, "") && (
+        <p className="section-intro fineprint">Submitted as {view.url}. A grade covers the whole origin.</p>
+      )}
 
       {/* One band for the whole verdict: score, placement, the bars, and what qualifies it. The
           findings and their evidence stay below, unchanged; nothing up here explains a fault. */}
@@ -824,7 +829,9 @@ function RankDetail({ r }: { r: GradeResult }) {
             degrade the user experience or allow bad actors easy unauthorized access.
           </span>
         </li>
-        {potential !== null && (
+        {/* Zero exposure is a real reading (nothing in the battery applied), and dividing by it
+            printed Infinity%. There is no share to state, so the line stays out. */}
+        {potential !== null && potential > 0 && (
           <li>
             <span className="k">{fmtScore(potential)}</span>
             <span className="v">

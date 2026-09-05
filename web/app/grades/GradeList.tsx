@@ -10,6 +10,7 @@ const STATUS_TEXT: Record<GradeSummary["status"], string> = {
   running: "grading",
   done: "",
   failed: "did not finish",
+  cancelled: "stopped",
 };
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;

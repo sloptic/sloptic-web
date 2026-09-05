@@ -366,7 +366,7 @@ export default function FieldTable({
                   ) : e.status === "queued" ? (
                     "waiting"
                   ) : e.status === "failed" ? (
-                    "did not respond"
+                    "did not finish"
                   ) : e.grade_id ? (
                     "graded"
                   ) : canGrade && runId ? (

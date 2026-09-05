@@ -316,6 +316,22 @@ export default function EventActions({
                   {etaOf(live) && <span className="st">{etaOf(live)}</span>}
                 </div>
 
+                {live.status === "ready" && live.event_entries.length === 0 && (
+                  <div className="run-controls">
+                    <button className="button" type="button" disabled={busy}
+                            onClick={() => refresh(live)}>
+                      Read the gallery again
+                    </button>
+                    <button className="button secondary" type="button" disabled={busy}
+                            onClick={() => void act(async () => {
+                              await post("/api/events/run/cancel", { id: live.id });
+                              return "Run cancelled.";
+                            })}>
+                      Cancel run
+                    </button>
+                  </div>
+                )}
+
                 {live.status === "ready" && live.event_entries.length > 0 && (() => {
                   const toGrade = ungradedCount(live);
                   const graded = regradableCount(live);
@@ -507,7 +523,15 @@ export default function EventActions({
         </section>
       )}
 
-      {/* The live run's field sits with its card; history rows never carry one. */}
+      {/* The live run's field sits with its card. A settled run keeps its field only while its
+          recovery passes are outstanding, and that one needs a heading: with no live card above it,
+          an unlabelled table reads as the field of the run you are about to start. */}
+      {fieldRun && fieldRun !== live && fieldRun.event_entries.length > 0 && (
+        <h2 className="section-head">
+          Field of the run from{" "}
+          {new Date(fieldRun.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+        </h2>
+      )}
       {fieldRun && fieldRun.event_entries.length > 0 && (
         <FieldTable
           runId={fieldRun.id}
@@ -552,10 +576,15 @@ export default function EventActions({
                   <td>{r.gallery_complete === false ? "short" : r.gallery_complete === true ? "complete" : "unknown"}</td>
                   <td>
                     {r.status !== "resolving" && r.status !== "ready" && (
-                      <><a href={`/events/${slug}/${r.id}`}>board</a>{refreshable(r) ? ", " : ""}</>
+                      <><a href={`/events/${slug}/${r.id}`}>leaderboard</a>{refreshable(r) ? ", " : ""}</>
                     )}
                     {refreshable(r) && (
-                      <button className="link-button" type="button" disabled={busy} onClick={() => refresh(r)}>
+                      // Refusing this server-side is not enough on its own: a refresh puts the run
+                      // back into resolving, and a second live run on one event is a thing no card
+                      // can steer, so the button says why before it is pressed.
+                      <button className="link-button" type="button" disabled={busy || !!live}
+                              title={live ? "Another run on this event is still going." : undefined}
+                              onClick={() => refresh(r)}>
                         refresh
                       </button>
                     )}

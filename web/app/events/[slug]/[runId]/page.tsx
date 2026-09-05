@@ -189,7 +189,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
   // count is honest.
   const battery = run.mode === "active" ? TOTALS.total : TOTALS.passive;
   const dnfRows: DnfRow[] = [
-    ...failed.map((r) => ({ name: r.name, project_url: r.project_url, note: "DNF, the deployment did not respond" })),
+    ...failed.map((r) => ({ name: r.name, project_url: r.project_url, note: "DNF, the grade did not finish" })),
     ...withheld.map((r) => ({
       name: r.name,
       project_url: r.project_url,

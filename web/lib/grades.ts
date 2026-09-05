@@ -1,6 +1,26 @@
 // Shared shape for grade LIST views (the browser's own history, and an account's grades). The single
 // report view has its own richer route; this is deliberately just enough to render a row.
 
+/** What a person is told a failed grade did, given what the worker recorded.
+ *
+ *  The worker writes for operators: `worker error: KeyError('surface')` is the right thing in the
+ *  row and the wrong thing on a report. The prefixes below are the ones grade_child and the
+ *  supervisor actually write; anything else is passed through, since a message written to be read
+ *  (the active-authorization refusal, a cancel) already says what it means. */
+export function failureText(raw: string | null | undefined): string {
+  const s = (raw ?? "").trim();
+  if (!s) return "The grade did not finish.";
+  if (s.startsWith("target not gradeable:"))
+    return "Sloptic could not reach the app. Check that the URL is live, public, and serving over HTTPS.";
+  if (s.startsWith("worker error:"))
+    return "Something went wrong on our side, so this grade did not finish. Grading it again usually works.";
+  if (s.startsWith("the grader process was killed"))
+    return "The grade stopped before it finished. Grading it again usually works.";
+  if (s.startsWith("grading did not finish within"))
+    return `${s.charAt(0).toUpperCase()}${s.slice(1)}. Very large apps can exceed the time one grade gets.`;
+  return s;
+}
+
 export const SUMMARY_SELECT =
   "id, origin, submitted_url, mode, status, submitted_at, finished_at, account_id, results(slop_score, percentile, percentile_band, ranking)";
 
@@ -11,7 +31,7 @@ export type GradeSummary = {
   /** Which battery ran. The two rank on different frozen curves, so a list that mixes them without
    *  saying which is which invites comparing numbers that are not comparable. */
   mode: "passive" | "active";
-  status: "queued" | "running" | "done" | "failed";
+  status: "queued" | "running" | "done" | "failed" | "cancelled";
   submitted_at: string;
   finished_at: string | null;
   /** Whether an account owns it, which is what decides if the report expires. Never the account id:

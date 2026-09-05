@@ -37,7 +37,9 @@ export default async function EventPage({ params }: { params: { slug: string } }
   // the page, and the events API's own compact shape arrives without a second auth-plus-query chain.
   const [gradedRes, seededRuns] = await Promise.all([
     runIds.length
-      ? db.from("grades").select("id", { count: "exact", head: true }).in("event_run_id", runIds)
+      // Only the finished ones: the delete dialog calls these "reports" and offers to take them,
+      // and what it takes are results rows. A queued grade has none.
+      ? db.from("grades").select("id", { count: "exact", head: true }).in("event_run_id", runIds).eq("status", "done")
       : Promise.resolve({ count: 0 }),
     runsForAccount(user.id, params.slug).catch(() => []),
   ]);

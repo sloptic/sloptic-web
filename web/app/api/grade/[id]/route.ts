@@ -30,7 +30,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   // absence break the lookup: a report that already exists must keep rendering on a database that
   // has not been migrated yet. Anything else turns an optional flourish into a 500 on a finished
   // grade, which is what happened when this shipped ahead of its migration.
-  const CORE = "id, status, submitted_url, submitted_at, finished_at, error";
+  const CORE = "id, origin, status, submitted_url, submitted_at, finished_at, error";
   let { data: grade, error } = await db
     .from("grades")
     .select(`${CORE}, progress, account_id, retry_due_at, retry_passes, event_run_id, claimed_at`)
@@ -151,6 +151,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     id: grade.id,
     status: grade.status,
     url: grade.submitted_url,
+    // What was actually graded. The worker pins the run to the origin (egress.origin_scope), so a
+    // submitted path is where the submitter pointed, not what the report covers.
+    origin: (grade as { origin?: string | null }).origin ?? grade.submitted_url,
     submitted_at: grade.submitted_at,
     error: grade.error,
     result,

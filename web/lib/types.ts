@@ -164,7 +164,10 @@ export interface GradeProgress {
 export interface GradeView {
   id: string;
   status: GradeStatus;
+  /** Exactly what was submitted, path and query included. */
   url: string;
+  /** Scheme, host and port: the scope the grade actually covered. */
+  origin?: string;
   submitted_at: string;
   /** When the worker claimed the grade. Differs from submitted_at by the queue wait, which for
    *  event grades can include long pauses; the running timer starts here, not at submission. */

@@ -8,14 +8,16 @@ import { AREAS, AREA_BLURBS, categoriesFor } from "@/lib/checks";
 
 // Sample grade, passive mode. Each axis splits three ways: what failed, what applied, what the mode
 // could have run. Read in checks or in slop points, since a handful of failed checks can cost more than
-// a pile of them. The point totals sum to the 42 above.
+// a pile of them. The point totals sum to the 42 above, and the possible counts to the passive
+// battery's real 44 (security 17, qa 15, performance 12), so the sample does not quietly disagree
+// with the number the rest of the site quotes.
 const SAMPLE_AXES = [
   {
     id: "security",
     label: "security",
     failed: 4,
     applied: 9,
-    possible: 14,
+    possible: 17,
     slopFailed: 20,
     slopApplied: 46,
     slopPossible: 62,
@@ -25,7 +27,7 @@ const SAMPLE_AXES = [
     label: "quality",
     failed: 3,
     applied: 8,
-    possible: 12,
+    possible: 15,
     slopFailed: 14,
     slopApplied: 38,
     slopPossible: 55,
@@ -35,7 +37,7 @@ const SAMPLE_AXES = [
     label: "performance",
     failed: 2,
     applied: 6,
-    possible: 11,
+    possible: 12,
     slopFailed: 8,
     slopApplied: 26,
     slopPossible: 40,
