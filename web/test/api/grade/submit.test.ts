@@ -126,10 +126,20 @@ describe("POST /api/grade, normalising the target", () => {
     expect(String(db.rows("grades")[0].origin)).toMatch(/^https:\/\/xn--/);
   });
 
-  it("queues every grade as passive, whatever the caller asks for", async () => {
-    // Active probing is a gated tier behind two ownership proofs (CLAUDE.md). This route issues none,
-    // so nothing it accepts may ever be queued active.
+  it("refuses the full battery to a caller who has proved nothing, rather than downgrading it", async () => {
+    // Active probing is a gated tier behind two ownership proofs (CLAUDE.md). Asking is allowed;
+    // what the caller cannot do is DECIDE, so an unverified request is refused rather than quietly
+    // served the passive floor under a name the caller did not ask for. The account-bound cases live
+    // in test/security/passive-floor, which is where this rule is enforced in detail.
     const req = jsonRequest("http://localhost/api/grade", { url: "https://example.com", mode: "active" });
+    req.headers.set("x-forwarded-for", "203.0.113.7");
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+    expect(db.rows("grades")).toHaveLength(0);
+  });
+
+  it("queues the passive floor when no battery is asked for", async () => {
+    const req = jsonRequest("http://localhost/api/grade", { url: "https://example.com" });
     req.headers.set("x-forwarded-for", "203.0.113.7");
     await POST(req);
     expect(db.rows("grades")[0].mode).toBe("passive");

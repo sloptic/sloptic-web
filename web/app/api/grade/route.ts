@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: GRADING_CLOSED_MESSAGE }, { status: 503 });
   }
 
-  let body: { url?: string };
+  let body: { url?: unknown; mode?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -71,21 +71,63 @@ export async function POST(req: NextRequest) {
   // lands unowned and quietly expires unless they later go and claim it, which makes signing in
   // look like it does nothing.
   const user = await currentUser();
+
+  // 5a. The battery. PASSIVE unless this ACCOUNT has proved it owns this origin, and the server
+  // decides that, never the caller: the client may ask, and asking is all it can do.
+  //
+  // Until now this was the string "passive" and nothing else, so owner verification granted
+  // something no part of the site could spend. The grant is re-read here rather than trusted from
+  // anywhere earlier, and the worker re-reads it AGAIN at grade time along with both proofs, which
+  // is the layering CLAUDE.md asks for: no single check is the authorization.
+  let mode: "passive" | "active" = "passive";
+  if (body.mode === "active") {
+    if (!user) {
+      return NextResponse.json(
+        { error: "Sign in to run the full battery on a domain you have verified." },
+        { status: 401 }
+      );
+    }
+    const { data: grant } = await db
+      .from("grants")
+      .select("scope")
+      .eq("account_id", user.id)
+      .eq("kind", "app_origin")
+      .eq("scope", target.origin)
+      .is("revoked_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+    if (!grant) {
+      // Refused rather than quietly downgraded: someone who asked for the full battery and silently
+      // got the passive floor would read the result as the whole story.
+      return NextResponse.json(
+        {
+          error:
+            "The full battery needs this origin verified by your account first. Verify it, then grade it.",
+        },
+        { status: 403 }
+      );
+    }
+    mode = "active";
+  }
+
   const { data, error } = await db
     .from("grades")
     .insert({
       origin: target.origin,
-      submitted_url: (body.url || "").trim(),
-      mode: "passive",
+      submitted_url: typeof body.url === "string" ? body.url.trim() : "",
+      mode,
       status: "queued",
       submitter_ip_hash: ipHash,
       account_id: user?.id ?? null,
     })
-    .select("id, status, origin")
+    .select("id, status, origin, mode")
     .single();
 
   if (error || !data) {
     return NextResponse.json({ error: "Could not enqueue the grade." }, { status: 500 });
   }
-  return NextResponse.json({ id: data.id, status: data.status, origin: data.origin }, { status: 202 });
+  return NextResponse.json(
+    { id: data.id, status: data.status, origin: data.origin, mode: data.mode },
+    { status: 202 }
+  );
 }

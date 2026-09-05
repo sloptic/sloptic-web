@@ -1,10 +1,17 @@
 /** Passive by default, for everyone who has proved nothing.
  *
  *  CLAUDE.md: "An unverified target gets only observational probes. Active/injection probes NEVER
- *  run on an unverified target. This is legal safety, not a feature flag." The single-URL form is
- *  the anonymous tier, so the battery it enqueues must not be a function of anything the caller
- *  sends. These tests are about the submit path only, as the gate; where the URL may point is the
- *  egress sandbox's question, not this one.
+ *  run on an unverified target. This is legal safety, not a feature flag."
+ *
+ *  This file used to assert that the route ALWAYS wrote passive, which was true while owner
+ *  verification did not exist and the grant it issues could not be spent anywhere. The rule was
+ *  never "the caller cannot ask", though: it is "the caller cannot decide". So the battery is now a
+ *  function of a grant the SERVER reads, and these tests say that, which is a stronger claim than
+ *  the one they replaced. A body is still just a request; what makes it active is the account
+ *  having proved it owns the origin.
+ *
+ *  These are about the submit path as the gate. Where the URL may point is the egress sandbox's
+ *  question, and whether the proofs still hold at grade time is the worker's.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { fakeDb, type FakeSupabase } from "../helpers/supabase";
@@ -29,6 +36,9 @@ vi.mock("@/lib/egress", () => ({ egressPrecheck: async () => null }));
 import { POST as submitGrade } from "@/app/api/grade/route";
 
 const ALICE = { id: "u-alice", email: "alice@example.com" };
+const NOW = new Date().toISOString();
+const FUTURE = new Date(Date.now() + 60 * 86_400_000).toISOString();
+const PAST = new Date(Date.now() - 86_400_000).toISOString();
 const YEAR_AWAY = "2099-01-01T00:00:00.000Z";
 
 function store(): FakeSupabase {
@@ -62,14 +72,26 @@ afterEach(() => {
   delete process.env.GRADING_OPEN;
 });
 
-describe("POST /api/grade always enqueues the passive floor", () => {
-  it("ignores a mode the caller asked for", async () => {
+describe("POST /api/grade enqueues the passive floor unless the account owns the origin", () => {
+  it("refuses an anonymous caller who asks for the full battery", async () => {
+    // Refused, not quietly downgraded: someone who asked for the full battery and silently got the
+    // passive floor would read the result as the whole story.
     const db = store();
     setDb(db);
     const res = await read(
       await submitGrade(
         jsonRequest("http://x/api/grade", { url: "https://someone-elses-app.com", mode: "active" })
       )
+    );
+    expect(res.status).toBe(401);
+    expect(db.rows("grades")).toHaveLength(0);
+  });
+
+  it("enqueues the passive floor when no mode is asked for", async () => {
+    const db = store();
+    setDb(db);
+    const res = await read(
+      await submitGrade(jsonRequest("http://x/api/grade", { url: "https://someone-elses-app.com" }))
     );
     expect(res.status).toBe(202);
     expect(db.rows("grades")[0].mode).toBe("passive");
@@ -78,10 +100,10 @@ describe("POST /api/grade always enqueues the passive floor", () => {
   it("ignores any other field a body could carry", async () => {
     const db = store();
     setDb(db);
+    setUser(ALICE);
     await submitGrade(
       jsonRequest("http://x/api/grade", {
         url: "https://someone-elses-app.com",
-        mode: "active",
         account_id: "u-victim",
         event_run_id: "run-1",
         status: "done",
@@ -89,39 +111,93 @@ describe("POST /api/grade always enqueues the passive floor", () => {
     );
     const row = db.rows("grades")[0];
     expect(row.mode).toBe("passive");
-    expect(row.account_id).toBeNull();
+    // Her own account, from the session, never the body's claim about whose it is.
+    expect(row.account_id).toBe(ALICE.id);
     expect(row.event_run_id).toBeUndefined();
     expect(row.status).toBe("queued");
   });
 
-  it("does not read a grant for the submitted origin at all", async () => {
+  it("does not read a grant when nobody asked for the full battery", async () => {
     const db = store();
     setDb(db);
+    setUser(ALICE);
     await submitGrade(jsonRequest("http://x/api/grade", { url: "https://alices-app.com/dashboard" }));
-    // "This origin is active-gradable" is not a question the system may ask, so the submit path has
-    // no reason to look at the grants table.
+    // An ordinary submission is the anonymous tier whoever sends it, so there is no question to ask
+    // of the grants table and no way for the answer to matter.
     expect(db.calls.some((c) => c.table === "grants")).toBe(false);
     expect(db.rows("grades")[0].mode).toBe("passive");
   });
 
-  it("stays passive for Mallory pointing at the origin Alice verified", async () => {
+  it("refuses Mallory the full battery on the origin ALICE verified", async () => {
+    // The load-bearing rule, and the reason the grant is account-bound rather than origin-bound:
+    // "this account may actively grade this origin", never "this origin is active-gradable".
+    // store() already seeds Alice's live grant for this origin, which is the whole point here.
     const db = store();
     setDb(db);
     setUser({ id: "u-mallory", email: "mallory@example.com" });
-    await submitGrade(jsonRequest("http://x/api/grade", { url: "https://alices-app.com", mode: "active" }));
-    expect(db.rows("grades")[0].mode).toBe("passive");
+    const res = await read(
+      await submitGrade(jsonRequest("http://x/api/grade", { url: "https://alices-app.com", mode: "active" }))
+    );
+    expect(res.status).toBe(403);
+    expect(db.rows("grades")).toHaveLength(0);
   });
 
-  it("stays passive for Alice herself: this route is the anonymous tier, not the owner tier", async () => {
+  it("gives Alice the full battery on the origin she verified", async () => {
     const db = store();
     setDb(db);
     setUser(ALICE);
-    await submitGrade(jsonRequest("http://x/api/grade", { url: "https://alices-app.com", mode: "active" }));
-    const row = db.rows("grades")[0];
-    expect(row.mode).toBe("passive");
-    // Attached to her account so it does not expire out from under her, which is a different thing
-    // from authorizing anything.
-    expect(row.account_id).toBe(ALICE.id);
+    const res = await read(
+      await submitGrade(jsonRequest("http://x/api/grade", { url: "https://alices-app.com", mode: "active" }))
+    );
+    expect(res.status).toBe(202);
+    expect(db.rows("grades")[0].mode).toBe("active");
+    expect(db.rows("grades")[0].account_id).toBe(ALICE.id);
+  });
+
+  it("refuses Alice on a grant that has expired or been revoked", async () => {
+    for (const lapsed of [{ expires_at: PAST, revoked_at: null }, { expires_at: FUTURE, revoked_at: NOW }]) {
+      const db = store();
+      setDb(db);
+      // Replace the seeded live grant rather than adding beside it: two live grants for one scope
+      // cannot exist (0007's unique index), and the lookup would fail closed on them anyway.
+      db.rows("grants").length = 0;
+      db.rows("grants").push({
+        account_id: ALICE.id, kind: "app_origin", scope: "https://alices-app.com", ...lapsed,
+      });
+      setUser(ALICE);
+      const res = await read(
+        await submitGrade(jsonRequest("http://x/api/grade", { url: "https://alices-app.com", mode: "active" }))
+      );
+      expect(res.status).toBe(403);
+      expect(db.rows("grades")).toHaveLength(0);
+    }
+  });
+
+  it("refuses a grant for a DIFFERENT origin, however close", async () => {
+    // The grant authorizes a scheme, host and port, so a sibling host or another port is somebody
+    // else's server as far as this is concerned.
+    for (const other of ["https://sub.alices-app.com", "https://alices-app.com:8443", "http://alices-app.com"]) {
+      const db = store();
+      setDb(db);
+      setUser(ALICE);
+      const res = await read(await submitGrade(jsonRequest("http://x/api/grade", { url: other, mode: "active" })));
+      expect(res.status, other).toBe(403);
+    }
+  });
+
+  it("does not let an ORGANIZER grant stand in for owning the origin", async () => {
+    const db = store();
+    setDb(db);
+    db.rows("grants").length = 0;
+    db.rows("grants").push({
+      account_id: ALICE.id, kind: "organizer_event", scope: "https://alices-app.com",
+      revoked_at: null, expires_at: FUTURE,
+    });
+    setUser(ALICE);
+    const res = await read(
+      await submitGrade(jsonRequest("http://x/api/grade", { url: "https://alices-app.com", mode: "active" }))
+    );
+    expect(res.status).toBe(403);
   });
 
   it("normalizes the target to an origin and refuses what will not parse", async () => {

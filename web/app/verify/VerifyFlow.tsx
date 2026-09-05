@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Claim } from "@/lib/domain-claims";
 
 export type { Claim };
@@ -112,6 +113,7 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
   signedIn: boolean;
   initialClaims: Claim[];
 }) {
+  const router = useRouter();
   const [claims, setClaims] = useState<Claim[]>(initialClaims);
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -187,6 +189,23 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
     } catch (err) {
       setNote(err instanceof Error ? err.message : "Could not start verification.");
     } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Queue the full battery on an origin this account has proved it owns.
+   *
+   *  The server decides whether that is allowed, by re-reading the grant. This only asks, which is
+   *  why it can be a plain button rather than a form carrying a claim about who the caller is.
+   */
+  async function gradeActively(origin: string) {
+    setBusy(true);
+    setNote(null);
+    try {
+      const d = await post("/api/grade", { url: origin, mode: "active" });
+      router.push(`/grade/${d.id}`);
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : "Could not start the grade.");
       setBusy(false);
     }
   }
@@ -320,7 +339,14 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
                   Check now
                 </button>
               )}
-              {c.status === "verified" && <a className="button" href="/">Grade it</a>}
+              {c.status === "verified" && (
+                // Grades it, rather than pointing at the form and hoping. The origin is right here
+                // and the account is the one holding the grant, so the button does the thing.
+                <button className="button" type="button" disabled={busy}
+                        onClick={() => void gradeActively(c.origin)}>
+                  Grade it actively
+                </button>
+              )}
               {c.status !== "revoked" && (
                 <button
                   className="button secondary"
