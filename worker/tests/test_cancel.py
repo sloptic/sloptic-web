@@ -220,7 +220,7 @@ class TestCancelRun:
         conn.execute("UPDATE grades SET retry_due_at = now() - interval '1 minute' WHERE id = %s", (g,))
         conn.execute("UPDATE event_entries SET grade_id = %s WHERE id = %s", (g, entry))
 
-        assert db.claim_retry(conn, 600.0) is None
+        assert db.claim_retry(conn, 600.0, 99) is None
 
     def test_a_second_cancel_pass_dequeues_nothing_and_disturbs_no_grade(self, conn, account):
         # The supervisor is a loop, and an organizer can hit the button twice. A cancel that is not
@@ -251,45 +251,43 @@ class TestCancelRun:
 
         assert _r(conn, run)["status"] == "cancelled"
 
-    def test_cancel_run_restamps_a_run_it_has_already_finished(self, conn, account):
-        # DISPUTED, current behaviour asserted so the suite stays green. cancel_run has no status
-        # guard, so a second pass moves finished_at again. The web half returns 409 for a run that
-        # is already cancelled, so the two disagree about whether a re-cancel is an event at all.
-        # See the report: the correct behaviour is to leave a settled run's timestamps alone.
-        run = _run(conn, account)
-        db.cancel_run(conn, run)
-        first = _r(conn, run)["finished_at"]
+    def test_a_settled_run_is_not_restamped(self, conn, account):
+        # The route answers 409 for a run that is done, failed or already cancelled. This is the
+        # transactional equivalent of that route, so it has to mean the same thing: a second cancel
+        # is a no-op, not an event that moves the finish time.
+        run = _run(conn, account, status="cancelled")
+        conn.execute("UPDATE event_runs SET finished_at = now() - interval '1 hour' WHERE id = %s", (run,))
+        before = _r(conn, run)["finished_at"]
 
-        db.cancel_run(conn, run)
+        assert db.cancel_run(conn, run) == 0
 
-        assert _r(conn, run)["finished_at"] > first
+        assert _r(conn, run)["finished_at"] == before
 
-    def test_cancel_run_reopens_a_run_that_had_already_finished(self, conn, account):
-        # DISPUTED, current behaviour asserted so the suite stays green. The web half refuses a
-        # done or failed run with 409 and leaves its grades alone; cancel_run overwrites the status
-        # of a run that finished normally. See the report.
+    def test_a_finished_run_is_not_reopened_as_cancelled(self, conn, account):
+        # A board that completed is a record. Cancelling it after the fact would rewrite what
+        # happened, and the route refuses exactly this.
         run = _run(conn, account, status="done")
 
-        db.cancel_run(conn, run)
+        assert db.cancel_run(conn, run) == 0
 
-        assert _r(conn, run)["status"] == "cancelled"
+        assert _r(conn, run)["status"] == "done"
 
-    def test_cancel_run_also_unlinks_the_entries_of_grades_that_already_finished(self, conn, account):
-        # DISPUTED, current behaviour asserted so the suite stays green. The web half unlinks ONLY
-        # the entries whose grade it just dequeued; cancel_run unlinks every entry of the run whose
-        # grade is not running, which drops the finished reports off the board of a run that was
-        # part way through. See the report.
+    def test_a_finished_report_keeps_its_place_on_the_board(self, conn, account):
+        # Only what this call dequeued is unlinked. Unlinking "anything not running" also took every
+        # FINISHED grade, so cancelling a part-graded run emptied the board of the reports it had
+        # already earned: the rows survived with nothing pointing at them.
         run = _run(conn, account)
-        done = _grade(conn, origin="https://done.example.com", status="done", run=run)
-        entry = _entry(conn, run, done, "https://done.example.com")
+        landed = _grade(conn, status="done", run=run)
+        waiting = _grade(conn, origin="https://b.example.com", run=run)
+        e_landed = _entry(conn, run, landed)
+        e_waiting = _entry(conn, run, waiting, "https://b.example.com")
 
-        db.cancel_run(conn, run)
+        assert db.cancel_run(conn, run) == 1
 
-        assert _link(conn, entry) is None
-        assert _g(conn, done)["status"] == "done"
+        assert _link(conn, e_landed) == landed
+        assert _link(conn, e_waiting) is None
+        assert _g(conn, landed)["status"] == "done"
 
-
-class TestCancelRacingAClaim:
     def test_a_claim_cannot_take_a_grade_the_cancel_has_already_locked(self, conn, second, account):
         # The whole reason cancel_run holds one transaction. Mid-cancel the run does not yet read as
         # cancelled to anyone else, so the only thing standing between another worker and a grade
@@ -490,11 +488,11 @@ class TestUnlinkEntriesOf:
 
         assert _link(conn, entry) is None
 
-    def test_unlink_entries_of_also_detaches_a_grade_that_landed_done(self, conn, account):
-        # DISPUTED, current behaviour asserted so the suite stays green. mark_cancelled deliberately
-        # lets a report that landed just before the kill win, and then the supervisor calls this with
-        # the same id list and takes the finished grade's entry link anyway, so the work survives as
-        # a row nothing on the board points at. See the report.
+    def test_a_grade_that_landed_done_keeps_its_place_on_the_board(self, conn, account):
+        # The race mark_cancelled exists to win, followed through to the end. The supervisor guards
+        # mark_cancelled on status='running', so a report committed in the breath before the kill
+        # stays done, and then hands this the WHOLE doomed list. Unlinking that winner would leave
+        # the work surviving as a row nothing on the board points at, undoing the race it just won.
         run = _run(conn, account)
         g = _grade(conn, status="running", run=run, claimed="now()")
         entry = _entry(conn, run, g)
@@ -505,4 +503,18 @@ class TestUnlinkEntriesOf:
 
         db.unlink_entries_of(conn, doomed)
 
-        assert _link(conn, entry) is None
+        assert _link(conn, entry) == g
+
+    def test_a_killed_grade_beside_a_finished_one_is_still_unlinked(self, conn, account):
+        # The guard is per grade, not per call: one finished sibling must not shelter the rest.
+        run = _run(conn, account)
+        landed = _grade(conn, status="running", run=run, claimed="now()")
+        killed = _grade(conn, origin="https://b.example.com", status="running", run=run, claimed="now()")
+        e_landed = _entry(conn, run, landed)
+        e_killed = _entry(conn, run, killed, "https://b.example.com")
+        conn.execute("UPDATE grades SET status = 'done' WHERE id = %s", (landed,))
+
+        db.unlink_entries_of(conn, [landed, killed])
+
+        assert _link(conn, e_landed) == landed
+        assert _link(conn, e_killed) is None

@@ -297,6 +297,27 @@ class TestSaveResult:
         assert _row(conn, gid) is None
 
 
+    def test_a_cancelled_grade_is_not_brought_back_as_done(self, conn):
+        """The kill race, followed to the end.
+
+        cancel kills the child, but a child can commit its report in the breath between the SIGKILL
+        and mark_cancelled. save_result used to flip ANY grade to done and clear its error, so the
+        grade the organizer stopped came back as finished with the reason wiped. Its siblings
+        mark_failed and mark_cancelled are both guarded on 'running'; this one was not.
+        """
+        gid = _grade(conn, status="running")
+        conn.execute(
+            "UPDATE grades SET status = 'cancelled', error = 'cancelled by the organizer' WHERE id = %s",
+            (gid,),
+        )
+
+        db.save_result(conn, gid, _payload())
+
+        row = conn.execute("SELECT status, error FROM grades WHERE id = %s", (gid,)).fetchone()
+        assert row["status"] == "cancelled"
+        assert row["error"] == "cancelled by the organizer"
+
+
 class TestLoadResult:
     def test_a_grade_with_no_report_loads_as_nothing(self, conn):
         gid = _grade(conn)

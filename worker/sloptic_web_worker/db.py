@@ -71,7 +71,10 @@ def expire_queued_jobs(conn: psycopg.Connection) -> int:
                                                                 THEN %(timeout)s
                                                                 ELSE %(event_timeout)s END)
            -- A paused run holds its grades on purpose; expiry may not fail them out from under it.
-           -- A cancelled run's stragglers age out here, since nothing will ever claim them.
+           -- A cancelled run's stragglers are NOT failed here either, but they are not left to poll
+           -- for ever: cancel_queued_on_cancelled_runs below marks them cancelled, which is the
+           -- truthful status (0024 made it distinct so the row says who stopped it) where this
+           -- statement would have blamed a worker that was never the reason.
            AND NOT EXISTS (
                  SELECT 1 FROM event_runs r
                   WHERE r.id = grades.event_run_id AND (r.paused OR r.status = 'cancelled'))
@@ -81,6 +84,29 @@ def expire_queued_jobs(conn: psycopg.Connection) -> int:
          "event_timeout": config.EVENT_QUEUE_TIMEOUT_SECONDS},
     ).fetchall()
     return len(row or [])
+
+
+def cancel_queued_on_cancelled_runs(conn: psycopg.Connection) -> int:
+    """Mark the queued leftovers of a cancelled run cancelled, rather than leaving them to poll.
+
+    claim_job refuses a cancelled run's grades and expire_queued_jobs refuses to age them out, so
+    without this they sit queued for ever. It is reachable rather than theoretical: a grade running
+    through a cancel that the boot reaper later returns to the queue lands exactly here.
+
+    Cancelled, not failed, and with the organizer named: 0024 made the status distinct so a stopped
+    grade does not read as one that broke.
+    """
+    rows = conn.execute(
+        """
+        UPDATE grades
+           SET status = 'cancelled', finished_at = now(), error = 'cancelled by the organizer'
+         WHERE status = 'queued'
+           AND EXISTS (SELECT 1 FROM event_runs r
+                        WHERE r.id = grades.event_run_id AND r.status = 'cancelled')
+     RETURNING 1;
+        """
+    ).fetchall()
+    return len(rows or [])
 
 
 def reap_abandoned_at_boot(conn: psycopg.Connection, boot: datetime) -> int:
@@ -302,7 +328,8 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
             },
         )
         conn.execute(
-            "UPDATE grades SET status = 'done', finished_at = now(), error = NULL WHERE id = %s;",
+            "UPDATE grades SET status = 'done', finished_at = now(), error = NULL "
+            " WHERE id = %s AND status = 'running';",
             (job_id,),
         )
 
@@ -508,46 +535,57 @@ def set_run_priority(conn: psycopg.Connection, run_id: str, priority: int) -> No
 
 
 def cancel_run(conn: psycopg.Connection, run_id: str) -> int:
-    """Stop a run: its queued grades become 'cancelled', the entries they belonged to are unlinked
-    (so those apps are gradeable again), and the run is marked cancelled. Grades already RUNNING
-    are left alone on purpose: a grade is minutes from landing, killing the child mid-flight buys
-    nothing, and the run no longer references them once marked. Returns how many were dequeued."""
+    """Stop a run: its queued grades become 'cancelled', the entries THEY belonged to are unlinked
+    (so those apps are gradeable again), and the run is marked cancelled. Returns how many were
+    dequeued.
+
+    Nothing in the worker calls this: the web route at /api/events/run/cancel does the work, and the
+    supervisor kills the run's running children on its next pass (running_on_cancelled_runs). It is
+    kept as the transactional equivalent, so it has to agree with that route rather than drift into
+    a second, different meaning of cancel. It previously disagreed twice: it unlinked the entries of
+    grades that had FINISHED, which takes an organizer's completed reports off their own board, and
+    it had no run-status guard, so it would reopen a settled run and restamp its finished_at.
+
+    Running grades are left attached here on purpose. The supervisor kills them and unlinks them
+    itself, which keeps the report-landed-first race in one place.
+    """
     with conn.transaction():
-        row = conn.execute(
-            """
-            WITH dequeued AS (
-                UPDATE grades
-                   SET status = 'cancelled', finished_at = now(),
-                       error = 'cancelled by the organizer'
-                 WHERE event_run_id = %s AND status = 'queued'
-                 RETURNING id
-            )
-            SELECT count(*) AS n FROM dequeued;
-            """,
+        # The run first, and only from a state a cancel may act on. Without this a settled run was
+        # reopened as cancelled and its finished_at restamped, while the route answers 409.
+        stopped = conn.execute(
+            """UPDATE event_runs
+                   SET status = 'cancelled', paused = false, finished_at = now()
+                 WHERE id = %s AND status IN ('resolving', 'ready', 'grading')
+             RETURNING id;""",
             (run_id,),
         ).fetchone()
-        n = int(row["n"])
-        conn.execute(
+        if not stopped:
+            return 0
+
+        dequeued = conn.execute(
             """
-            UPDATE event_entries e
-               SET grade_id = NULL
-             WHERE e.run_id = %s
-               AND e.grade_id IS NOT NULL
-               AND NOT EXISTS (
-                     SELECT 1 FROM grades g WHERE g.id = e.grade_id AND g.status = 'running');
+            UPDATE grades
+               SET status = 'cancelled', finished_at = now(),
+                   error = 'cancelled by the organizer'
+             WHERE event_run_id = %s AND status = 'queued'
+         RETURNING id;
             """,
             (run_id,),
-        )
+        ).fetchall()
+        ids = [r["id"] for r in dequeued]
+        n = len(ids)
+        if ids:
+            # Only what this call just dequeued, named exactly. Unlinking "anything not running"
+            # also swept up every FINISHED grade, so cancelling a part-graded run silently emptied
+            # the board of the reports it had already earned.
+            conn.execute(
+                "UPDATE event_entries SET grade_id = NULL WHERE run_id = %s AND grade_id = ANY(%s);",
+                (run_id, ids),
+            )
         conn.execute(
             """UPDATE grades
                    SET retry_due_at = NULL
                  WHERE event_run_id = %s AND retry_due_at IS NOT NULL;""",
-            (run_id,),
-        )
-        conn.execute(
-            """UPDATE event_runs
-                   SET status = 'cancelled', paused = false, finished_at = now()
-                 WHERE id = %s;""",
             (run_id,),
         )
     return n
@@ -586,12 +624,20 @@ def mark_cancelled(conn: psycopg.Connection, grade_id: str) -> None:
 
 
 def unlink_entries_of(conn: psycopg.Connection, grade_ids: list[str]) -> None:
-    """Detach entries from killed grades, so those apps are gradeable again."""
+    """Detach entries from killed grades, so those apps are gradeable again.
+
+    A grade that FINISHED keeps its entry. The supervisor guards mark_cancelled on status='running'
+    precisely so a report landing in the breath before the kill wins that race, and then passes the
+    whole doomed list here: without this clause the winner keeps its report and loses its place on
+    the board, which undoes the race it just won.
+    """
     if not grade_ids:
         return
     conn.execute(
-        """UPDATE event_entries SET grade_id = NULL
-            WHERE grade_id = ANY(%s);""",
+        """UPDATE event_entries e SET grade_id = NULL
+            WHERE e.grade_id = ANY(%s)
+              AND NOT EXISTS (SELECT 1 FROM grades g
+                               WHERE g.id = e.grade_id AND g.status = 'done');""",
         (grade_ids,),
     )
 
@@ -620,6 +666,17 @@ def save_field(conn: psycopg.Connection, run_id: str, entries: list, complete: b
     short list we know about are different facts, and only one of them is safe to rank.
     """
     with conn.transaction():
+        # The run row FIRST, and bail if it matched nothing. Everything below writes to a field the
+        # organizer is meant to authorise, and a cancel landing mid-resolve used to leave this
+        # writing entries into (and pruning entries out of) a run that was already stopped. The
+        # status predicate lives here rather than only on the update at the end.
+        claimed = conn.execute(
+            "SELECT 1 FROM event_runs WHERE id = %s AND status = 'resolving' FOR UPDATE;",
+            (run_id,),
+        ).fetchone()
+        if not claimed:
+            return
+
         for e in entries:
             conn.execute(
                 """INSERT INTO event_entries (run_id, project_url, app_url, skip_reason)
@@ -640,7 +697,7 @@ def save_field(conn: psycopg.Connection, run_id: str, entries: list, complete: b
             )
         conn.execute(
             """UPDATE event_runs
-                  SET status = CASE WHEN status = 'grading' THEN 'grading' ELSE 'ready' END,
+                  SET status = 'ready',
                       entries_found = %(n)s, gallery_complete = %(c)s,
                       detail = left(%(d)s, 2000), resolved_at = now(),
                       refresh_requested = false,
@@ -791,7 +848,7 @@ class Retry:
     passes: int
 
 
-def claim_retry(conn: psycopg.Connection, lock_s: float) -> Retry | None:
+def claim_retry(conn: psycopg.Connection, lock_s: float, max_passes: int) -> Retry | None:
     """Take one grade whose blocked tail is due for another pass.
 
     The due time is pushed out by the claim itself, so a slow pass cannot be picked up twice, and the
@@ -820,6 +877,12 @@ def claim_retry(conn: psycopg.Connection, lock_s: float) -> Retry | None:
                            AND (r2.paused OR r2.status = 'cancelled'))
                   AND (g2.event_run_id IS NULL
                        OR EXISTS (SELECT 1 FROM event_entries e WHERE e.grade_id = g2.id))
+                  -- The ceiling, enforced where the traffic is decided. schedule_retry refuses to
+                  -- BOOK past the maximum and the supervisor stops booking after a pass, but neither
+                  -- survives a worker killed between this claim and that branch: the passes are
+                  -- already spent, retry_due_at still holds the claim lock, and every lock expiry
+                  -- would hand the same grade out again, for ever.
+                  AND g2.retry_passes < %(max_passes)s
                 ORDER BY g2.retry_due_at
                 FOR UPDATE OF g2 SKIP LOCKED
                 LIMIT 1
@@ -827,7 +890,7 @@ def claim_retry(conn: psycopg.Connection, lock_s: float) -> Retry | None:
      RETURNING g.id, g.origin, g.mode, g.retry_passes,
                (SELECT r2.blocked_probes FROM results r2 WHERE r2.grade_id = g.id) AS blocked;
         """,
-        {"lock": lock_s},
+        {"lock": lock_s, "max_passes": max_passes},
     ).fetchone()
     if not row:
         return None

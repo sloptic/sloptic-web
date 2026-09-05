@@ -24,7 +24,7 @@ export async function GET() {
   const db = supabaseAdmin();
 
   const [{ data: worker, error: workerErr }, { count: queued, error: queueErr }] = await Promise.all([
-    db.from("worker_status").select("last_seen, state, in_flight").eq("id", "worker").maybeSingle(),
+    db.from("worker_status").select("last_seen, state, reason, in_flight").eq("id", "worker").maybeSingle(),
     db.from("grades").select("id", { count: "exact", head: true }).eq("status", "queued"),
   ]);
 
@@ -41,6 +41,13 @@ export async function GET() {
   else if (ageSeconds === null) problems.push("no worker has ever checked in");
   else if (!workerAlive) problems.push(`worker heartbeat is ${ageSeconds}s old`);
   if (queueErr) problems.push(`queue unreadable: ${queueErr.message}`);
+  // A live worker that is deliberately not claiming is still a grade that would not finish, which
+  // is this route's own definition of degraded. The heartbeat says so ("holding" plus the reason:
+  // a tripped challenge backoff holds both lanes for 48h, a spent daily budget holds one until
+  // midnight), and reading only last_seen reported 200 straight through it.
+  if (workerAlive && worker?.state === "holding") {
+    problems.push(`worker is holding: ${worker?.reason || "not claiming any lane"}`);
+  }
 
   const ok = problems.length === 0;
   return NextResponse.json(

@@ -129,6 +129,16 @@ class _Reputation:
         print(f"[breaker] tripped: {reason}. Not claiming for {hours:.0f}h so the flag can decay.",
               flush=True)
 
+    def backing_off(self) -> bool:
+        """Whether the challenge backoff is holding right now.
+
+        Separate from blocked(), which also reports a spent daily budget. The budgets are about how
+        much work we do; this is about our IP having been challenged repeatedly, and it is the only
+        one that must reach the retry lane: a retry aims MORE traffic at exactly the origins that
+        did the challenging.
+        """
+        return time.time() < self.paused_until
+
     def blocked(self, conn) -> dict[str, str]:
         """Which lanes may not be claimed right now, and why. Empty means both are open.
 
@@ -237,7 +247,7 @@ def process_retries(conn) -> int:
     injection pools have to differ from the main grade's, which is per-process. The child grades;
     this claims, merges, and books whatever comes next.
     """
-    r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
+    r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
     if r is None:
         return 0
     pad = grader.benign_pad(set(r.blocked)) if (r.mode == "active" and config.RETRY_PAD_BENIGN) else []
@@ -501,6 +511,13 @@ def main() -> None:
             # slots a fresh run is starving behind, and the organizer's cancel was an instruction
             # about traffic, not a suggestion for later. Each killed grade is marked cancelled with
             # its entry unlinked, so the app is gradeable again under the next run.
+            # Queued leftovers of a cancelled run: nothing claims them and nothing expires them,
+            # so they are closed here rather than polling for ever.
+            stranded = db.cancel_queued_on_cancelled_runs(conn)
+            if stranded:
+                print(f"[cancel] closed {stranded} queued grade(s) of cancelled run(s)", flush=True)
+                worked = True
+
             doomed = db.running_on_cancelled_runs(conn)
             if doomed:
                 for run in running[:]:
@@ -519,8 +536,6 @@ def main() -> None:
             # every pass rather than waiting behind the grade queue.
             worked = process_event_checks(conn) > 0 or worked
             worked = process_event_runs(conn) > 0 or worked
-            worked = process_retries(conn) > 0 or worked
-
             # Say WHY we are idle, but only when the reason changes: this loop runs every 5s.
             blocked = rep.blocked(conn)
             lanes = {l for l in ("public", "event") if l not in blocked}
@@ -540,6 +555,15 @@ def main() -> None:
                          oldest)
             else:
                 beat.set("polling", "", None)
+
+            # AFTER the breaker is consulted, and gated on it. A challenge backoff exists because
+            # our IP was challenged repeatedly, and a recovery pass is a near-full battery aimed at
+            # the very origins that challenged us: running those through a backoff re-warms the flag
+            # the backoff exists to let decay, and CLAUDE.md is explicit that we never build anything
+            # that defeats a bot challenge. The booking stays on the grade, so nothing is lost; the
+            # pass simply waits for the backoff to expire like everything else.
+            if not rep.backing_off():
+                worked = process_retries(conn) > 0 or worked
 
             if lanes:
                 worked = fill(conn, running, lanes) or worked

@@ -220,7 +220,7 @@ class TestClaimingAPass:
         g = _grade(conn, origin="https://app.example.com", mode="active")
         _result(conn, g, blocked=["sec-inj-001", "sec-up-002"], mode="active")
         _book(conn, g, ["sec-inj-001", "sec-up-002"])
-        r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
+        r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
         assert r is not None
         assert r.grade_id == g
         assert r.origin == "https://app.example.com"
@@ -232,7 +232,7 @@ class TestClaimingAPass:
     def test_returns_nothing_when_no_pass_is_booked(self, conn):
         g = _grade(conn)
         _result(conn, g, blocked=["sec-inj-001"])
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS) is None
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES) is None
 
     def test_leaves_a_pass_whose_cooldown_has_not_elapsed(self, conn):
         # The cooldown IS the respect for the challenge: coming early re-warms a block that was
@@ -240,7 +240,7 @@ class TestClaimingAPass:
         g = _grade(conn)
         _result(conn, g, blocked=["sec-inj-001"])
         _book(conn, g, delay=600.0)
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS) is None
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES) is None
 
     def test_counts_the_pass_on_the_claim_rather_than_on_success(self, conn):
         # A pass that crashes still counts. Counting on success would let a grade that reliably
@@ -248,7 +248,7 @@ class TestClaimingAPass:
         g = _grade(conn)
         _result(conn, g, blocked=["sec-inj-001"])
         _book(conn, g)
-        r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
+        r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
         assert r.passes == 1
         assert _row(conn, g)["retry_passes"] == 1
 
@@ -259,7 +259,7 @@ class TestClaimingAPass:
         g = _grade(conn)
         _result(conn, g, blocked=["sec-inj-001"])
         _book(conn, g)
-        db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
+        db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
         wait = _wait_seconds(conn, g)
         assert abs(wait - config.RETRY_CLAIM_LOCK_SECONDS) < 30
         assert wait > config.RETRY_BLOCKED_NEXT_DELAY_SECONDS
@@ -270,8 +270,8 @@ class TestClaimingAPass:
         g = _grade(conn)
         _result(conn, g, blocked=["sec-inj-001"])
         _book(conn, g)
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS) is not None
-        assert db.claim_retry(second, config.RETRY_CLAIM_LOCK_SECONDS) is None
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES) is not None
+        assert db.claim_retry(second, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES) is None
 
     def test_two_workers_never_take_the_same_pass(self, conn, second):
         # FOR UPDATE SKIP LOCKED only means anything across sessions, hence the second connection.
@@ -280,10 +280,10 @@ class TestClaimingAPass:
         for g in (a, b):
             _result(conn, g, blocked=["sec-inj-001"])
             _book(conn, g)
-        first = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
-        other = db.claim_retry(second, config.RETRY_CLAIM_LOCK_SECONDS)
+        first = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
+        other = db.claim_retry(second, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
         assert {first.grade_id, other.grade_id} == {a, b}
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS) is None
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES) is None
 
     def test_takes_the_most_overdue_pass_first(self, conn):
         old = _grade(conn, origin="https://old.example.com")
@@ -292,7 +292,7 @@ class TestClaimingAPass:
             _result(conn, g, blocked=["sec-inj-001"])
         _book(conn, old, delay=-3600.0)
         _book(conn, new, delay=-60.0)
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS).grade_id == old
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES).grade_id == old
 
     def test_will_not_claim_a_pass_for_a_grade_with_nothing_still_blocked(self, conn):
         # A tail that already came back needs no traffic. This is the guard that stops a stale
@@ -300,7 +300,7 @@ class TestClaimingAPass:
         g = _grade(conn)
         _result(conn, g, blocked=[])
         _book(conn, g)
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS) is None
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES) is None
 
     def test_will_not_claim_a_pass_for_a_grade_that_stored_no_result(self, conn):
         # Nothing to fold into: a pass here would produce a narrowed subset record standing alone,
@@ -308,7 +308,7 @@ class TestClaimingAPass:
         # scripts/retry_blocked.py.
         g = _grade(conn)
         _book(conn, g)
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS) is None
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES) is None
 
     @pytest.mark.parametrize("status", ["queued", "running", "failed", "cancelled"])
     def test_only_a_finished_grade_gets_a_recovery_pass(self, conn, status):
@@ -317,7 +317,7 @@ class TestClaimingAPass:
         g = _grade(conn, status=status)
         _result(conn, g, blocked=["sec-inj-001"])
         _book(conn, g)
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS) is None
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES) is None
 
     def test_clearing_the_booking_stops_the_asking(self, conn):
         g = _grade(conn)
@@ -325,21 +325,30 @@ class TestClaimingAPass:
         _book(conn, g)
         db.clear_retry(conn, g)
         assert _row(conn, g)["retry_due_at"] is None
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS) is None
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES) is None
 
-    def test_the_claim_does_not_itself_enforce_the_ceiling_disputed(self, conn):
-        # DISPUTED, asserting what the code does today. claim_retry increments retry_passes but
-        # never checks it against the ceiling: the bound lives in schedule_retry and in the
-        # supervisor's post-pass branch. A worker killed between the claim and that branch (SIGKILL,
-        # a power cut, a DB error in save_result) leaves retry_due_at at now + lock with the passes
-        # spent, and the next poll after the lock expires claims it again, and again, for ever. See
-        # the report: the ceiling belongs in the claim, which is the only durable enforcement point.
+    def test_the_claim_enforces_the_ceiling_itself(self, conn):
+        # The claim is the only DURABLE enforcement point, which is why the ceiling lives here as
+        # well as in schedule_retry. A worker killed between the claim and the supervisor's post-pass
+        # branch (SIGKILL, a power cut, a DB error inside save_result) leaves the passes spent and
+        # retry_due_at holding the claim lock, so without this clause the next expiry would hand the
+        # same grade out again, and again, for ever.
         g = _grade(conn, passes=MAX)
         _result(conn, g, blocked=["sec-inj-001"])
         conn.execute("UPDATE grades SET retry_due_at = now() - interval '1 minute' WHERE id = %s", (g,))
-        again = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
-        assert again is not None
-        assert again.passes == MAX + 1
+
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES) is None
+
+    def test_a_grade_one_pass_below_the_ceiling_is_still_claimed(self, conn):
+        # The bound is not off by one: the last permitted pass must still run.
+        g = _grade(conn, passes=MAX - 1)
+        _result(conn, g, blocked=["sec-inj-001"])
+        conn.execute("UPDATE grades SET retry_due_at = now() - interval '1 minute' WHERE id = %s", (g,))
+
+        claimed = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
+
+        assert claimed is not None
+        assert claimed.passes == MAX
 
 
 class TestPauseAndCancel:
@@ -351,7 +360,7 @@ class TestPauseAndCancel:
         _entry(conn, run, g)
         _result(conn, g, blocked=["sec-inj-001"])
         _book(conn, g)
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS) is None
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES) is None
 
     def test_a_paused_run_holds_its_pass_rather_than_losing_it(self, conn, account):
         run = _run(conn, account, paused=True)
@@ -359,9 +368,9 @@ class TestPauseAndCancel:
         _entry(conn, run, g)
         _result(conn, g, blocked=["sec-inj-001"])
         _book(conn, g)
-        db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
+        db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
         conn.execute("UPDATE event_runs SET paused = false WHERE id = %s", (run,))
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS).grade_id == g
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES).grade_id == g
 
     def test_a_pause_does_not_spend_a_pass(self, conn, account):
         # The counter must not tick while the run is held, or a long pause would silently burn the
@@ -371,7 +380,7 @@ class TestPauseAndCancel:
         _entry(conn, run, g)
         _result(conn, g, blocked=["sec-inj-001"])
         _book(conn, g)
-        db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
+        db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
         assert _row(conn, g)["retry_passes"] == 0
 
     def test_will_not_claim_a_pass_once_the_run_is_cancelled(self, conn, account):
@@ -381,7 +390,7 @@ class TestPauseAndCancel:
         _result(conn, g, blocked=["sec-inj-001"])
         _book(conn, g)
         conn.execute("UPDATE event_runs SET status = 'cancelled' WHERE id = %s", (run,))
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS) is None
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES) is None
 
     def test_cancelling_a_run_drops_the_passes_it_had_booked(self, conn, account):
         # Not just hidden: erased. Without this, cancel would leave attack-tail re-checks booked
@@ -393,7 +402,7 @@ class TestPauseAndCancel:
         _book(conn, g)
         db.cancel_run(conn, run)
         assert _row(conn, g)["retry_due_at"] is None
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS) is None
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES) is None
 
     def test_a_cancel_does_not_reach_another_run_s_passes(self, conn, account):
         mine = _run(conn, account, slug="mine")
@@ -411,7 +420,7 @@ class TestPauseAndCancel:
         _result(conn, g, blocked=["sec-inj-001"])
         _book(conn, g)
         db.cancel_run(conn, run)
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS).grade_id == g
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES).grade_id == g
 
     def test_will_not_claim_a_pass_for_a_grade_the_field_no_longer_points_at(self, conn, account):
         # A regrade unlinks the superseded grade. Its tail is recovered into a report no board reads.
@@ -421,7 +430,7 @@ class TestPauseAndCancel:
         _entry(conn, run, fresh)
         _result(conn, stale, blocked=["sec-inj-001"])
         _book(conn, stale)
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS) is None
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES) is None
 
 
 class TestTheCadenceAcrossPasses:
@@ -436,7 +445,7 @@ class TestTheCadenceAcrossPasses:
         # Each turn of this loop is one pass that ran and re-tripped the block, which is the worst
         # honest case: the app keeps challenging and we keep coming back at the escalated wait.
         while True:
-            r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
+            r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
             if r is None:
                 break
             passes += 1
@@ -456,7 +465,7 @@ class TestTheCadenceAcrossPasses:
         _book(conn, g)
         booked = 0
         for _ in range(MAX + 5):
-            r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
+            r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
             if r is None:
                 break
             # The supervisor's crash branch: the pass produced no verdict, so it re-books at the
@@ -466,7 +475,7 @@ class TestTheCadenceAcrossPasses:
             elif _book(conn, g, delay=-1.0):
                 booked += 1
         assert booked == MAX - 1
-        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS) is None
+        assert db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES) is None
 
 
 class TestMergingAPassBack:
@@ -690,7 +699,7 @@ class TestWhatTheBoardShows:
 
     def test_a_pass_that_recovered_the_whole_tail_reads_as_recovered(self, conn, no_curve):
         g = self._challenged_grade(conn, ["sec-inj-001", "sec-inj-002"])
-        r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
+        r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
         merged = grader.merge_retry(
             db.load_result(conn, g),
             {"outcomes": [_outcome("sec-inj-001", category="injection"),
@@ -703,7 +712,7 @@ class TestWhatTheBoardShows:
 
     def test_a_pass_that_recovered_part_of_the_tail_reads_as_partial(self, conn, no_curve):
         g = self._challenged_grade(conn, ["sec-inj-001", "sec-inj-002"])
-        r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
+        r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
         merged = grader.merge_retry(
             db.load_result(conn, g),
             {"outcomes": [_outcome("sec-inj-001", category="injection")], "findings": [],
@@ -719,7 +728,7 @@ class TestWhatTheBoardShows:
         # The N mark needs retry_blocked_initial to survive: with it NULL the board reads initial 0,
         # draws no mark at all, and a grade whose tail was never tested looks like an ordinary one.
         g = self._challenged_grade(conn, ["sec-inj-001", "sec-inj-002"])
-        r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
+        r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
         merged = grader.merge_retry(
             db.load_result(conn, g),
             {"outcomes": [], "findings": [], "blocked_probes": list(r.blocked),
@@ -733,7 +742,7 @@ class TestWhatTheBoardShows:
         # save_result is reused for the merge, so the grade must come back done rather than being
         # re-opened, and the pass counter must not be reset by the write.
         g = self._challenged_grade(conn, ["sec-inj-001"])
-        r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
+        r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
         merged = grader.merge_retry(
             db.load_result(conn, g),
             {"outcomes": [_outcome("sec-inj-001", category="injection")], "findings": [],
@@ -750,7 +759,7 @@ class TestWhatTheBoardShows:
 
     def test_the_merge_replaces_the_stored_result_rather_than_adding_one(self, conn, no_curve):
         g = self._challenged_grade(conn, ["sec-inj-001"])
-        r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS)
+        r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
         merged = grader.merge_retry(
             db.load_result(conn, g),
             {"outcomes": [_outcome("sec-inj-001", category="injection")], "findings": [],

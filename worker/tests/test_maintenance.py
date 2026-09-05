@@ -180,26 +180,47 @@ class TestExpireQueuedJobs:
         assert _row(conn, held)["status"] == "queued"
         assert _row(conn, stale)["status"] == "failed"
 
-    def test_a_cancelled_run_s_straggler_is_currently_left_queued_for_ever(self, conn, account):
-        # DISPUTED, and asserting what the code does today rather than what it should do.
-        #
-        # expire_queued_jobs' own docstring says "A cancelled run's stragglers age out here, since
-        # nothing will ever claim them", but the statement's NOT EXISTS covers `r.paused OR
-        # r.status = 'cancelled'`, so a cancelled run's queued grade is skipped by expiry as well as
-        # refused by claim_job. It is stranded: never claimed, never finished, polling for ever.
-        #
-        # It is reachable. cancel_run only dequeues what is queued AT THAT MOMENT and deliberately
-        # leaves running grades alone, so a grade running through a cancel that the boot sweep or
-        # the stale reaper later returns to the queue lands in exactly this state.
-        #
-        # The right end state is 'cancelled' with "cancelled by the organizer" (0024 made that
-        # status distinct so the row says who stopped it, and failing it with "no worker was
-        # available to run it" would be the lie that migration exists to prevent). Left as an
-        # assertion of the present behaviour so the suite stays green and the gap stays visible.
+    def test_expiry_does_not_blame_a_worker_for_a_cancelled_run_s_straggler(self, conn, account):
+        # Expiry leaves it alone on purpose: failing it with "no worker was available to run it"
+        # would be exactly the lie 0024 made a distinct 'cancelled' status to prevent. Closing it is
+        # cancel_queued_on_cancelled_runs' job, below.
         run = _run(conn, account, status="cancelled")
         straggler = _grade(conn, run=run, submitted_ago=config.EVENT_QUEUE_TIMEOUT_SECONDS + 60)
+
         assert db.expire_queued_jobs(conn) == 0
+
         assert _row(conn, straggler)["status"] == "queued"
+
+    def test_a_cancelled_run_s_straggler_is_closed_rather_than_left_polling(self, conn, account):
+        # claim_job refuses a cancelled run's grades and expiry refuses to age them out, so without
+        # this the row polls for ever. Reachable rather than theoretical: a grade running through a
+        # cancel that the boot sweep later returns to the queue lands in exactly this state.
+        run = _run(conn, account, status="cancelled")
+        straggler = _grade(conn, run=run)
+
+        assert db.cancel_queued_on_cancelled_runs(conn) == 1
+
+        row = _row(conn, straggler)
+        assert row["status"] == "cancelled"
+        assert row["error"] == "cancelled by the organizer"
+        assert row["finished_at"] is not None
+
+    def test_closing_stragglers_touches_no_live_run_and_no_public_grade(self, conn, account):
+        live = _run(conn, account, status="grading")
+        theirs = _grade(conn, run=live)
+        mine = _grade(conn, origin="https://mine.example.com")
+
+        assert db.cancel_queued_on_cancelled_runs(conn) == 0
+
+        assert _row(conn, theirs)["status"] == "queued"
+        assert _row(conn, mine)["status"] == "queued"
+
+    def test_closing_stragglers_is_idempotent(self, conn, account):
+        run = _run(conn, account, status="cancelled")
+        _grade(conn, run=run)
+        db.cancel_queued_on_cancelled_runs(conn)
+
+        assert db.cancel_queued_on_cancelled_runs(conn) == 0
         assert db.claim_job(conn) is None
 
     def test_it_never_touches_a_grade_that_is_already_running_or_finished(self, conn):

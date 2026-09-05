@@ -268,6 +268,28 @@ class TestSaveFieldRunRow:
         assert row["resolved_at"] is None
         assert row["entries_found"] is None
 
+    def test_a_cancelled_run_gains_no_entries_from_a_resolve_in_flight(self, conn, account):
+        # The run row was always guarded, but the entry writes above it were not, so a cancelled run
+        # quietly collected a field the organizer never authorised and could have rows pruned out of
+        # it. The guard now sits at the top of the transaction, so the whole write is one decision.
+        run = _run(conn, account)
+        conn.execute("UPDATE event_runs SET status='cancelled', finished_at=now() WHERE id=%s", (run,))
+
+        db.save_field(conn, run, [_E(_p(1), "https://one.example.com")], True, "read the gallery")
+
+        assert _field(conn, run) == {}
+
+    def test_a_cancelled_run_s_existing_field_is_not_pruned_by_a_late_resolve(self, conn, account):
+        # The prune is the destructive half of the same statement: a listing arriving after the
+        # cancel must not delete rows from a field that is now a record of what was stopped.
+        run = _run(conn, account)
+        db.save_field(conn, run, [_E(_p(1), "https://one.example.com")], True, "read the gallery")
+        conn.execute("UPDATE event_runs SET status='cancelled', finished_at=now() WHERE id=%s", (run,))
+
+        db.save_field(conn, run, [_E(_p(2), "https://two.example.com")], True, "read again")
+
+        assert set(_field(conn, run)) == {_p(1)}
+
     def test_a_run_that_failed_is_not_quietly_made_ready(self, conn, account):
         run = _run(conn, account, status="failed")
         db.save_field(conn, run, [_E(_p(1), "https://one.example.com")], True, "")
