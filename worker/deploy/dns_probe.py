@@ -41,10 +41,34 @@ def attempt(server, name, edns, tcp):
     except dns.resolver.NoAnswer:
         return "NoAnswer (a real answer: name exists, no TXT)"
     except Exception as e:
-        return f"{type(e).__name__}: {str(e)[:60]}"
+        return f"{type(e).__name__}: {str(e)[:70]}"
+
+# 10.0.0.1 is the LAN resolver systemd-resolved itself forwards to (resolvectl: "Current DNS Server:
+# 10.0.0.1"), and egress.nft allows the worker to reach it on :53 directly. If the stubs are the
+# broken part, this is the path that still works, and it is already inside the sandbox.
+SERVERS = ("127.0.0.53", "127.0.0.54", "10.0.0.1")
+
+import getpass
+import subprocess
+
+print(f"running as: {getpass.getuser()}")
+print("(run this as BOTH the worker's user and your own: the nftables rules are uid-scoped, so a")
+print(" difference between the two runs means the sandbox, and no difference means the resolver)")
 
 for name, label in ((EXISTS, "a name that HAS TXT"), (OURS, "our verification name")):
     print(f"\n=== {label}: {name} ===")
-    for server in ("127.0.0.53", "127.0.0.54"):
+    for server in SERVERS:
         for how, edns, tcp in (("udp +edns", True, False), ("udp -edns", False, False), ("tcp", False, True)):
-            print(f"  {server}  {how:10} -> {attempt(server, name, edns, tcp)}")
+            print(f"  {server:12} {how:10} -> {attempt(server, name, edns, tcp)}")
+
+# The path glibc actually uses for getaddrinfo is D-Bus to systemd-resolved, NOT the stub listener,
+# so it can work perfectly while every raw query above fails. That is worth knowing: the worker
+# grades apps fine today, which means name resolution as such is not broken.
+print("\n=== the path getaddrinfo uses (D-Bus, not the stub) ===")
+for probe in (["resolvectl", "query", "google.com"], ["getent", "hosts", "google.com"]):
+    try:
+        out = subprocess.run(probe, capture_output=True, text=True, timeout=15)
+        first = (out.stdout or out.stderr).strip().splitlines()
+        print(f"  {' '.join(probe):32} -> {first[0][:80] if first else '(no output)'}")
+    except Exception as e:
+        print(f"  {' '.join(probe):32} -> {type(e).__name__}: {e}")
