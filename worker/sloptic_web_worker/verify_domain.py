@@ -103,6 +103,29 @@ def check_file(origin: str, token: str) -> Factor:
     return Factor("not_found", "a file is served there, but it is not this claim's token")
 
 
+def _query_txt(name: str):
+    """TXT lookup through the local stub, retried without EDNS if the stub cannot parse the query.
+
+    The sandbox permits DNS to the local resolver only (worker/deploy/egress.nft allows 127.0.0.53
+    and the bridge gateway, and drops the rest of port 53), which is deliberate and not something to
+    widen for a client quirk. So the fallback happens here instead.
+
+    The worker box's systemd-resolved answered FORMERR to the EDNS query dnspython sends by default,
+    which surfaced as "all nameservers failed" and blocked every DNS proof. Retrying without EDNS is
+    the standard remedy for a resolver that cannot parse the extension, and it costs one extra query
+    only on the boxes that need it.
+    """
+    import dns.resolver
+
+    try:
+        return dns.resolver.resolve(name, "TXT", lifetime=_TIMEOUT)
+    except dns.resolver.NoNameservers:
+        plain = dns.resolver.Resolver()
+        plain.use_edns(False)
+        plain.lifetime = _TIMEOUT
+        return plain.resolve(name, "TXT", lifetime=_TIMEOUT)
+
+
 def check_dns(host: str, token: str) -> Factor:
     """Look for the token in a TXT record at _sloptic.<host>.
 
@@ -119,9 +142,13 @@ def check_dns(host: str, token: str) -> Factor:
         # owner would be told their record is missing because OUR worker is missing a library.
         return Factor("blocked", "DNS checking is unavailable on this worker (dnspython not installed)")
 
-    name = f"{DNS_LABEL}.{host}"
+    # ABSOLUTE, with the trailing dot. Without it the stub applies the host's search domains, so a
+    # box with `search example.edu` in resolv.conf would go looking for
+    # _sloptic.theirdomain.com.example.edu and report an owner's correct record as missing.
+    name = f"{DNS_LABEL}.{host}."
+
     try:
-        answers = dns.resolver.resolve(name, "TXT", lifetime=_TIMEOUT)
+        answers = _query_txt(name)
     except dns.resolver.NXDOMAIN:
         return Factor("not_found", "no _sloptic record")
     except dns.resolver.NoAnswer:

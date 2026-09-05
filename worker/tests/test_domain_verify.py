@@ -213,3 +213,55 @@ class TestDegradingRatherThanCrashing:
 
         assert factor.status == "blocked"
         assert "dnspython" in factor.detail
+
+
+class TestTheDnsQueryItself:
+    def test_the_name_queried_is_absolute(self, monkeypatch):
+        """A relative name inherits the host's search domains.
+
+        The worker box's resolv.conf can carry `search something.example`, and without the trailing
+        dot the stub would go looking for _sloptic.theirdomain.com.something.example and report an
+        owner's perfectly correct record as missing. Absolute names cannot be suffixed.
+        """
+        seen = {}
+
+        def fake(name):
+            seen["name"] = name
+            raise RuntimeError("stop here, the name is the whole assertion")
+
+        monkeypatch.setattr(verify_domain, "_query_txt", fake)
+        verify_domain.check_dns("example.com", "tok")
+
+        assert seen["name"] == "_sloptic.example.com."
+
+    def test_a_resolver_that_cannot_parse_edns_is_retried_without_it(self, monkeypatch):
+        """The box's systemd-resolved answered FORMERR to dnspython's default EDNS query.
+
+        That surfaced as NoNameservers, which blocked every DNS proof on the service. The sandbox
+        allows DNS to the local stub only (egress.nft), and widening a security boundary for a client
+        quirk would be the wrong trade, so the retry lives in the client.
+        """
+        import dns.resolver
+
+        calls = []
+
+        class FakeResolver:
+            def __init__(self):
+                self.edns = True
+
+            def use_edns(self, value):
+                self.edns = value
+
+            def resolve(self, name, rdtype, lifetime=None):
+                calls.append(self.edns)
+                if self.edns is not False:
+                    raise dns.resolver.NoNameservers("FORMERR")
+                return ["answered once EDNS was off"]
+
+        monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
+        monkeypatch.setattr(dns.resolver, "resolve",
+                            lambda *a, **k: FakeResolver().resolve(*a, **k))
+
+        assert verify_domain._query_txt("_sloptic.example.com.") == ["answered once EDNS was off"]
+        # Tried with EDNS, then again without: the fallback is a retry, not the default.
+        assert calls == [True, False]
