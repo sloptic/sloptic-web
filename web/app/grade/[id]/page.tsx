@@ -225,7 +225,7 @@ export default function GradePage({ params }: { params: { id: string } }) {
     return (
       <section className="pending">
         {crumb}
-        <h1>{view.url}</h1>
+        <h1>{view.origin ?? view.url}</h1>
         <p className="status">
           {!stalled && <span className="tick" aria-hidden />}
           {view.status === "running"
@@ -270,7 +270,7 @@ export default function GradePage({ params }: { params: { id: string } }) {
     return (
       <section className="report">
         {crumb}
-        <h1>{view.url}</h1>
+        <h1>{view.origin ?? view.url}</h1>
         <p className="error">{failureText(view.error)}</p>
       </section>
     );
@@ -283,7 +283,7 @@ export default function GradePage({ params }: { params: { id: string } }) {
     return (
       <section className="report">
         {crumb}
-        <h1>{view.url}</h1>
+        <h1>{view.origin ?? view.url}</h1>
         <p className="error">This report has expired.</p>
         <p className="section-intro">
           Anonymous reports are kept for {view.retain_days ?? 30} days. Grade the app again for a fresh one.
@@ -591,13 +591,13 @@ function Withheld({ view, blocked, now, onResume }: { view: GradeView; blocked: 
     <section className="report">
       {view.event && <EventCrumb slug={view.event.slug} />}
       <h1>
-        {view.url}
+        {view.origin ?? view.url}
         <span className="tag">{view.result?.mode ?? "passive"}</span>
       </h1>
       <div className="challenge-note withheld" role="status">
         <p className="challenge-head">No score (withheld grade)</p>
         <p>
-          {onset !== null
+          {onset
             ? `A bot challenge stopped the grade at check ${onset} of ${battery}.`
             : "A bot challenge stopped the grade before any check ran."}
         </p>

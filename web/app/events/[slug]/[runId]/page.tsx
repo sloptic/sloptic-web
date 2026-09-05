@@ -194,7 +194,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
       name: r.name,
       project_url: r.project_url,
       note: r.blocked > 0
-        ? r.onset !== null
+        ? r.onset
           ? `no score (stopped at check ${r.onset} of ${battery})`
           : `no score (a bot challenge blocked every check${r.marks.none ? ", and the retries recovered nothing" : ""})`
         : r.botChallenge

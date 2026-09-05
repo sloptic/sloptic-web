@@ -33,6 +33,9 @@ function keepText(g: GradeSummary): string {
   const when = reportExpiresAt(g.finished_at, false);
   if (!when) return "";
   const days = daysUntil(when);
+  // Past the window the sweep has already taken the report, and the grade row that is left is the
+  // only reason this row still renders. Counting on past zero printed "expires in -12d".
+  if (days < 0) return "expired";
   return days === 0 ? "expires today" : `expires in ${days}d`;
 }
 
