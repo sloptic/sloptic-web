@@ -39,6 +39,12 @@ function field(over: Row = {}): void {
 }
 
 beforeEach(() => {
+
+  // The queueing routes refuse when no worker is running, the same authority /api/grade
+
+  // answers at, so the suite has to open grading before any of them will do anything.
+
+  process.env.GRADING_OPEN = "1";
   blocked.clear();
   db = fakeDb({ uniques: [ONE_LIVE_RUN], defaults: DEFAULTS });
   setDb(db);

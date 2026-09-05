@@ -21,7 +21,10 @@ function stats(mode: Battery) {
 export function estimateSeconds(remaining: number, mode: Battery): number {
   if (remaining <= 0) return 0;
   const { mean, parallel } = stats(mode);
-  return (remaining * mean) / parallel;
+  // Floored at one grade's own duration. A grade cannot run in parallel with itself, so dividing
+  // straight through said 33s for the last passive grade of a run, against a corpus mean of 121.7s.
+  // The tail of every run was the part the estimate got most wrong, and the part someone watches.
+  return Math.max(mean, (remaining * mean) / parallel);
 }
 
 /** A duration in seconds as a phrase, rounded to a precision the estimate can actually support. */
@@ -30,6 +33,10 @@ export function formatEta(s: number): string {
   const mins = Math.round(s / 60);
   if (mins < 60) return `about ${mins} minutes`;
   const hours = s / 3600;
+  // An hour had no phrase of its own: the minutes branch ends when rounding reaches 60, and
+  // everything from there to 105 minutes was called an hour and a half, so a one hour wait was
+  // overstated by half.
+  if (hours < 1.25) return "about an hour";
   if (hours < 1.75) return "about an hour and a half";
   return `about ${Math.round(hours)} hours`;
 }

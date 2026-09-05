@@ -197,12 +197,9 @@ describe("describeProbe", () => {
     expect(describeProbe("")).toBeNull();
   });
 
-  // DISCREPANCY (reported, not fixed). lib/checks.ts:67 and :77 look an id up in a plain object
-  // literal, so an id that names something on Object.prototype comes back truthy. "constructor"
-  // reaches the array destructure as a function and throws TypeError, which takes the whole report
-  // render down rather than reading as the unknown id it is. The fix is an own-property check (or a
-  // null-prototype map) in the generated index.
-  it.fails("does not answer for a property Object.prototype happens to carry", () => {
+  // A bare object inherits from Object.prototype, so PROBE_INDEX["constructor"] answers with a
+    // function: truthy, not iterable, and a crash where the contract promises null.
+  it("does not answer for a property Object.prototype happens to carry", () => {
     expect(describeProbe("constructor")).toBeNull();
     expect(describeProbe("toString")).toBeNull();
     expect(describeCategory("constructor")).toBeNull();
@@ -247,10 +244,8 @@ describe("categoryName", () => {
     expect(categoryName("")).toBe("");
   });
 
-  // DISCREPANCY (reported, not fixed). Same root cause as describeProbe above: LABELS is a plain
-  // object, so categoryName("constructor") reads Object's own `name` and renders the category as
-  // "Object" instead of falling back to the slug the doc promises.
-  it.fails("does not return an inherited property for a slug that shadows one", () => {
+  // Same inheritance, quieter result: categoryName answered "Object" instead of the slug.
+  it("does not return an inherited property for a slug that shadows one", () => {
     expect(categoryName("constructor")).toBe("constructor");
   });
 });

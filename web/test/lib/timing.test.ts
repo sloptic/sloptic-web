@@ -49,12 +49,9 @@ describe("estimateSeconds", () => {
     expect(estimateSeconds(20, "active")).toBeCloseTo(2 * estimateSeconds(10, "active"), 6);
   });
 
-  // DISCREPANCY (reported, not fixed). lib/timing.ts:24 divides by parallelism unconditionally, so
-  // the last grade in a run is estimated at a quarter of what one grade takes. A field of one is a
-  // real case (the board polls until the last entry lands), and "under two minutes" for a passive
-  // grade whose corpus median is 94 seconds and whose mean is 121.7 is a promise the worker cannot
-  // keep. Below the concurrency the floor is one grade's own duration.
-  it.fails("never estimates one remaining grade at less than one grade takes", () => {
+  // A grade cannot run in parallel with itself. Dividing straight through said 33s for the last
+    // passive grade of a run, against a corpus mean of 121.7s.
+  it("never estimates one remaining grade at less than one grade takes", () => {
     expect(estimateSeconds(1, "passive")).toBeGreaterThanOrEqual(medianSeconds("passive"));
     expect(estimateSeconds(1, "active")).toBeGreaterThanOrEqual(medianSeconds("active"));
   });
@@ -81,11 +78,9 @@ describe("formatEta", () => {
     for (const s of [0, 90, 600, 4000, 6300, 20000]) expect(formatEta(s)).not.toMatch(/[—–]/);
   });
 
-  // DISCREPANCY (reported, not fixed). lib/timing.ts:30-33: 60 rounded minutes falls out of the
-  // minutes branch and into the "hour and a half" one, so an estimate of exactly one hour, and every
-  // estimate from 59.5 minutes upward, is quoted half an hour longer than it is. The phrase is meant
-  // for the 1.25 to 1.75 hour range it cannot express in whole hours.
-  it.fails("calls one hour an hour, not an hour and a half", () => {
+  // The minutes branch ends when rounding reaches 60, so an hour had no phrase of its own and
+    // everything up to 105 minutes was called an hour and a half.
+  it("calls one hour an hour, not an hour and a half", () => {
     expect(formatEta(3600)).not.toBe("about an hour and a half");
     expect(formatEta(3570)).not.toBe("about an hour and a half");
   });

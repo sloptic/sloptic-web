@@ -64,26 +64,32 @@ export function sampleFor(area: Area, n = 6): Category[] {
  *  active included, so the live progress line can name an active check instead of falling back to a
  *  bare "running the checks". */
 export function describeProbe(id: string): { area: Area; name: string } | null {
-  const hit = PROBE_INDEX[id];
+  const hit = Object.hasOwn(PROBE_INDEX, id) ? PROBE_INDEX[id] : undefined;
   if (!hit) return null;
   const [area, slug] = hit;
-  return { area, name: LABELS[slug]?.name ?? slug };
+  return { area, name: labelFor(slug)?.name ?? slug };
 }
 
 /** The category a probe belongs to, slug plus labeled name. Grouping surfaces (what failed, what
  *  passed, what a challenge blocked) need this, not the per-probe name the index does not carry. */
 export function describeCategory(id: string): { area: Area; slug: string; name: string } | null {
-  const hit = PROBE_INDEX[id];
+  const hit = Object.hasOwn(PROBE_INDEX, id) ? PROBE_INDEX[id] : undefined;
   if (!hit) return null;
   const [area, slug] = hit;
-  return { area, slug, name: LABELS[slug]?.name ?? slug };
+  return { area, slug, name: labelFor(slug)?.name ?? slug };
 }
 
 /** A category slug as a reader meets it. Findings carry slugs straight from the grader, so this is
  *  the join to the hand-written half; an unnamed slug falls back to itself and shows up as
  *  something to name. */
 export function categoryName(slug: string): string {
-  return LABELS[slug]?.name ?? slug;
+  return labelFor(slug)?.name ?? slug;
+}
+
+/** Own properties only. A bare object inherits from Object.prototype, so LABELS["constructor"]
+ *  answers with a function and categoryName returned "Object" for it. */
+function labelFor(slug: string) {
+  return Object.hasOwn(LABELS, slug) ? LABELS[slug] : undefined;
 }
 
 /** Passive checks per area, the denominator for "of everything this mode could run". */

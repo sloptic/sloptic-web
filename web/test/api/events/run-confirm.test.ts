@@ -27,6 +27,12 @@ const confirm = (body: unknown) =>
 const gradesOf = (runId: string) => db.rows("grades").filter((g) => g.event_run_id === runId);
 
 beforeEach(() => {
+
+  // The queueing routes refuse when no worker is running, the same authority /api/grade
+
+  // answers at, so the suite has to open grading before any of them will do anything.
+
+  process.env.GRADING_OPEN = "1";
   blocked.clear();
   db = fakeDb({ uniques: [ONE_LIVE_RUN], defaults: DEFAULTS });
   setDb(db);

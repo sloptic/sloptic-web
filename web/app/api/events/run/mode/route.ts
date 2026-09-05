@@ -156,7 +156,9 @@ export async function POST(req: NextRequest) {
     if (entries?.length) {
       const { error: eErr } = await db
         .from("event_entries")
-        .insert(entries.map((e) => ({ run_id: created.id, ...e })));
+        // Spread first: the new run's id must win over anything the select happens to carry, or
+        // widening that query by one column would copy the field onto the OLD run.
+        .insert(entries.map((e) => ({ ...e, run_id: created.id })));
       if (eErr) {
         // Rolled back by hand: PostgREST gives no transaction across two calls, and a half-copied
         // run would hold the event's one live slot while confirm graded 30 of 60 apps as if that

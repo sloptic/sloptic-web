@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { currentUser } from "@/lib/auth";
 import { normalizeTarget } from "@/lib/origin";
 import { egressPrecheck } from "@/lib/egress";
+import { gradingOpen, GRADING_CLOSED_MESSAGE } from "@/lib/flags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,14 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+
+  // The same authority the single-URL route answers at. Queueing a field with nothing to grade it
+  // fills a board with rows that spin, and an organizer watching that cannot tell a closed service
+  // from a slow one.
+  if (!gradingOpen()) {
+    return NextResponse.json({ error: GRADING_CLOSED_MESSAGE }, { status: 503 });
+  }
+
 
   let body: { runId?: string; projectUrl?: string; projectUrls?: string[] };
   try {

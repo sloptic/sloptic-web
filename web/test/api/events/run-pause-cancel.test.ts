@@ -25,6 +25,12 @@ const call = (handler: (r: never) => Promise<Response>, path: string, body: unkn
   handler(jsonRequest(`https://sloptic.org/api/events/run/${path}`, body) as never);
 
 beforeEach(() => {
+
+  // confirm and grade-one refuse when no worker is running, so the pause tests below have to get
+
+  // past that gate to reach the pause check they are actually about.
+
+  process.env.GRADING_OPEN = "1";
   db = fakeDb({ uniques: [ONE_LIVE_RUN], defaults: DEFAULTS });
   setDb(db);
   setUser(ORGANIZER);
@@ -268,7 +274,9 @@ describe("POST /api/events/run/cancel", () => {
     expect(stored(db, "grades", "g-queued-2")?.status).toBe("cancelled");
   });
 
-  it.fails("counts what it actually dequeued, not what it hoped to", async () => {
+  // The snapshot is what the route hoped to take; the claim loop can flip a grade to running in
+  // between, and the guarded write is what actually happened.
+  it("counts what it actually dequeued, not what it hoped to", async () => {
     // KNOWN DEFECT (cancel/route.ts:83). `dequeued` is the size of the pre-write snapshot, while the
     // write itself re-checks status and may cancel fewer. The route already reads back the rows it
     // really cancelled (cancelledRows), so the honest number is in hand.

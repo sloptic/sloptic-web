@@ -12,6 +12,8 @@ export function failureText(raw: string | null | undefined): string {
   if (!s) return "The grade did not finish.";
   if (s.startsWith("target not gradeable:"))
     return "Sloptic could not reach the app. Check that the URL is live, public, and serving over HTTPS.";
+  if (s.startsWith("egress sandbox not declared ready"))
+    return "Grading is not running right now, so this grade did not start. Try again shortly.";
   if (s.startsWith("worker error:"))
     return "Something went wrong on our side, so this grade did not finish. Grading it again usually works.";
   if (s.startsWith("the grader process was killed"))
@@ -92,10 +94,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  *  failing the batch: one bad entry in a browser's history should not blank the whole list. */
 export function cleanIds(input: unknown): string[] {
   if (!Array.isArray(input)) return [];
-  return [...new Set(input.filter((v): v is string => typeof v === "string" && UUID.test(v)))].slice(
-    0,
-    MAX_IDS
-  );
+  const seen = input
+    .filter((v): v is string => typeof v === "string" && UUID.test(v))
+    // Lowercased before deduplicating: the pattern accepts either case, Postgres compares uuids by
+    // value, and the stored form is lowercase, so two casings of one id were eating two slots.
+    .map((v) => v.toLowerCase());
+  return [...new Set(seen)].slice(0, MAX_IDS);
 }
 
 

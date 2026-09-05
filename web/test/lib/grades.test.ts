@@ -78,12 +78,9 @@ describe("failureText", () => {
     for (const s of outputs) expect(s).not.toMatch(/[—–]/);
   });
 
-  // DISCREPANCY (reported, not fixed). worker/sloptic_web_worker/grade_child.py:107 fails a grade
-  // with the raw EgressNotReady text, which names an environment variable, a repo path and a doc
-  // path. failureText's own doc says operator prose is the thing it exists to intercept, and
-  // CLAUDE.md treats internal infrastructure detail as something the product does not hand out, so
-  // this message needs a prefix branch of its own rather than the pass-through.
-  it.fails("does not hand the egress-sandbox refusal to a visitor verbatim", () => {
+  // The worker writes that refusal for an operator, naming an env var, an nftables file and a doc
+    // path. Operator prose is exactly what this function exists to intercept.
+  it("does not hand the egress-sandbox refusal to a visitor verbatim", () => {
     const out = failureText(
       "egress sandbox not declared ready on this host: refusing to grade a real target. " +
         "The code tiers ship with the grader; set EGRESS_SANDBOX_READY=1 only once the OS tier " +
@@ -259,10 +256,9 @@ describe("cleanIds", () => {
     expect(cleanIds([...dupes, ...rest])).toHaveLength(MAX_IDS);
   });
 
-  // DISCREPANCY (reported, not fixed). The regex accepts either case, but the dedupe is a plain
-  // string Set, so the same uuid in two cases survives twice and eats two of the 100 slots. Postgres
-  // compares uuids by value, so the query would return one row for the pair.
-  it.fails("treats the same uuid in different cases as one id", () => {
+  // The pattern accepts either case and Postgres compares uuids by value, so two casings of one id
+    // are one id, and letting both through spent two of the cap's slots on it.
+  it("treats the same uuid in different cases as one id", () => {
     const mixed = "abcdef01-0000-4000-8000-00000000000a";
     expect(cleanIds([mixed, mixed.toUpperCase()])).toHaveLength(1);
   });

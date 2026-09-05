@@ -50,6 +50,10 @@ export async function POST(req: NextRequest) {
     .eq("status", "queued");
   const queuedIds = (queued ?? []).map((g) => g.id);
 
+  // What the guarded write below actually took, which is not always what the snapshot above saw:
+  // the claim loop can flip a grade to running in between. The organizer is told the real number.
+  let dequeued = 0;
+
   // Mark, unlink, and mark the run. Unlinking only entries whose grade is NOT running keeps the
   // in-flight ones attached, so their reports land on the field they were graded for.
   if (queuedIds.length > 0) {
@@ -65,6 +69,7 @@ export async function POST(req: NextRequest) {
       .select("id");
     if (gErr) return NextResponse.json({ error: "Could not cancel the queue." }, { status: 500 });
     const cancelledIds = (cancelledRows ?? []).map((g) => g.id);
+    dequeued = cancelledIds.length;
     if (cancelledIds.length > 0) {
       const { data: linked } = await db
         .from("event_entries")
@@ -87,5 +92,5 @@ export async function POST(req: NextRequest) {
     .eq("id", run.id)
     .in("status", ["ready", "grading", "resolving"]);
   if (error) return NextResponse.json({ error: "Could not cancel the run." }, { status: 500 });
-  return NextResponse.json({ cancelled: true, dequeued: queuedIds.length });
+  return NextResponse.json({ cancelled: true, dequeued });
 }
