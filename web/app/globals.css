@@ -3415,6 +3415,74 @@ h1.report-url {
   user-select: all;
 }
 
+/* A domain is a ROW first and instructions second. Someone with six of them reads six lines and
+   opens the one that needs work; someone with one sees what they saw before, already open. */
+.domain-row {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  margin: 0 0 0.6rem;
+}
+.domain-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 0.9rem;
+  cursor: pointer;
+  list-style: none;
+}
+.domain-summary::-webkit-details-marker { display: none; }
+.domain-summary:hover { background: var(--paper); }
+.domain-name {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.domain-proofs { display: flex; gap: 0.35rem; }
+.domain-verdict {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.domain-body {
+  padding: 0.2rem 0.9rem 1rem;
+  border-top: 1px solid var(--line);
+}
+
+/* One proof, small. The same three readings as the cards and the event slip, so a glance down the
+   list means the same thing it means anywhere else. */
+.proof-pill {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  padding: 0.12rem 0.4rem;
+  border: 1px solid var(--line-strong);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  color: var(--muted);
+}
+.proof-pill[data-state="ok"]        { border-left-color: var(--verified); color: var(--ink-soft); }
+.proof-pill[data-state="not_found"] { border-left-color: var(--accent); }
+.proof-pill[data-state="blocked"],
+.proof-pill[data-state="pending"]   { border-left-color: var(--line-strong); }
+
+/* The token and its copy button read as one control. */
+.token-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+.token-row .token-block { flex: 1; }
+.copy-token {
+  flex: none;
+  margin-top: 0.9rem;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.8rem;
+}
+
 /* The token, once and prominently, because copying it correctly is the entire task. Bigger than the
    surrounding text and selectable in one click. */
 .token-headline {

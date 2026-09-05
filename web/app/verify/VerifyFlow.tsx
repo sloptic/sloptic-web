@@ -55,6 +55,59 @@ function Factor({ label, status, kind, checking, children }: {
   );
 }
 
+/** The row's one-line verdict, which is about the CLAIM rather than either proof. */
+function claimLine(c: Claim): string {
+  if (c.status === "verified") return "verified";
+  if (c.status === "failed") return "gave up looking";
+  if (c.status === "revoked") return "given up";
+  if (!c.checked_at) return "waiting for the first check";
+  if (c.file_status === "ok" && c.dns_status === "ok") return "verifying";
+  return "waiting for both proofs";
+}
+
+/** A proof's state, small enough to sit in a row of them.
+ *
+ *  Same three readings the cards and the event slip use, so one glance down the list means the same
+ *  thing everywhere: green holds, orange is yours to fix, grey is ours or not yet known.
+ */
+function Pill({ label, status, checking }: {
+  label: string;
+  status: Claim["file_status"];
+  checking: boolean;
+}) {
+  return (
+    <span className="proof-pill" data-state={status ?? "pending"}>
+      {label}
+      {checking && <span className="dots" aria-hidden />}
+    </span>
+  );
+}
+
+/** Copy the token, because it is 50 characters of base64 that has to land byte for byte in two
+ *  places. Selecting it by hand is where a verification quietly fails. */
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      className="button secondary copy-token"
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(value);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } catch {
+          // Clipboard access can be refused (an insecure origin, a permission policy). The token is
+          // selectable in one click either way, so say nothing rather than claim a copy happened.
+          setCopied(false);
+        }
+      }}
+    >
+      {copied ? "copied" : "copy"}
+    </button>
+  );
+}
+
 export default function VerifyFlow({ signedIn, initialClaims }: {
   signedIn: boolean;
   initialClaims: Claim[];
@@ -67,6 +120,12 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
   // carries a newer one, which is the only signal that separates "still looking" from "looked and
   // found nothing": both leave the claim pending.
   const [checkingFrom, setCheckingFrom] = useState<Record<string, string | null>>({});
+  // Open what needs doing. A pending claim is the one carrying instructions somebody is mid-way
+  // through; a verified one is a row you glance at. So the list is quiet by default and loud exactly
+  // where there is work, which is what keeps it readable at six domains and unchanged at one.
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set(initialClaims.filter((c) => c.status === "pending").map((c) => c.id))
+  );
 
   const isChecking = (c: Claim) => c.id in checkingFrom && checkingFrom[c.id] === c.checked_at;
 
@@ -179,78 +238,80 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
       {note && <p className="section-intro">{note}</p>}
 
       {claims.map((c) => (
-        <section className="section attached" key={c.id}>
-          <h2 className="section-head">{c.origin}</h2>
+        <details
+          className="domain-row"
+          key={c.id}
+          open={expanded.has(c.id)}
+          onToggle={(e) => {
+            const isOpen = (e.currentTarget as HTMLDetailsElement).open;
+            setExpanded((prev) => {
+              const next = new Set(prev);
+              if (isOpen) next.add(c.id);
+              else next.delete(c.id);
+              return next;
+            });
+          }}
+        >
+          {/* The row is the whole state at a glance: which domain, and where each proof stands.
+              Someone with six domains reads six lines instead of six pages of instructions, and
+              opens only the one that needs them. */}
+          <summary className="domain-summary">
+            <span className="domain-name">{c.origin.replace(/^https?:\/\//, "")}</span>
+            <span className="domain-proofs">
+              <Pill label="file" status={c.file_status} checking={isChecking(c)} />
+              <Pill label="dns" status={c.dns_status} checking={isChecking(c)} />
+            </span>
+            <span className="domain-verdict">{claimLine(c)}</span>
+          </summary>
 
-          {c.status === "verified" ? (
-            <>
+          <div className="domain-body">
+            {c.status === "verified" ? (
               <p className="section-intro">
                 Verified{c.verified_at ? ` on ${new Date(c.verified_at).toLocaleDateString()}` : ""}.
-                This domain is eligible for active grading with this account. Others submitting this domain
-                gets passive grading only. Click "Give it up" to remove this verification and stop active grading.
+                The full battery runs on this origin for your account. Anyone else who submits it
+                still gets the passive floor.
+                {c.expires_at ? ` Prove it again by ${new Date(c.expires_at).toLocaleDateString()}.` : ""}
               </p>
-              {/* The proofs stay visible once verified, both green. They are still load bearing:
-                  every active grade re-reads them, so "is my record still there" has to be
-                  answerable from here rather than only from a failed grade. */}
-              <div className="proof-steps">
-                <Factor label="The file" status={c.file_status} kind="file" checking={isChecking(c)}>
-                  <p>
-                    Served at <code>{c.origin}/.well-known/sloptic-verification.txt</code>. Leave it
-                    there: an active grade re-checks it every time.
-                  </p>
-                </Factor>
-                <Factor label="The DNS record" status={c.dns_status} kind="record" checking={isChecking(c)}>
-                  <p>
-                    Published at <code>_sloptic.{c.host}</code>. Leave it there too, for the same
-                    reason.
-                  </p>
-                </Factor>
-              </div>
-              <div className="run-controls">
-                <a className="button" href="/">Grade it</a>
-                <button
-                  className="button secondary"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    if (!window.confirm(
-                      `Give up verification for ${c.origin}? Active grading stops immediately. You can verify it again later.`
-                    )) return;
-                    void act(c.id, "/api/verify/revoke", "Verification given up.");
-                  }}
-                >
-                  Give it up
-                </button>
-              </div>
-            </>
-          ) : c.status === "pending" ? (
-            <>
+            ) : c.status === "pending" ? (
               <p className="section-intro">
                 Publish the token below both as a file and as a DNS TXT record to prove ownership of
                 this site.
               </p>
-              {/* Once, and up here. It was inside both cards, which put the one thing a person came
-                  to copy in two places and neither of them first. */}
-              <pre className="token-block token-headline"><code>{c.token}</code></pre>
+            ) : (
+              <p className="section-intro">
+                This claim is {c.status}. Add the domain again above if you still want to verify it.
+              </p>
+            )}
 
-              {/* Shown in every state. A verified origin still depends on both of these, and
-                  active grades re-check them each time, so hiding them once the claim goes green
-                  would hide the only thing that says WHY it is green. */}
-              <div className="proof-steps">
-                <Factor label="The file" status={c.file_status} kind="file" checking={isChecking(c)}>
-                  <p>
-                    Serve it at <code>{c.origin}/.well-known/sloptic-verification.txt</code>, with the
-                    token as the whole body.
-                  </p>
-                </Factor>
-                <Factor label="The DNS record" status={c.dns_status} kind="record" checking={isChecking(c)}>
-                  <p>
-                    Add a TXT record at <code>_sloptic.{c.host}</code> with the same value. DNS can
-                    take a while to propagate, which is normal.
-                  </p>
-                </Factor>
-              </div>
-              <div className="run-controls">
+            {c.status !== "revoked" && (
+              <>
+                <div className="token-row">
+                  <pre className="token-block token-headline"><code>{c.token}</code></pre>
+                  <CopyButton value={c.token} />
+                </div>
+
+                {/* Both proofs, in every state. They do not stop mattering once the claim is green:
+                    every active grade re-reads them, so "is my record still there" has to be
+                    answerable here rather than only from a grade that failed. */}
+                <div className="proof-steps">
+                  <Factor label="The file" status={c.file_status} kind="file" checking={isChecking(c)}>
+                    <p>
+                      Serve it at <code>{c.origin}/.well-known/sloptic-verification.txt</code>, with
+                      the token as the whole body.
+                    </p>
+                  </Factor>
+                  <Factor label="The DNS record" status={c.dns_status} kind="record" checking={isChecking(c)}>
+                    <p>
+                      Add a TXT record at <code>_sloptic.{c.host}</code> with the same value. DNS can
+                      take a while to propagate, which is normal.
+                    </p>
+                  </Factor>
+                </div>
+              </>
+            )}
+
+            <div className="run-controls">
+              {c.status === "pending" && (
                 <button className="button" type="button" disabled={busy || isChecking(c)}
                         onClick={() => {
                           setCheckingFrom((prev) => ({ ...prev, [c.id]: c.checked_at }));
@@ -258,20 +319,35 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
                         }}>
                   Check now
                 </button>
-              </div>
-              {c.checked_at && (
-                <p className="fineprint">
-                  Last checked {new Date(c.checked_at).toLocaleTimeString()}.
-                  {c.detail ? ` ${c.detail}` : ""}
-                </p>
               )}
-            </>
-          ) : (
-            <p className="section-intro">
-              This claim is {c.status}. Start again above if you still want to verify this origin.
-            </p>
-          )}
-        </section>
+              {c.status === "verified" && <a className="button" href="/">Grade it</a>}
+              {c.status !== "revoked" && (
+                <button
+                  className="button secondary"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    if (!window.confirm(
+                      c.status === "verified"
+                        ? `Give up verification for ${c.origin}? Active grading stops immediately. You can verify it again later.`
+                        : `Stop trying to verify ${c.origin}? You can add it again later.`
+                    )) return;
+                    void act(c.id, "/api/verify/revoke", "Verification given up.");
+                  }}
+                >
+                  Give it up
+                </button>
+              )}
+            </div>
+
+            {c.checked_at && (
+              <p className="fineprint">
+                Last checked {new Date(c.checked_at).toLocaleTimeString()}.
+                {c.detail ? ` ${c.detail}` : ""}
+              </p>
+            )}
+          </div>
+        </details>
       ))}
     </>
   );
