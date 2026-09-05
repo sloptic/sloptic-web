@@ -34,6 +34,43 @@ new schema:
     psql "$DATABASE_URL" -f supabase/migrations/00NN_whatever.sql
 
 
+## The LAN resolver mangles NXDOMAIN (2026-09-05)
+
+The box forwards DNS to 10.0.0.1, and that router answers **FORMERR** for every name that does not
+exist, where a correct resolver answers NXDOMAIN. Names that DO exist answer NOERROR normally.
+
+    1.1.1.1   nonexistent-xyz.google.com  ->  NXDOMAIN   correct
+    10.0.0.1  nonexistent-xyz.google.com  ->  FORMERR    the router
+    10.0.0.1  _dmarc.google.com     TXT   ->  NOERROR    fine, because that name exists
+
+It is not about TXT, underscore labels, EDNS, UDP framing, or which stub is asked: `nonexistent`
+anything gets FORMERR, and every rung of verify_domain's escalation gets the same answer, because
+FORMERR is what the router SENDS rather than a failure to reach it.
+
+What it costs. FORMERR is not an answer about the domain, so verify_domain reports the DNS factor as
+`blocked` ("could not check"), which is correct and deliberate: reporting it as `not_found` would tell
+an owner their record is missing when we never got a verdict. So a claim reads "could not check"
+until the record is published. It does NOT block verification, because the moment the record exists
+the name exists and the router answers properly.
+
+The fix is on the box, not in the code. Point systemd-resolved somewhere that answers correctly:
+
+    # /etc/systemd/resolved.conf
+    [Resolve]
+    DNS=1.1.1.1 8.8.8.8
+    Domains=~.
+
+    sudo systemctl restart systemd-resolved
+    python3 worker/deploy/dns_probe2.py     # expect NXDOMAIN, not FORMERR
+
+That fixes DNS for the whole box rather than working around it in one module, and it needs no
+egress change: systemd-resolved's own upstream traffic runs under its uid, not the worker's, so the
+uid-scoped rules in egress.nft never see it.
+
+Diagnosing it again: `worker/deploy/dns_probe.py` walks the resolvers through three ways of asking,
+and `dns_probe2.py` prints the actual response CODES, which is what finally settled this. Exceptions
+collapse FORMERR, SERVFAIL, REFUSED and a timeout into one word; the rcode does not.
+
 ## Tests
 
 Against a real Postgres, because the worker's logic is its SQL: the lane ordering in `claim_job`,
