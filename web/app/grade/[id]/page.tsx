@@ -549,10 +549,6 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
 
       <RankDetail r={r} />
 
-      <p className="passive-note">
-        This is a passive grade only, seeing only what a visitor sees. <a href="/verify">Verify the domain</a> for an active grade.
-      </p>
-
       <Surface surface={r.surface ?? null} />
       <Findings findings={r.findings ?? []} card={cardByProbe} />
       <Passed items={passed} />
@@ -856,7 +852,7 @@ function RankDetail({ r }: { r: GradeResult }) {
           whole battery is a note about something that did not happen. */}
       {limited && (
         <p className="section-intro fineprint">
-          *If fewer than 40 checks applied, the app is noted for &quot;Limited Engagement&quot;.
+          *Marked for limited engagement: too few checks applied for a fair read.
         </p>
       )}
     </>
