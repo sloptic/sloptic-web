@@ -281,18 +281,24 @@ export default function FieldTable({
             select all {selectable.length} not yet graded
           </label>
           {pageSelectable.length > 0 && (
-            <button
-              className="linkish"
-              type="button"
-              onClick={() => setPicked((p) => new Set([...p, ...pageSelectable]))}
-            >
+            <label className="field-filter">
+              <input
+                type="checkbox"
+                checked={pageSelectable.every((u) => picked.has(u))}
+                onChange={(e) => {
+                  const on = e.target.checked;
+                  setPicked((p) => {
+                    const next = new Set(p);
+                    for (const u of pageSelectable) {
+                      if (on) next.add(u);
+                      else next.delete(u);
+                    }
+                    return next;
+                  });
+                }}
+              />
               select this page ({pageSelectable.length})
-            </button>
-          )}
-          {pickedNow.length > 0 && (
-            <button className="linkish" type="button" onClick={() => setPicked(new Set())}>
-              clear
-            </button>
+            </label>
           )}
           <button
             className="button"
