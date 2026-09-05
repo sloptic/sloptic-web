@@ -628,8 +628,17 @@ a {
 .sample-axis-val .of {
   color: var(--muted);
 }
+/* Three numbers, two levels of emphasis, and the third level is NOT more transparency.
+ *
+ *  This read `opacity: 0.6` over var(--muted), which composites to #a4a69a on the card and lands at
+ *  2.32:1 against a required 4.5. Sloptic caught it on its own homepage. Opacity is the trap: the
+ *  colour token passes on its own (4.85:1) and the rule that dims it is nowhere near the palette,
+ *  so nothing about the token file suggests anything is wrong.
+ *
+ *  There is no room under --muted for a dimmer colour that still passes on this background, so the
+ *  hierarchy comes from weight instead, which costs no contrast at all. */
 .sample-axis-val .of.dim {
-  opacity: 0.6;
+  font-weight: 300;
 }
 
 /* count vs slop-points */

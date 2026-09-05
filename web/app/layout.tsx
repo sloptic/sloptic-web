@@ -5,6 +5,7 @@ import ThemeToggle from "./ThemeToggle";
 import NavMenu from "./NavMenu";
 import MobileNav from "./MobileNav";
 import { ACCOUNT, REFERENCE } from "@/lib/nav";
+import { headers } from "next/headers";
 import { currentUser } from "@/lib/auth";
 import "./globals.css";
 
@@ -56,6 +57,10 @@ const themeInit = `try{var t=localStorage.getItem('sloptic-theme');if(t)document
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // The nonce middleware minted for THIS response. Without it the CSP blocks the theme script below
+  // and every visitor on a dark theme gets a flash of the light one, which is the exact thing that
+  // script exists to prevent.
+  const nonce = headers().get("x-nonce") ?? undefined;
   let user = null;
   try {
     user = await currentUser();
@@ -66,7 +71,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body>
-        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeInit }} />
         {/* Cookieless, same-origin page analytics: paths, referrers, country, device class. The one
             measurement the privacy policy names, and the only script the site carries. */}
         <Analytics />
