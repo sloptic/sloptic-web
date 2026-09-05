@@ -80,14 +80,40 @@ jobs:
 
   worker:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sloptic_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
-      # The worker has no tests yet, and this is not pretending otherwise. It catches a syntax error
-      # or a bad import reaching the box that actually runs grades, which is worth the ten seconds
-      # until there is a real suite here.
       - name: Worker compiles
         run: python -m compileall -q worker/sloptic_web_worker
+
+      - name: Install
+        run: pip install --quiet "psycopg[binary]>=3.2" python-dotenv pytest
+
+      # Against a real Postgres, because the worker's logic IS its SQL: the lane ordering in
+      # claim_job, FOR UPDATE SKIP LOCKED, the guards that make a pause outrank a claim, the partial
+      # unique index behind one-live-run. A fake connection would assert none of it. The suite
+      # builds the schema from the real migrations, so a migration that no longer applies in order
+      # fails here rather than against a production database.
+      - name: Worker tests
+        working-directory: worker
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:test@localhost:5432/sloptic_test
+          PYTHONPATH: .
+        run: python -m pytest tests/
