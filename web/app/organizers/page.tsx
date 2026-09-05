@@ -126,8 +126,8 @@ export default function OrganizersPage({
           shows that the stuff no app should get wrong can be graded objectively.
         </p>
         <div className="cta-row">
-          <a className="button" href="mailto:hello@sloptic.org?subject=Organizer%20access">
-            Request organizer access
+          <a className="button" href="#verify-event">
+            Verify your event
           </a>
           <a className="button secondary" href="/methodology">
             How the grade works

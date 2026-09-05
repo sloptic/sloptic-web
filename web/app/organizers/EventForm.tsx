@@ -26,7 +26,7 @@ export default function EventForm({ initialEvent = "" }: { initialEvent?: string
   }
 
   return (
-    <div className="event-form-wrap">
+    <div className="event-form-wrap" id="verify-event">
       <form onSubmit={submit} className="grade-form">
         <input
           type="text"
