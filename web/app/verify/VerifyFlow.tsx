@@ -56,9 +56,19 @@ function Factor({ label, status, kind, checking, children }: {
   );
 }
 
+/** Whether both proofs stood at the last look.
+ *
+ *  The gate on offering an active grade, and it is the same question the worker asks itself just
+ *  before sending anything. A verified claim can sit here with a proof missing: verification is not
+ *  revoked over one bad look, so "verified" and "gradeable right now" are different facts.
+ */
+function proofsHold(c: Claim): boolean {
+  return c.file_status === "ok" && c.dns_status === "ok";
+}
+
 /** The row's one-line verdict, which is about the CLAIM rather than either proof. */
 function claimLine(c: Claim): string {
-  if (c.status === "verified") return "verified";
+  if (c.status === "verified") return proofsHold(c) ? "verified" : "a proof is missing";
   if (c.status === "failed") return "gave up looking";
   if (c.status === "revoked") return "given up";
   if (!c.checked_at) return "waiting for the first check";
@@ -287,8 +297,8 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
             {c.status === "verified" ? (
               <p className="section-intro">
                 Verified{c.verified_at ? ` on ${new Date(c.verified_at).toLocaleDateString()}` : ""}.
-                This domain is eligible for active grading for this account only (others can only grade this)
-                domain passively).
+                This domain is eligible for active grading for this account only (others can only
+                grade this domain passively).
                 {c.expires_at ? ` Prove it again by ${new Date(c.expires_at).toLocaleDateString()}.` : ""}
               </p>
             ) : c.status === "pending" ? (
@@ -344,9 +354,13 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
                 </button>
               )}
               {c.status === "verified" && (
-                // Grades it, rather than pointing at the form and hoping. The origin is right here
-                // and the account is the one holding the grant, so the button does the thing.
-                <button className="button" type="button" disabled={busy}
+                // Off while a proof is failing, because the worker re-reads both immediately before
+                // it sends anything and would refuse. Offering a button whose only outcome is a
+                // failed grade wastes a slot and teaches the wrong thing: the reason is right above
+                // it, in the half that went orange.
+                <button className="button" type="button"
+                        disabled={busy || !proofsHold(c)}
+                        title={proofsHold(c) ? undefined : "Both proofs have to be published: an active grade re-checks them."}
                         onClick={() => void gradeActively(c.origin)}>
                   Grade it actively
                 </button>

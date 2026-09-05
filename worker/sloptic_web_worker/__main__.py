@@ -241,9 +241,6 @@ def _retry_pass(origin: str, mode: str, only_probes: list | None) -> dict:
 
 
 
-_DAY = 24 * 60 * 60
-
-
 def process_domain_checks(conn) -> int:
     """Settle any owner claims due for a look. Returns how many were checked.
 
@@ -282,7 +279,8 @@ def process_domain_checks(conn) -> int:
                 # Already verified: record that both proofs still stand, and NOTHING else. Calling
                 # verify_domain_claim here would upsert the grant with a fresh expires_at on every
                 # daily look, so a grant would never expire and the time box would mean nothing.
-                db.record_domain_check(conn, claim.id, "ok", "ok", out.detail, _DAY)
+                db.record_domain_check(conn, claim.id, "ok", "ok", out.detail,
+                                       config.DOMAIN_WATCH_SECONDS)
                 continue
             result = db.verify_domain_claim(conn, claim, out.detail, config.GRANT_DAYS)
             if result == "granted":
@@ -300,9 +298,10 @@ def process_domain_checks(conn) -> int:
             # A verified domain whose proof has stopped answering. The claim stays verified and the
             # grant is untouched: one bad look is a deploy or a WAF, not evidence that ownership
             # ended, and the active grade re-checks both proofs itself and refuses on its own. What
-            # changes is what the owner SEES, so the row goes orange and says which half. An hour, so
-            # a fix is noticed without chasing somebody else's server.
-            retry = 60 * 60
+            # changes is what the owner SEES, so the row goes orange and says which half, and this
+            # is polled hard rather than watched: an owner staring at an orange row is usually
+            # republishing the thing right now and wants it to go green without pressing anything.
+            retry = config.DOMAIN_REPAIR_SECONDS
             print(f"[owner] {claim.origin}: VERIFIED but a proof is missing now "
                   f"(file={out.file.status} dns={out.dns.status})", flush=True)
         else:

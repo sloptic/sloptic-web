@@ -169,7 +169,20 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         .is("revoked_at", null)
         .gt("expires_at", new Date().toISOString())
         .maybeSingle();
-      canGradeActively = !!grant;
+      // The grant is necessary and not sufficient: the worker re-reads both proofs immediately
+      // before it sends anything, so offering the button while one is missing would offer a grade
+      // whose only outcome is a refusal. Verification is not revoked over a single bad look, which
+      // is exactly why "verified" and "gradeable right now" have to be asked separately.
+      if (grant) {
+        const { data: claim } = await db
+          .from("domain_claims")
+          .select("file_status, dns_status")
+          .eq("account_id", viewer.id)
+          .eq("origin", gradedOrigin)
+          .eq("status", "verified")
+          .maybeSingle();
+        canGradeActively = claim?.file_status === "ok" && claim?.dns_status === "ok";
+      }
     }
   }
 

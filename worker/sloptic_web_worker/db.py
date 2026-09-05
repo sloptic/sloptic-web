@@ -485,12 +485,12 @@ def verify_domain_claim(conn: psycopg.Connection, claim: DomainClaim, detail: st
             UPDATE domain_claims
                SET status = 'verified', file_status = 'ok', dns_status = 'ok',
                    checked_at = now(), verified_at = now(), detail = left(%(d)s, 2000),
-                   -- Round again tomorrow rather than in five minutes: a verified claim is watched,
-                   -- not chased, and this is somebody else's server we are fetching from.
-                   check_due_at = now() + interval '1 day'
+                   -- Watched from here on, on the healthy cadence. Chasing a domain whose proofs
+                   -- both hold teaches nothing and it is somebody else's server we are fetching.
+                   check_due_at = now() + make_interval(secs => %(watch)s)
              WHERE id = %(id)s;
             """,
-            {"d": detail, "id": claim.id},
+            {"d": detail, "id": claim.id, "watch": config.DOMAIN_WATCH_SECONDS},
         )
         # Scoped to the ORIGIN, which is what a grade compares against, and upserted so a
         # re-verification refreshes the window rather than stacking a second authorization.

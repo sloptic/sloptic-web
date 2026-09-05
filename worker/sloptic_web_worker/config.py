@@ -154,6 +154,15 @@ VERIFY_DNS_RESOLVERS = [
     s.strip() for s in os.environ.get("VERIFY_DNS_RESOLVERS", "1.1.1.1,8.8.8.8").split(",") if s.strip()
 ]
 
+# How often a VERIFIED domain's two proofs are looked at again.
+#
+# Adaptive on purpose. A healthy domain is watched rather than chased: these are fetches of somebody
+# else's server, and once both proofs hold there is nothing to learn quickly. A domain whose proof has
+# stopped answering is the opposite case, because the owner is probably fixing it right now and wants
+# to see it go green, so that one is polled hard.
+DOMAIN_WATCH_SECONDS = float(os.environ.get("DOMAIN_WATCH_SECONDS", str(6 * 3600)))
+DOMAIN_REPAIR_SECONDS = float(os.environ.get("DOMAIN_REPAIR_SECONDS", "300"))
+
 GRANT_DAYS = int(os.environ.get("GRANT_DAYS", "90"))
 
 # How long a claim keeps waiting for its token to appear before it is failed. Generous: an organizer
