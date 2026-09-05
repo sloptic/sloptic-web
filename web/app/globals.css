@@ -3319,3 +3319,19 @@ h1.report-url {
   outline: none;
   border-color: var(--accent);
 }
+
+/* The board's own copy of the run card's progress bar. */
+.board-progress {
+  display: block;
+  max-width: var(--measure);
+  height: 0.5rem;
+  margin: 0.6rem auto 0;
+}
+
+/* The board's own copy of the run card's progress bar. */
+.board-progress {
+  display: block;
+  max-width: var(--measure);
+  height: 0.5rem;
+  margin: 0.6rem auto 0;
+}

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import BoardTable, { type BoardRow, type DnfRow } from "./BoardTable";
+import AutoRefresh from "@/app/AutoRefresh";
 import BoardStats from "./BoardStats";
 import { TOTALS } from "@/lib/checks";
 import { recoveryMarks, isLimitedEngagement, type RecoveryMarks } from "@/lib/grades";
@@ -82,6 +83,11 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
   const results = resultsRes.data;
 
   const gradeStatus = new Map((grades ?? []).map((g) => [g.id, g.status]));
+  const doneCount = [...gradeStatus.values()].filter((st) => st === "done").length;
+  const inFlight = [...gradeStatus.values()].filter((st) => st === "queued" || st === "running").length;
+  const barPct =
+    doneCount + inFlight > 0 ? Math.round((doneCount / (doneCount + inFlight)) * 100) : null;
+  const live = ["resolving", "ready", "grading"].includes(run.status);
   const retrying = new Set((grades ?? []).filter((g) => g.retry_due_at).map((g) => g.id));
   const gradesById = new Map((grades ?? []).map((g) => [g.id, g]));
   const byGrade = new Map((results ?? []).map((r) => [r.grade_id, r]));
@@ -214,7 +220,14 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
           {withheld.length > 0 ? ` ${withheld.length} interrupted by a bot challenge.` : ""}
           {rows.some((r) => r.limited) ? ` ${rows.filter((r) => r.limited).length} on partial batteries, marked L.` : ""}
         </p>
+        <AutoRefresh intervalMs={5000} active={live || rows.some((r) => r.pendingRetry)} />
       </div>
+
+      {barPct !== null && inFlight > 0 && (
+        <span className="progress-track board-progress" aria-hidden>
+          <span className="progress-fill" style={{ width: `${barPct}%` }} />
+        </span>
+      )}
 
       <section className="section attached">
         <h2 className="section-head">The board</h2>
