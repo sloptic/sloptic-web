@@ -58,7 +58,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
   const db = supabaseAdmin();
   const { data: run } = await db
     .from("event_runs")
-    .select("id, slug, mode, status, override, entries_found, gallery_complete, created_at")
+    .select("id, slug, mode, status, override, paused, entries_found, gallery_complete, created_at")
     .eq("id", params.runId)
     .eq("account_id", user.id)
     .maybeSingle();
@@ -87,7 +87,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
   const inFlight = [...gradeStatus.values()].filter((st) => st === "queued" || st === "running").length;
   const barPct =
     doneCount + inFlight > 0 ? Math.round((doneCount / (doneCount + inFlight)) * 100) : null;
-  const live = ["resolving", "ready", "grading"].includes(run.status);
+  const live = ["resolving", "ready", "grading"].includes(run.status) && !run.paused;
   const retrying = new Set((grades ?? []).filter((g) => g.retry_due_at).map((g) => g.id));
   const gradesById = new Map((grades ?? []).map((g) => [g.id, g]));
   const byGrade = new Map((results ?? []).map((r) => [r.grade_id, r]));
@@ -215,7 +215,11 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
       <h1>{run.slug}</h1>
         <p className="page-lead">
           {ranked.length + gated.length} of {total} entries {run.mode}ly graded.
-          {pending.length > 0 ? ` ${pending.length} still running.` : ""}
+          {run.paused
+            ? " Grading paused by the organizer."
+            : pending.length > 0
+              ? ` ${pending.length} still running.`
+              : ""}
           {failed.length > 0 ? ` ${failed.length} could not be reached.` : ""}
           {withheld.length > 0 ? ` ${withheld.length} interrupted by a bot challenge.` : ""}
           {rows.some((r) => r.limited) ? ` ${rows.filter((r) => r.limited).length} on partial batteries, marked L.` : ""}
@@ -223,7 +227,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         <AutoRefresh intervalMs={5000} active={live || rows.some((r) => r.pendingRetry)} />
       </div>
 
-      {barPct !== null && inFlight > 0 && (
+      {barPct !== null && (
         <span className="progress-track board-progress" aria-hidden>
           <span className="progress-fill" style={{ width: `${barPct}%` }} />
         </span>

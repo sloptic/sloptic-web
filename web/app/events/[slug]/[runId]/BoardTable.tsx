@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import RecoverySup from "@/app/RecoverySup";
 import type { RecoveryMarks } from "@/lib/grades";
 
@@ -71,9 +71,14 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
     return (av - bv) * dir;
   });
 
-  const last = Math.max(0, Math.ceil(sorted.length - 1) / PAGE === 0 ? 0 : Math.ceil(sorted.length / PAGE) - 1);
-  const from = page * PAGE;
+  const last = Math.max(0, Math.ceil(sorted.length / PAGE) - 1);
+  // The row count changes under a live refresh (regrades repoint links, recovered catastrophes
+  // migrate rows), so the page is clamped to what the shrunk list can still show.
+  const from = Math.min(page, last) * PAGE;
   const shown = sorted.slice(from, from + PAGE);
+  useEffect(() => {
+    if (page > last) setPage(last);
+  }, [page, last]);
 
   function click(key: Key) {
     setPage(0);
@@ -86,6 +91,7 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
 
   return (
     <>
+      {rows.length > 0 && (
       <div className="table-scroll">
         <table className="count-table board-table">
           <thead>
@@ -129,7 +135,9 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
           </tbody>
         </table>
       </div>
-      {rows.some((r) => r.provisional || r.marks.retry || r.marks.none || r.marks.partial || r.marks.full || r.marks.limited) && (
+      )}
+      {rows.some((r) => r.provisional || r.marks.retry || r.marks.none || r.marks.partial || r.marks.full || r.marks.limited) ||
+       dnf.some((d) => d.marks && (d.marks.retry || d.marks.none || d.marks.partial || d.marks.full || d.marks.limited)) && (
         <p className="marks-key">
           <b>B</b> retry pending, <b>N</b> recovered none, <b>P</b> partial, <b>F</b> full, <b>L</b> limited battery
         </p>
