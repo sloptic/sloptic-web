@@ -23,6 +23,11 @@ const doneCount = (r: Run) => r.event_entries.filter((e) => gradeOf(e)?.status =
 const runningCount = (r: Run) => r.event_entries.filter((e) => gradeOf(e)?.status === "running").length;
 const queuedCount = (r: Run) => r.event_entries.filter((e) => gradeOf(e)?.status === "queued").length;
 const inFlightCount = (r: Run) => queuedCount(r) + runningCount(r);
+/** What a regrade actually re-queues: entries whose grade has FINISHED, in any of the three ways it
+ *  can. The button used to count only the done ones, so a run holding ten failed grades offered to
+ *  regrade 29 and queued 39. */
+const regradableCount = (r: Run) =>
+  r.event_entries.filter((e) => !e.skip_reason && ["done", "failed", "cancelled"].includes(gradeOf(e)?.status ?? "")).length;
 const finishedCount = (r: Run) => r.event_entries.filter((e) => ["done", "failed"].includes(gradeOf(e)?.status ?? "")).length;
 
 function checkLine(c: Claim): string {
@@ -313,35 +318,35 @@ export default function EventActions({
 
                 {live.status === "ready" && live.event_entries.length > 0 && (() => {
                   const toGrade = ungradedCount(live);
-                  const graded = doneCount(live);
+                  const graded = regradableCount(live);
                   return (
                   <div className="run-controls">
-                    <span className="mode-toggle" aria-label="battery for this run">
-                      <span
+                    <span className="mode-toggle" role="group" aria-label="battery for this run">
+                      <button
+                        type="button"
                         className={live.mode === "passive" ? "on" : ""}
-                        onClick={() => {
-                          if (live.mode !== "passive" && !busy)
-                            void act(async () => {
-                              await post("/api/events/run/mode", { id: live.id, mode: "passive" });
-                              return "Switched to passive.";
-                            });
-                        }}
+                        aria-pressed={live.mode === "passive"}
+                        disabled={busy || live.mode === "passive"}
+                        onClick={() => void act(async () => {
+                          await post("/api/events/run/mode", { id: live.id, mode: "passive" });
+                          return "Switched to passive.";
+                        })}
                       >
                         passive
-                      </span>
-                      <span
+                      </button>
+                      <button
+                        type="button"
                         className={live.mode === "active" ? "on" : ""}
-                        title={live.mode !== "active" && !canActive ? "Active grading needs the disclosure verified before the deadline." : undefined}
-                        onClick={() => {
-                          if (live.mode !== "active" && !busy && canActive)
-                            void act(async () => {
-                              await post("/api/events/run/mode", { id: live.id, mode: "active" });
-                              return "Switched to active.";
-                            });
-                        }}
+                        aria-pressed={live.mode === "active"}
+                        disabled={busy || live.mode === "active" || !canActive}
+                        title={!canActive ? "Active grading needs the disclosure verified before the deadline." : undefined}
+                        onClick={() => void act(async () => {
+                          await post("/api/events/run/mode", { id: live.id, mode: "active" });
+                          return "Switched to active.";
+                        })}
                       >
                         active
-                      </span>
+                      </button>
                     </span>
                     {toGrade > 0 && (
                       <button className="button" type="button" disabled={busy}
@@ -354,12 +359,12 @@ export default function EventActions({
                     )}
                     {graded > 0 && (
                       <button className={"button" + (toGrade > 0 ? " secondary" : "")} type="button" disabled={busy}
-                              title={`Queue fresh grades for all ${graded} graded entries under this run's battery. The board follows the new reports.`}
+                              title={`Queue fresh grades for every entry under this run's battery, the ${graded} already graded included. The board follows the new reports.`}
                               onClick={() => void act(async () => {
                                 const d = await post("/api/events/run/confirm", { id: live.id, regrade: true });
                                 return `Queued ${d.queued} regrades.`;
                               })}>
-                        Regrade {graded} graded
+                        Regrade all {graded + toGrade}
                       </button>
                     )}
                     <button className="button secondary" type="button" disabled={busy}
@@ -380,7 +385,9 @@ export default function EventActions({
 
                 {live.status === "grading" && (
                   <>
-                    {ungradedCount(live) > 0 && (
+                    {/* A paused run refuses confirm, and refresh would silently release the hold,
+                        so neither is offered until grading resumes. */}
+                    {!live.paused && ungradedCount(live) > 0 && (
                       <div className="run-controls">
                         <button className="button" type="button" disabled={busy}
                                 onClick={() => void act(async () => {
@@ -410,14 +417,16 @@ export default function EventActions({
                               })}>
                         {live.paused ? "Resume grading" : "Pause grading"}
                       </button>
-                      <button className="button secondary" type="button" disabled={busy}
-                              onClick={() => refresh(live)}>
-                        Refresh gallery
-                      </button>
+                      {!live.paused && (
+                        <button className="button secondary" type="button" disabled={busy}
+                                onClick={() => refresh(live)}>
+                          Refresh gallery
+                        </button>
+                      )}
                       <button className="button secondary" type="button" disabled={busy}
                               onClick={() => {
                                 if (!window.confirm(
-                                  `Cancel this run? The ${queuedCount(live)} queued grades stop and their apps become gradeable again. Grades already running finish.`
+                                  `Cancel this run? The ${queuedCount(live)} queued grades stop and their apps become gradeable again. Grades already running are stopped too.`
                                 )) return;
                                 void act(async () => {
                                   await post("/api/events/run/cancel", { id: live.id });

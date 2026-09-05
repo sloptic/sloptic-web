@@ -84,13 +84,18 @@ export async function POST(req: NextRequest) {
 
   // One live run per event per account. A second resolve while one is in flight would grade the
   // field twice.
-  const { data: live } = await db
+  // Deliberately not maybeSingle(): that errors on more than one row and hands back a null row,
+  // which reads here as "nothing live" and starts yet another run, so a single duplicate would
+  // breed. Taking the oldest live run holds the guard however many rows exist.
+  const { data: liveRuns } = await db
     .from("event_runs")
     .select("id, status")
     .eq("account_id", user.id)
     .eq("slug", slug)
     .in("status", ["resolving", "ready", "grading"])
-    .maybeSingle();
+    .order("created_at", { ascending: true })
+    .limit(1);
+  const live = liveRuns?.[0];
   if (live) return NextResponse.json({ run: live, existing: true });
 
   const { data, error } = await db
@@ -100,6 +105,18 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error || !data) {
+    // The partial unique index (0025) is the real guard, so losing that race is an expected
+    // outcome, not a failure: hand back the run that won it, exactly as the check above would have.
+    if (error?.code === "23505") {
+      const { data: won } = await db
+        .from("event_runs")
+        .select("id, status")
+        .eq("account_id", user.id)
+        .eq("slug", slug)
+        .in("status", ["resolving", "ready", "grading"])
+        .limit(1);
+      if (won?.[0]) return NextResponse.json({ run: won[0], existing: true });
+    }
     return NextResponse.json({ error: "Could not start the run." }, { status: 500 });
   }
   // Logged either way: an override run is a thing done outside the ownership check, and an active

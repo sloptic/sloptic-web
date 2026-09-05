@@ -136,8 +136,8 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
         </table>
       </div>
       )}
-      {rows.some((r) => r.provisional || r.marks.retry || r.marks.none || r.marks.partial || r.marks.full || r.marks.limited) ||
-       dnf.some((d) => d.marks && (d.marks.retry || d.marks.none || d.marks.partial || d.marks.full || d.marks.limited)) && (
+      {(rows.some((r) => r.provisional || r.marks.retry || r.marks.none || r.marks.partial || r.marks.full || r.marks.limited) ||
+        dnf.some((d) => !!d.marks && (d.marks.retry || d.marks.none || d.marks.partial || d.marks.full || d.marks.limited))) && (
         <p className="marks-key">
           <b>B</b> retry pending, <b>N</b> recovered none, <b>P</b> partial, <b>F</b> full, <b>L</b> limited battery
         </p>

@@ -319,8 +319,6 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
   const ranAnything = (r.coverage?.probes_total ?? 0) > 0 || (r.outcomes?.length ?? 0) > 0;
   const withheld =
     !ranAnything && (blockedProbes.length > 0 || r.bot_challenge === true || r.challenge_stage === "entry");
-  if (withheld)
-    return <Withheld view={view} blocked={blockedProbes} now={now} onResume={onResume} />;
   // r.challenge_onset_index: how far the grade got before the challenge, for the withheld note.
 
   // Everything the bars need, derived from the record: what fired, what applied, and what this mode
@@ -417,6 +415,12 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
     return m;
   }, [r]);
 
+  // Rendered after EVERY hook above, deliberately. A recovery pass can flip a withheld grade to a
+  // scored one between two polls of the same mounted page, and an early return higher up would
+  // change the hook count mid-mount, which React treats as a fatal error.
+  if (withheld)
+    return <Withheld view={view} blocked={blockedProbes} now={now} onResume={onResume} />;
+
   return (
     <section className="report">
       {view.event && <EventCrumb slug={view.event.slug} />}
@@ -443,19 +447,23 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
           </div>
         )}
         <span className="grow" />
-        <span className="mode-toggle" aria-label="axis readout">
-          <span
+        <span className="mode-toggle" role="group" aria-label="axis readout">
+          <button
+            type="button"
             className={axisView === "checks" ? "on" : ""}
+            aria-pressed={axisView === "checks"}
             onClick={() => setAxisView("checks")}
           >
             checks
-          </span>
-          <span
+          </button>
+          <button
+            type="button"
             className={axisView === "slop" ? "on" : ""}
+            aria-pressed={axisView === "slop"}
             onClick={() => setAxisView("slop")}
           >
             slop points
-          </span>
+          </button>
         </span>
         </div>
         <div className="score-axes">

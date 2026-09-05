@@ -228,6 +228,7 @@ export default function FieldTable({
       <input
         className="field-search"
         type="search"
+        aria-label="Search submissions"
         placeholder="search submissions"
         value={query}
         onChange={(e) => {
@@ -256,7 +257,7 @@ export default function FieldTable({
               setPage(0);
             }}
           />
-          not graded ({entries.filter((e) => !e.skip_reason && !e.grade_id).length})
+          not graded ({entries.filter((e) => !e.skip_reason && e.status !== "done").length})
         </label>
         <label className="field-filter">
           <input

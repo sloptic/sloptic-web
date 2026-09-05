@@ -15,7 +15,11 @@ export default async function SignInPage({
 }: {
   searchParams: { next?: string; error?: string };
 }) {
-  const next = searchParams.next?.startsWith("/") ? searchParams.next : "/";
+  // A leading slash alone is not enough: "//evil.com" and "/\\evil.com" are off-site destinations
+  // that the browser resolves against the current scheme.
+  const asked = searchParams.next ?? "";
+  const next =
+    asked.startsWith("/") && !asked.startsWith("//") && !asked.startsWith("/\\") ? asked : "/";
   if (await currentUser()) redirect(next);
 
   let config: { url: string; key: string } | null = null;

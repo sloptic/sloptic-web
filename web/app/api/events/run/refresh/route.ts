@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   const db = supabaseAdmin();
   const { data: run } = await db
     .from("event_runs")
-    .select("id, status")
+    .select("id, slug, status, paused")
     .eq("id", body.id)
     .eq("account_id", user.id)
     .maybeSingle();
@@ -40,13 +40,34 @@ export async function POST(req: NextRequest) {
   if (!REFRESHABLE.includes(run.status as (typeof REFRESHABLE)[number])) {
     return NextResponse.json({ error: "A cancelled run stays cancelled." }, { status: 409 });
   }
+  // A refresh used to clear paused on its way through, which released a hold the organizer still
+  // believed was in effect. The hold outranks the refresh.
+  if (run.paused) {
+    return NextResponse.json({ error: "This run is paused. Resume grading first." }, { status: 409 });
+  }
+  // Refreshing a finished run puts it back into resolving, which makes it live. Two live runs on
+  // one event grade the field twice, and the event page can only steer one of them.
+  const { data: siblings } = await db
+    .from("event_runs")
+    .select("id")
+    .eq("account_id", user.id)
+    .eq("slug", run.slug)
+    .in("status", ["resolving", "ready", "grading"])
+    .neq("id", run.id)
+    .limit(1);
+  if (siblings?.length) {
+    return NextResponse.json(
+      { error: "Another run on this event is still going. Finish or cancel it first." },
+      { status: 409 }
+    );
+  }
   // started_at cleared too: it is what marks the run as claimed, and the worker only picks up an
   // unclaimed resolving run. refresh_requested switches the worker's resolve into re-check mode:
   // every submission is fetched again and compared with the cache, so the counts it reports are
   // measurements, not guesses.
   const { error } = await db
     .from("event_runs")
-    .update({ status: "resolving", started_at: null, finished_at: null, refresh_requested: true, paused: false })
+    .update({ status: "resolving", started_at: null, finished_at: null, refresh_requested: true })
     .eq("id", run.id);
   if (error) return NextResponse.json({ error: "Could not start the refresh." }, { status: 500 });
   return NextResponse.json({ refreshing: true });

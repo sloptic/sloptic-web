@@ -3118,19 +3118,29 @@ a.mast-user:hover {
   border-radius: var(--radius);
   overflow: hidden;
 }
-.mode-toggle span {
+.mode-toggle span,
+.mode-toggle button {
   padding: 0.32rem 0.8rem;
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.85rem;
   color: var(--muted);
   cursor: pointer;
+  background: none;
+  border: 0;
+  margin: 0;
 }
-.mode-toggle span.on {
+.mode-toggle span.on,
+.mode-toggle button.on {
   background: var(--ink);
   color: var(--paper);
   cursor: default;
 }
-.mode-toggle span:not(.on):hover { color: var(--ink); }
+.mode-toggle span:not(.on):hover,
+.mode-toggle button:not(.on):not(:disabled):hover { color: var(--ink); }
+/* The unavailable side is the only one that reads as unavailable: the lit side is disabled too,
+   because it is already selected, and dimming it would be a lie. */
+.mode-toggle button:not(.on):disabled { opacity: 0.45; cursor: not-allowed; }
+.mode-toggle button:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
 .chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.7rem; }
 
 /* One key for every letter the table can carry, instead of stacked legend lines. */
@@ -3226,7 +3236,8 @@ h1.report-url {
   flex-direction: row;
   align-items: center;
 }
-.band-top .mode-toggle span {
+.band-top .mode-toggle span,
+.band-top .mode-toggle button {
   padding: 0.1rem 0.5rem;
   font-size: 0.72rem;
 }
@@ -3297,7 +3308,8 @@ h1.report-url {
   .run-card .run-controls .button,
   .run-card .run-controls .mode-toggle { flex: 1 1 auto; }
   .run-card .mode-toggle { display: flex; }
-  .run-card .mode-toggle span { flex: 1; text-align: center; }
+  .run-card .mode-toggle span,
+  .run-card .mode-toggle button { flex: 1; text-align: center; }
 
   /* the didn't-finish list drops its two-column spread */
   .dnf-list li { flex-direction: column; gap: 0.15rem; align-items: flex-start; }
