@@ -23,7 +23,7 @@ export default function RecoverySup({ marks }: { marks?: RecoveryMarks | null })
         </sup>
       )}
       {marks.limited && (
-        <sup className="prov-mark" title="Limited: fewer than 40 checks applied, or a challenge cut the battery short.">
+        <sup className="prov-mark" title="Limited: too few checks applied for a fair read, or a challenge cut the battery short.">
           L
         </sup>
       )}
