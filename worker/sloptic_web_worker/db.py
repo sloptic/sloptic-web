@@ -369,6 +369,7 @@ class DomainClaim:
     origin: str
     host: str
     token: str
+    status: str
     attempts: int
 
 
@@ -377,6 +378,12 @@ def claim_domain_check(conn: psycopg.Connection) -> DomainClaim | None:
 
     Same shape as claim_event_check: SKIP LOCKED, and the due time is pushed out immediately so a
     slow check cannot be handed out twice while it runs.
+
+    VERIFIED claims are picked up too, not only pending ones. A proof that has stopped being published
+    is the thing an owner most needs telling about, and finding out from a failed active grade is the
+    worst way to learn it. They come round on their own timer (verify_domain_claim sets it a day out),
+    so this is one HTTP GET and one DNS query per verified domain per day, and pressing Check again
+    just brings that forward.
     """
     row = conn.execute(
         """
@@ -385,18 +392,19 @@ def claim_domain_check(conn: psycopg.Connection) -> DomainClaim | None:
                check_due_at = now() + interval '5 minutes'
          WHERE id = (
                SELECT id FROM domain_claims
-                WHERE status = 'pending' AND check_due_at <= now()
+                WHERE status IN ('pending', 'verified') AND check_due_at <= now()
                 ORDER BY check_due_at
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
          )
-     RETURNING id, account_id, origin, host, token, attempts;
+     RETURNING id, account_id, origin, host, token, status, attempts;
         """
     ).fetchone()
     if row is None:
         return None
     return DomainClaim(id=str(row["id"]), account_id=str(row["account_id"]), origin=row["origin"],
-                       host=row["host"], token=row["token"], attempts=row["attempts"])
+                       host=row["host"], token=row["token"], status=row["status"],
+                       attempts=row["attempts"])
 
 
 def record_domain_check(conn: psycopg.Connection, claim_id: str, file_status: str, dns_status: str,
@@ -476,7 +484,10 @@ def verify_domain_claim(conn: psycopg.Connection, claim: DomainClaim, detail: st
             """
             UPDATE domain_claims
                SET status = 'verified', file_status = 'ok', dns_status = 'ok',
-                   checked_at = now(), verified_at = now(), detail = left(%(d)s, 2000)
+                   checked_at = now(), verified_at = now(), detail = left(%(d)s, 2000),
+                   -- Round again tomorrow rather than in five minutes: a verified claim is watched,
+                   -- not chased, and this is somebody else's server we are fetching from.
+                   check_due_at = now() + interval '1 day'
              WHERE id = %(id)s;
             """,
             {"d": detail, "id": claim.id},

@@ -31,7 +31,10 @@ export async function POST(req: NextRequest) {
     .eq("account_id", user.id)
     .maybeSingle();
   if (!claim) return NextResponse.json({ error: "Not found." }, { status: 404 });
-  if (claim.status !== "pending") {
+  // A VERIFIED claim may be re-checked too. Proofs can stop being published, and finding that out
+  // from a failed active grade is the worst way to learn it. The check only reports: it never
+  // revokes, because one bad look is a deploy or a WAF rather than evidence that ownership ended.
+  if (claim.status !== "pending" && claim.status !== "verified") {
     return NextResponse.json({ error: `That claim is ${claim.status}.` }, { status: 409 });
   }
 
@@ -39,7 +42,7 @@ export async function POST(req: NextRequest) {
     .from("domain_claims")
     .update({ check_due_at: new Date().toISOString() })
     .eq("id", claim.id)
-    .eq("status", "pending");
+    .in("status", ["pending", "verified"]);
   if (error) return NextResponse.json({ error: "Could not schedule the check." }, { status: 500 });
   return NextResponse.json({ checking: true });
 }

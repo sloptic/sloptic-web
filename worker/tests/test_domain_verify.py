@@ -75,11 +75,18 @@ class TestClaimingAndChecking:
         other = db.claim_domain_check(second)
         assert {first.id, other.id} == {a, b}
 
-    def test_only_pending_claims_are_checked(self, conn, account):
-        for status in ("verified", "failed", "revoked"):
+    def test_a_settled_claim_is_not_checked_again(self, conn, account):
+        # failed and revoked are ENDED. Verified is not: it is watched, because the proofs have to
+        # stay published and an active grade re-reads them every time.
+        for status in ("failed", "revoked"):
             conn.execute("TRUNCATE domain_claims CASCADE")
             _claim(conn, account, status=status)
-            assert db.claim_domain_check(conn) is None
+            assert db.claim_domain_check(conn) is None, status
+
+    def test_a_verified_claim_is_still_checked(self, conn, account):
+        conn.execute("TRUNCATE domain_claims CASCADE")
+        _claim(conn, account, status="verified")
+        assert db.claim_domain_check(conn) is not None
 
 
 class TestRecordingWhatWeSaw:
@@ -458,3 +465,66 @@ class TestWhichResolverDecidesAProof:
 
         assert factor.status == "blocked"
         assert "9.9.9.9" in factor.detail and "system" in factor.detail
+
+
+class TestWatchingAVerifiedDomain:
+    def test_a_verified_claim_comes_round_again(self, conn, account):
+        # The proofs have to stay published, since every active grade re-reads them. A verified claim
+        # that was never looked at again would let a domain go quietly unprovable until a grade
+        # failed, which is the worst way for an owner to learn it.
+        _accept_terms(conn, account)
+        _claim(conn, account)
+        db.verify_domain_claim(conn, db.claim_domain_check(conn), "both found", 90)
+        conn.execute("UPDATE domain_claims SET check_due_at = now() - interval '1 minute'")
+
+        again = db.claim_domain_check(conn)
+
+        assert again is not None
+        assert again.status == "verified"
+
+    def test_a_verified_claim_is_watched_daily_rather_than_chased(self, conn, account):
+        # Somebody else's server. One fetch a day, not one every five minutes.
+        _accept_terms(conn, account)
+        _claim(conn, account)
+        db.verify_domain_claim(conn, db.claim_domain_check(conn), "both found", 90)
+
+        hours = conn.execute(
+            "SELECT extract(epoch from (check_due_at - now()))/3600 AS h FROM domain_claims"
+        ).fetchone()["h"]
+        assert 20 <= hours <= 24
+
+    def test_recording_a_look_never_touches_the_grant(self, conn, account):
+        """The trap this design exists to avoid.
+
+        Re-verifying on every daily look would upsert the grant with a fresh expires_at each time, so
+        a grant would never expire and the 90 day time box would mean nothing: a domain that changed
+        hands would keep its authorization for as long as the file and the record survived the
+        handover. So a routine look RECORDS and nothing else.
+        """
+        _accept_terms(conn, account)
+        _claim(conn, account)
+        db.verify_domain_claim(conn, db.claim_domain_check(conn), "both found", 90)
+        before = conn.execute("SELECT expires_at FROM grants WHERE account_id = %s", (account,)).fetchone()["expires_at"]
+
+        db.record_domain_check(conn, _row_id(conn), "ok", "ok", "still there", 86400)
+
+        after = conn.execute("SELECT expires_at FROM grants WHERE account_id = %s", (account,)).fetchone()["expires_at"]
+        assert after == before
+
+    def test_a_proof_that_vanished_is_reported_and_not_revoked(self, conn, account):
+        # One bad look is a deploy or a WAF, not evidence that ownership ended. What changes is what
+        # the owner SEES; the active grade re-checks both proofs itself and refuses on its own.
+        _accept_terms(conn, account)
+        _claim(conn, account)
+        db.verify_domain_claim(conn, db.claim_domain_check(conn), "both found", 90)
+
+        db.record_domain_check(conn, _row_id(conn), "not_found", "ok", "the file is gone", 3600)
+
+        row = _row(conn, _row_id(conn))
+        assert row["status"] == "verified"
+        assert row["file_status"] == "not_found"
+        assert len(_grants(conn, account)) == 1
+
+
+def _row_id(conn):
+    return str(conn.execute("SELECT id FROM domain_claims LIMIT 1").fetchone()["id"])

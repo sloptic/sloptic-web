@@ -330,13 +330,17 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
             )}
 
             <div className="run-controls">
-              {c.status === "pending" && (
-                <button className="button" type="button" disabled={busy || isChecking(c)}
+              {(c.status === "pending" || c.status === "verified") && (
+                // Offered on a verified domain too: the proofs have to stay published, since every
+                // active grade re-reads them, so "are they still there" needs an answer that does
+                // not cost a failed grade.
+                <button className={c.status === "verified" ? "button secondary" : "button"}
+                        type="button" disabled={busy || isChecking(c)}
                         onClick={() => {
                           setCheckingFrom((prev) => ({ ...prev, [c.id]: c.checked_at }));
                           void act(c.id, "/api/verify/recheck", null);
                         }}>
-                  Check now
+                  {c.status === "verified" ? "Check again" : "Check now"}
                 </button>
               )}
               {c.status === "verified" && (

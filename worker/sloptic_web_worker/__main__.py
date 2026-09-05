@@ -241,6 +241,9 @@ def _retry_pass(origin: str, mode: str, only_probes: list | None) -> dict:
 
 
 
+_DAY = 24 * 60 * 60
+
+
 def process_domain_checks(conn) -> int:
     """Settle any owner claims due for a look. Returns how many were checked.
 
@@ -272,7 +275,15 @@ def process_domain_checks(conn) -> int:
             db.record_domain_check(conn, claim.id, "blocked", "blocked", detail, 15 * 60)
             continue
 
+        watching = claim.status == "verified"
+
         if out.verified:
+            if watching:
+                # Already verified: record that both proofs still stand, and NOTHING else. Calling
+                # verify_domain_claim here would upsert the grant with a fresh expires_at on every
+                # daily look, so a grant would never expire and the time box would mean nothing.
+                db.record_domain_check(conn, claim.id, "ok", "ok", out.detail, _DAY)
+                continue
             result = db.verify_domain_claim(conn, claim, out.detail, config.GRANT_DAYS)
             if result == "granted":
                 print(f"[owner] verified {claim.origin} for {claim.account_id}", flush=True)
@@ -281,12 +292,23 @@ def process_domain_checks(conn) -> int:
                       f"the terms, so no grant was written", flush=True)
             continue
 
-        # Not verified yet, and WHY decides how soon to look again. A block is our problem and backs
-        # off hard; a missing proof is something the owner is still publishing, so we look sooner.
+        # Not verified, and WHY decides how soon to look again. A block is our problem and backs off
+        # hard; a missing proof on a PENDING claim is something the owner is mid-way through
+        # publishing, so we look sooner.
         blocked = "blocked" in (out.file.status, out.dns.status)
-        retry = 15 * 60 if blocked else 60
+        if watching:
+            # A verified domain whose proof has stopped answering. The claim stays verified and the
+            # grant is untouched: one bad look is a deploy or a WAF, not evidence that ownership
+            # ended, and the active grade re-checks both proofs itself and refuses on its own. What
+            # changes is what the owner SEES, so the row goes orange and says which half. An hour, so
+            # a fix is noticed without chasing somebody else's server.
+            retry = 60 * 60
+            print(f"[owner] {claim.origin}: VERIFIED but a proof is missing now "
+                  f"(file={out.file.status} dns={out.dns.status})", flush=True)
+        else:
+            retry = 15 * 60 if blocked else 60
+            print(f"[owner] {claim.origin}: file={out.file.status} dns={out.dns.status}", flush=True)
         db.record_domain_check(conn, claim.id, out.file.status, out.dns.status, out.detail, retry)
-        print(f"[owner] {claim.origin}: file={out.file.status} dns={out.dns.status}", flush=True)
     return n
 
 
