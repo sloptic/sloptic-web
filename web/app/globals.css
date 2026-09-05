@@ -3415,10 +3415,24 @@ h1.report-url {
   user-select: all;
 }
 
+/* The token, once and prominently, because copying it correctly is the entire task. Bigger than the
+   surrounding text and selectable in one click. */
+.token-headline {
+  font-size: 0.95rem;
+  padding: 0.8rem 0.9rem;
+  margin: 0.9rem 0 1.2rem;
+}
+
+/* The two proofs are STEPS, both required. A grid reads as a menu of options, so they stack. */
+.proof-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
 /* Each proof carries its own state, so the card says which half is outstanding at a glance, in the
    same three readings the event slip uses: green holds, orange is yours to fix, grey is ours. */
-.card[data-state] { border-left-width: 3px; }
-.card[data-state="ok"]        { border-left-color: var(--verified); }
-.card[data-state="not_found"] { border-left-color: var(--accent); }
+.card[data-state="ok"]        { border-top-color: var(--verified); }
+.card[data-state="not_found"] { border-top-color: var(--accent); }
 .card[data-state="blocked"],
-.card[data-state="pending"]   { border-left-color: var(--line-strong); }
+.card[data-state="pending"]   { border-top-color: var(--line-strong); }

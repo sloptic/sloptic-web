@@ -234,6 +234,75 @@ class TestTheDnsQueryItself:
 
         assert seen["name"] == "_sloptic.example.com."
 
+    def test_a_stub_that_answers_formerr_is_retried_over_tcp(self, monkeypatch):
+        """FORMERR means the resolver could not parse what we SENT, so each rung changes how we ask.
+
+        The box's systemd-resolved answers FORMERR to a UDP query and kept doing so after the
+        no-EDNS retry, which blocked every DNS proof on the service. TCP sidesteps the UDP framing
+        the first two rungs share, and the sandbox already permits TCP 53 to the local stub, so it
+        stays inside the boundary rather than widening it.
+        """
+        import dns.resolver
+
+        tried = []
+
+        class FakeResolver:
+            def __init__(self):
+                self.edns = True
+
+            def use_edns(self, value):
+                self.edns = value
+
+            def resolve(self, name, rdtype, lifetime=None, tcp=False):
+                tried.append(("tcp" if tcp else ("edns" if self.edns is not False else "no-edns")))
+                if not tcp:
+                    raise dns.resolver.NoNameservers("FORMERR")
+                return ["answered over tcp"]
+
+        monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
+
+        assert verify_domain._query_txt("_sloptic.example.com.") == ["answered over tcp"]
+        assert tried == ["edns", "no-edns", "tcp"]
+
+    def test_a_real_absence_is_not_retried_three_times(self, monkeypatch):
+        # NXDOMAIN is an ANSWER, and the same one however we ask. Escalating past it would turn one
+        # honest "no such record" into three queries and hide it behind a resolver-failure message.
+        import dns.resolver
+
+        calls = []
+
+        class FakeResolver:
+            def use_edns(self, value):
+                pass
+
+            def resolve(self, name, rdtype, lifetime=None, tcp=False):
+                calls.append(1)
+                raise dns.resolver.NXDOMAIN("no such name")
+
+        monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
+        factor = verify_domain.check_dns("example.com", "tok")
+
+        assert factor.status == "not_found"
+        assert len(calls) == 1
+
+    def test_every_rung_failing_is_blocked_and_says_what_was_tried(self, monkeypatch):
+        # Never "not_found": an owner must not be told their record is missing because our resolver
+        # is unhappy. The attempts travel in the detail so a blocked claim can be diagnosed.
+        import dns.resolver
+
+        class FakeResolver:
+            def use_edns(self, value):
+                pass
+
+            def resolve(self, name, rdtype, lifetime=None, tcp=False):
+                raise dns.resolver.NoNameservers("FORMERR")
+
+        monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
+        factor = verify_domain.check_dns("example.com", "tok")
+
+        assert factor.status == "blocked"
+        assert "tcp" in factor.detail
+
     def test_a_resolver_that_cannot_parse_edns_is_retried_without_it(self, monkeypatch):
         """The box's systemd-resolved answered FORMERR to dnspython's default EDNS query.
 
@@ -252,7 +321,7 @@ class TestTheDnsQueryItself:
             def use_edns(self, value):
                 self.edns = value
 
-            def resolve(self, name, rdtype, lifetime=None):
+            def resolve(self, name, rdtype, lifetime=None, tcp=False):
                 calls.append(self.edns)
                 if self.edns is not False:
                     raise dns.resolver.NoNameservers("FORMERR")

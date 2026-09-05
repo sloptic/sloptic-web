@@ -104,26 +104,45 @@ def check_file(origin: str, token: str) -> Factor:
 
 
 def _query_txt(name: str):
-    """TXT lookup through the local stub, retried without EDNS if the stub cannot parse the query.
+    """TXT lookup, escalating through the ways a local stub can fail to parse a query.
 
-    The sandbox permits DNS to the local resolver only (worker/deploy/egress.nft allows 127.0.0.53
-    and the bridge gateway, and drops the rest of port 53), which is deliberate and not something to
-    widen for a client quirk. So the fallback happens here instead.
+    The sandbox permits DNS to the LOCAL resolver only (worker/deploy/egress.nft allows 127.0.0.53
+    and the bridge gateway, and drops the rest of port 53). That is deliberate and not something to
+    widen for a client quirk, so every fallback here has to stay inside it.
 
-    The worker box's systemd-resolved answered FORMERR to the EDNS query dnspython sends by default,
-    which surfaced as "all nameservers failed" and blocked every DNS proof. Retrying without EDNS is
-    the standard remedy for a resolver that cannot parse the extension, and it costs one extra query
-    only on the boxes that need it.
+    The worker box's systemd-resolved answers FORMERR, which dnspython surfaces as NoNameservers and
+    which blocked every DNS proof on the service. FORMERR means the resolver could not parse what we
+    sent, so each rung changes HOW we ask rather than who we ask:
+
+      1. the default, EDNS included
+      2. without EDNS, for a stub that cannot parse the extension
+      3. over TCP, which sidesteps the UDP framing the first two share
+
+    Raises the LAST failure when all three fail, and check_dns reports that as blocked, never as
+    absence: an owner must not be told their record is missing because our resolver is unhappy.
     """
     import dns.resolver
 
-    try:
-        return dns.resolver.resolve(name, "TXT", lifetime=_TIMEOUT)
-    except dns.resolver.NoNameservers:
-        plain = dns.resolver.Resolver()
-        plain.use_edns(False)
-        plain.lifetime = _TIMEOUT
-        return plain.resolve(name, "TXT", lifetime=_TIMEOUT)
+    attempts = []
+    for label, build in (
+        ("edns", lambda r: r),
+        ("no-edns", lambda r: (r.use_edns(False), r)[1]),
+        ("tcp", lambda r: (r.use_edns(False), r)[1]),
+    ):
+        resolver = build(dns.resolver.Resolver())
+        resolver.lifetime = _TIMEOUT
+        try:
+            return resolver.resolve(name, "TXT", lifetime=_TIMEOUT, tcp=(label == "tcp"))
+        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+            # A real answer, and the same one however we asked. Let check_dns report absence.
+            raise
+        except Exception as e:  # noqa: BLE001
+            attempts.append(f"{label}: {type(e).__name__}")
+            last = e
+
+    # Every rung failed. Carry what was tried, so the next person reading a blocked claim can see it
+    # was not one unlucky query.
+    raise dns.resolver.NoNameservers(f"tried {', '.join(attempts)}") from last
 
 
 def check_dns(host: str, token: str) -> Factor:

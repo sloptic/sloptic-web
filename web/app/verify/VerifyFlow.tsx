@@ -171,24 +171,27 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
           ) : c.status === "pending" ? (
             <>
               <p className="section-intro">
-                Publish this token in both places. Both are needed: one proves you control what the
-                site serves, the other proves you control its DNS. Either alone is a proof somebody
-                with a foothold could fake.
+                Publish the token below both as a file and as a DNS TXT record to prove ownership of
+                this site.
               </p>
-              <div className="card-grid">
+              {/* Once, and up here. It was inside both cards, which put the one thing a person came
+                  to copy in two places and neither of them first. */}
+              <pre className="token-block token-headline"><code>{c.token}</code></pre>
+
+              {/* Stacked, not side by side: these are two steps to carry out, and a row invites
+                  reading them as alternatives. */}
+              <div className="proof-steps">
                 <Factor label="The file" status={c.file_status} kind="file">
                   <p>
                     Serve it at <code>{c.origin}/.well-known/sloptic-verification.txt</code>, with the
                     token as the whole body.
                   </p>
-                  <pre className="token-block"><code>{c.token}</code></pre>
                 </Factor>
                 <Factor label="The DNS record" status={c.dns_status} kind="record">
                   <p>
                     Add a TXT record at <code>_sloptic.{c.host}</code> with the same value. DNS can
                     take a while to propagate, which is normal.
                   </p>
-                  <pre className="token-block"><code>{c.token}</code></pre>
                 </Factor>
               </div>
               <div className="run-controls">
