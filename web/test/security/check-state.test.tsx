@@ -54,7 +54,12 @@ describe("what the organizer is told about the last check", () => {
     expect(text).toContain("Devpost did not answer our last check");
     expect(text).not.toContain("could not find that event");
     expect(text).not.toContain("could not find our link");
-    expect(screen.getByText(/did not answer/).closest(".verdict")).toHaveAttribute("data-state", "blocked");
+    // "unknown", not "blocked": the attribute carries what the ORGANIZER should read off the slip,
+    // and a fetch that failed on our side is not something they can act on. It used to be the raw
+    // check_status, which pinned an implementation detail rather than the property this test names.
+    // The property itself is unchanged: a blocked look must never be presented as a missing token.
+    expect(screen.getByText(/did not answer/).closest(".verdict")).toHaveAttribute("data-state", "unknown");
+    expect(screen.getByText(/did not answer/).closest(".verdict")).not.toHaveAttribute("data-state", "missing");
   });
 
   it("says the event is missing only when Devpost actually said so", () => {
