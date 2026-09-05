@@ -24,16 +24,31 @@ function factorLine(status: Claim["file_status"], kind: "file" | "record"): stri
   }
 }
 
-function Factor({ label, status, kind, children }: {
+/** One proof, in every state the claim can be in.
+ *
+ *  Shown even once the claim is verified: the two proofs are the thing being tracked, and a verified
+ *  origin that hides them cannot answer "which half am I looking at" or "is my record still there".
+ *  Active grades re-check both every time, so they never stop mattering.
+ *
+ *  While a check is in flight the card says so by ANIMATING rather than by adding a sentence: the
+ *  ellipsis carries it, the same way the event claim's slip does, and the accent bar keeps saying
+ *  what the last look found instead of being blanked out by the new one.
+ */
+function Factor({ label, status, kind, checking, children }: {
   label: string;
   status: Claim["file_status"];
   kind: "file" | "record";
+  checking: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className="card" data-state={status ?? "pending"}>
       <h3>
-        {label} <span className="tag">{factorLine(status, kind)}</span>
+        {label}{" "}
+        <span className="tag">
+          {factorLine(status, kind)}
+          {checking && <span className="dots" aria-hidden />}
+        </span>
       </h3>
       {children}
     </div>
@@ -48,6 +63,12 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  // The checked_at each claim had when Check now was pressed. A check is finished when the row
+  // carries a newer one, which is the only signal that separates "still looking" from "looked and
+  // found nothing": both leave the claim pending.
+  const [checkingFrom, setCheckingFrom] = useState<Record<string, string | null>>({});
+
+  const isChecking = (c: Claim) => c.id in checkingFrom && checkingFrom[c.id] === c.checked_at;
 
   const load = useCallback(async () => {
     const r = await fetch("/api/verify/claim", { cache: "no-store" }).catch(() => null);
@@ -60,10 +81,27 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
   // Only while something is actually pending. A verified origin does not change on its own, and a
   // page that polls for ever is the thing this product grades other people for.
   useEffect(() => {
-    if (!claims.some((c) => c.status === "pending")) return;
-    const t = setInterval(() => void load(), 5000);
+    const watching = claims.some((c) => c.status === "pending") || claims.some(isChecking);
+    if (!watching) return;
+    const t = setInterval(() => void load(), claims.some(isChecking) ? 1500 : 5000);
     return () => clearInterval(t);
-  }, [claims, load]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claims, load, checkingFrom]);
+
+  // Once a row carries a newer check, the wait is over and the card stops animating.
+  useEffect(() => {
+    setCheckingFrom((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const c of claims) {
+        if (c.id in next && next[c.id] !== c.checked_at) {
+          delete next[c.id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [claims]);
 
   async function post(path: string, body: unknown) {
     const res = await fetch(path, {
@@ -94,12 +132,12 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
     }
   }
 
-  async function act(id: string, path: string, then: string) {
+  async function act(id: string, path: string, then: string | null) {
     setBusy(true);
     setNote(null);
     try {
       await post(path, { id });
-      setNote(then);
+      if (then) setNote(then);
       await load();
     } catch (err) {
       setNote(err instanceof Error ? err.message : "Something went wrong.");
@@ -148,9 +186,26 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
             <>
               <p className="section-intro">
                 Verified{c.verified_at ? ` on ${new Date(c.verified_at).toLocaleDateString()}` : ""}.
-                The full battery runs on this origin for your account. Anyone else who submits it
-                still gets the passive floor.
+                This domain is eligible for active grading with this account. Others submitting this domain
+                gets passive grading only. Click "Give it up" to remove this verification and stop active grading.
               </p>
+              {/* The proofs stay visible once verified, both green. They are still load bearing:
+                  every active grade re-reads them, so "is my record still there" has to be
+                  answerable from here rather than only from a failed grade. */}
+              <div className="proof-steps">
+                <Factor label="The file" status={c.file_status} kind="file" checking={isChecking(c)}>
+                  <p>
+                    Served at <code>{c.origin}/.well-known/sloptic-verification.txt</code>. Leave it
+                    there: an active grade re-checks it every time.
+                  </p>
+                </Factor>
+                <Factor label="The DNS record" status={c.dns_status} kind="record" checking={isChecking(c)}>
+                  <p>
+                    Published at <code>_sloptic.{c.host}</code>. Leave it there too, for the same
+                    reason.
+                  </p>
+                </Factor>
+              </div>
               <div className="run-controls">
                 <a className="button" href="/">Grade it</a>
                 <button
@@ -178,16 +233,17 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
                   to copy in two places and neither of them first. */}
               <pre className="token-block token-headline"><code>{c.token}</code></pre>
 
-              {/* Stacked, not side by side: these are two steps to carry out, and a row invites
-                  reading them as alternatives. */}
+              {/* Shown in every state. A verified origin still depends on both of these, and
+                  active grades re-check them each time, so hiding them once the claim goes green
+                  would hide the only thing that says WHY it is green. */}
               <div className="proof-steps">
-                <Factor label="The file" status={c.file_status} kind="file">
+                <Factor label="The file" status={c.file_status} kind="file" checking={isChecking(c)}>
                   <p>
                     Serve it at <code>{c.origin}/.well-known/sloptic-verification.txt</code>, with the
                     token as the whole body.
                   </p>
                 </Factor>
-                <Factor label="The DNS record" status={c.dns_status} kind="record">
+                <Factor label="The DNS record" status={c.dns_status} kind="record" checking={isChecking(c)}>
                   <p>
                     Add a TXT record at <code>_sloptic.{c.host}</code> with the same value. DNS can
                     take a while to propagate, which is normal.
@@ -195,8 +251,11 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
                 </Factor>
               </div>
               <div className="run-controls">
-                <button className="button" type="button" disabled={busy}
-                        onClick={() => void act(c.id, "/api/verify/recheck", "Checking now.")}>
+                <button className="button" type="button" disabled={busy || isChecking(c)}
+                        onClick={() => {
+                          setCheckingFrom((prev) => ({ ...prev, [c.id]: c.checked_at }));
+                          void act(c.id, "/api/verify/recheck", null);
+                        }}>
                   Check now
                 </button>
               </div>
