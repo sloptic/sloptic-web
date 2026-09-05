@@ -294,7 +294,20 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
           </summary>
 
           <div className="domain-body">
-            {c.status === "verified" ? (
+            {c.status === "verified" && !proofsHold(c) ? (
+              // The state to lead with is the one blocking them, not the one that was true earlier.
+              // The verification itself stands (it is not revoked over a look), so the history goes
+              // in parentheses after: still verified, not gradeable until the proof is back.
+              <p className="section-intro">
+                One or more proofs is missing. Please add them back to grade actively.
+                {c.verified_at && (
+                  <>
+                    {" "}(originally verified on {new Date(c.verified_at).toLocaleDateString()}
+                    {c.expires_at ? `, expires ${new Date(c.expires_at).toLocaleDateString()}` : ""})
+                  </>
+                )}
+              </p>
+            ) : c.status === "verified" ? (
               <p className="section-intro">
                 Verified{c.verified_at ? ` on ${new Date(c.verified_at).toLocaleDateString()}` : ""}.
                 This domain is eligible for active grading for this account only (others can only
