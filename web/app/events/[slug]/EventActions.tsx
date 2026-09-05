@@ -30,6 +30,24 @@ const regradableCount = (r: Run) =>
   r.event_entries.filter((e) => !e.skip_reason && ["done", "failed", "cancelled"].includes(gradeOf(e)?.status ?? "")).length;
 const finishedCount = (r: Run) => r.event_entries.filter((e) => ["done", "failed"].includes(gradeOf(e)?.status ?? "")).length;
 
+/** What the accent bar should say, which is NOT check_status.
+ *
+ *  check_status is the outcome of the FETCH: 'ok' means we managed to read the event's pages, and it
+ *  is exactly the case that then reports "we could not find our link on your page yet". Passing it
+ *  through painted that green, because the value says the reading went fine and says nothing at all
+ *  about whether the token was there. Whether the proof holds is claim.status.
+ *
+ *    ok       the token is published and the claim is verified
+ *    missing  we looked and it is not there, which is the organizer's to fix
+ *    unknown  nothing is known yet: never checked, in flight, or a look that failed on OUR side
+ */
+function verdictState(c: Claim, checking: boolean): "ok" | "missing" | "unknown" {
+  if (c.status === "verified") return "ok";
+  if (checking || !c.checked_at) return "unknown";
+  if (c.check_status === "blocked" || c.check_status === "error") return "unknown";
+  return "missing";
+}
+
 function checkLine(c: Claim): string {
   if (!c.checked_at) return "Waiting for the first check.";
   if (c.check_status === "error") return "Something went wrong on our side during the last check. We are trying again.";
@@ -226,7 +244,7 @@ export default function EventActions({
           </p>
           <p className="token-link"><code>{`${origin}/e/${claim.token}`}</code></p>
 
-          <div className="verdict" data-state={checking ? "checking" : claim.check_status ?? "none"}>
+          <div className="verdict" data-state={verdictState(claim, checking)}>
             <p className="verdict-label">
               {checking ? (
                 <>

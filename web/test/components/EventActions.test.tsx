@@ -769,6 +769,44 @@ describe("the verification slip", () => {
     expect(maybeButton(/^Check now$/)).toBeNull();
   });
 
+  // The accent bar is coloured from this, and it must NOT be check_status. That field is the outcome
+  // of the fetch: 'ok' means we managed to read the event's pages, which is the very case that then
+  // reports "we could not find our link on your page yet". Passing it through painted an unverified
+  // event green, saying the proof holds directly above the sentence saying it does not.
+  it("does not call an unverified event verified, however well the fetch went", () => {
+    show({
+      verified: false,
+      initialClaim: { ...pendingClaim, check_status: "ok", checked_at: "2026-09-01T10:00:00.000Z" },
+    });
+    expect(document.querySelector(".verdict")?.getAttribute("data-state")).toBe("missing");
+  });
+
+  it("calls a verified event verified", () => {
+    show({
+      verified: true,
+      initialClaim: { ...pendingClaim, status: "verified", check_status: "ok", checked_at: "2026-09-01T10:00:00.000Z" },
+    });
+    expect(document.querySelector(".verdict")?.getAttribute("data-state")).toBe("ok");
+  });
+
+  it("blames nobody for a look that failed on our side", () => {
+    // blocked and error are OURS. Marking them the same as a missing link would tell an organizer to
+    // fix something that is not theirs, which is what the tri-state exists to prevent.
+    for (const s of ["blocked", "error"] as const) {
+      const { unmount } = show({
+        verified: false,
+        initialClaim: { ...pendingClaim, check_status: s, checked_at: "2026-09-01T10:00:00.000Z" },
+      });
+      expect(document.querySelector(".verdict")?.getAttribute("data-state")).toBe("unknown");
+      unmount();
+    }
+  });
+
+  it("says nothing is known before the first check", () => {
+    show({ verified: false, initialClaim: { ...pendingClaim, checked_at: null } });
+    expect(document.querySelector(".verdict")?.getAttribute("data-state")).toBe("unknown");
+  });
+
   it("uses no em dash in any verdict line", () => {
     for (const s of ["blocked", "not_found", "error", "ok"] as const) {
       const { unmount } = show({ verified: false, initialClaim: { ...pendingClaim, check_status: s, checked_at: "2026-09-01T10:00:00.000Z" } });

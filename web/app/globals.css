@@ -2878,12 +2878,9 @@ a.mast-user:hover {
  *  two failure states that are OURS. A blocked or errored check means we could not look, and
  *  colouring that the same as a missing link would blame an organizer for Devpost refusing us,
  *  which is the exact confusion the tri-state exists to prevent. */
-.verdict[data-state="ok"]        { border-left-color: var(--verified); }
-.verdict[data-state="not_found"] { border-left-color: var(--accent); }
-.verdict[data-state="checking"],
-.verdict[data-state="none"],
-.verdict[data-state="error"],
-.verdict[data-state="blocked"]   { border-left-color: var(--line-strong); }
+.verdict[data-state="ok"]      { border-left-color: var(--verified); }
+.verdict[data-state="missing"] { border-left-color: var(--accent); }
+.verdict[data-state="unknown"] { border-left-color: var(--line-strong); }
 .verdict-label {
   margin: 0 0 0.35rem;
   font-family: var(--font-mono);
