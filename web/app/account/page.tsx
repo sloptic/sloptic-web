@@ -4,6 +4,8 @@ import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import AccountActions from "./AccountActions";
 import GradeList from "../grades/GradeList";
+import VerifyFlow from "../verify/VerifyFlow";
+import { claimsForAccount } from "@/lib/domain-claims";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +27,7 @@ export default async function AccountPage() {
   if (!user) redirect("/signin?next=/account");
 
   const db = supabaseAdmin();
-  const [{ data: profile }, { data: grants }] = await Promise.all([
+  const [{ data: profile }, { data: grants }, claims] = await Promise.all([
     db.from("profiles").select("terms_accepted_at, created_at").eq("id", user.id).maybeSingle(),
     db
       .from("grants")
@@ -33,6 +35,7 @@ export default async function AccountPage() {
       .eq("account_id", user.id)
       .is("revoked_at", null)
       .order("granted_at", { ascending: false }),
+    claimsForAccount(user.id),
   ]);
 
   return (
@@ -46,7 +49,7 @@ export default async function AccountPage() {
           than a second implementation of each list. Two views of one dataset written twice is how
           they end up disagreeing, which already happened once with the percentile direction. */}
       <section className="section attached">
-        <h2 className="section-head">Apps you graded</h2>
+        <h2 className="section-head" id="your-grades">Apps you graded</h2>
         <p className="section-intro">
           Grades saved to this account and any this browser ran but hasn't been saved yet.
         </p>
@@ -65,22 +68,12 @@ export default async function AccountPage() {
 
       <section className="section">
         <h2 className="section-head">Domains you own</h2>
-        {grants && grants.filter((g) => g.kind === "app_origin").length > 0 ? (
-          <ul className="stat-list">
-            {grants
-              .filter((g) => g.kind === "app_origin")
-              .map((g) => (
-                <li key={g.scope}>
-                  <span className="k">{g.scope}</span>
-                  <span className="v">Active grading until {when(g.expires_at)}.</span>
-                </li>
-              ))}
-          </ul>
-        ) : (
-          <p className="section-intro">
-            None yet. <a href="/verify">What verifying involves</a>.
-          </p>
-        )}
+        <p className="section-intro">
+          Verifying a domain lets the full battery run on it, for this account only. Anyone else who
+          submits the same URL still gets the passive floor.{" "}
+          <a href="/verify">What verifying involves</a>.
+        </p>
+        <VerifyFlow signedIn initialClaims={claims} />
       </section>
 
       <section className="section">

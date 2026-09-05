@@ -6,6 +6,7 @@ import { normalizeTarget, UrlRejected } from "@/lib/origin";
 import { egressPrecheck } from "@/lib/egress";
 import { platformSuffix, PLATFORM_REFUSAL } from "@/lib/platform";
 import { hashIp, clientIp } from "@/lib/ratelimit";
+import { claimsForAccount } from "@/lib/domain-claims";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -111,27 +112,5 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const user = await currentUser();
   if (!user) return NextResponse.json({ claims: [] });
-
-  const db = supabaseAdmin();
-  const [{ data: claims }, { data: grants }] = await Promise.all([
-    db
-      .from("domain_claims")
-      .select("id, origin, host, token, status, file_status, dns_status, detail, checked_at, verified_at")
-      .eq("account_id", user.id)
-      .order("issued_at", { ascending: false })
-      .limit(50),
-    db
-      .from("grants")
-      .select("scope, expires_at")
-      .eq("account_id", user.id)
-      .eq("kind", "app_origin")
-      .is("revoked_at", null),
-  ]);
-
-  // The grant's expiry travels with the claim it came from, so a verified origin can say when it
-  // needs proving again rather than looking permanent.
-  const expiry = new Map((grants ?? []).map((g) => [g.scope as string, g.expires_at as string]));
-  return NextResponse.json({
-    claims: (claims ?? []).map((c) => ({ ...c, expires_at: expiry.get(c.origin) ?? null })),
-  });
+  return NextResponse.json({ claims: await claimsForAccount(user.id) });
 }

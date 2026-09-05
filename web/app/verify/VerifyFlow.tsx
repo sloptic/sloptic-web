@@ -1,20 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { Claim } from "@/lib/domain-claims";
 
-export type Claim = {
-  id: string;
-  origin: string;
-  host: string;
-  token: string;
-  status: "pending" | "verified" | "failed" | "revoked";
-  file_status: "ok" | "not_found" | "blocked" | null;
-  dns_status: "ok" | "not_found" | "blocked" | null;
-  detail: string | null;
-  checked_at: string | null;
-  verified_at: string | null;
-  expires_at?: string | null;
-};
+export type { Claim };
 
 /** One factor's state in words.
  *

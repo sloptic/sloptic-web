@@ -24,6 +24,9 @@ export const PRIMARY: NavLink[] = [
 /** Only meaningful with an account. */
 export const ACCOUNT: NavLink[] = [
   { href: "/account", label: "Account" },
-  { href: "/grades", label: "Your grades" },
   { href: "/events", label: "Your events" },
 ];
+
+// /grades is deliberately absent. Signed in it redirects to /account, which renders the same list,
+// so a nav entry would be a second door into one room. Signed out it is still reachable, from the
+// link on a report, which is where an anonymous visitor actually needs it.

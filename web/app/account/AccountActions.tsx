@@ -32,7 +32,7 @@ export default function AccountActions({ email }: { email: string }) {
       </p>
       <p>
         Note that reports you saved are not destroyed with the account. They are kept for 30 days. If
-        you want those deleted, <a href="/grades">do it here</a>.
+        you want those deleted, <a href="#your-grades">do it above</a>.
       </p>
       <form className="delete-form" onSubmit={remove}>
         <label htmlFor="confirm-email">Type {email} to confirm</label>

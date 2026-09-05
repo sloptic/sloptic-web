@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { TOTALS } from "@/lib/checks";
 import { currentUser } from "@/lib/auth";
-import { supabaseAdmin } from "@/lib/supabase";
-import VerifyFlow, { type Claim } from "./VerifyFlow";
+import VerifyFlow from "./VerifyFlow";
+import { claimsForAccount } from "@/lib/domain-claims";
 
 export const dynamic = "force-dynamic";
 
@@ -14,26 +14,7 @@ export const metadata: Metadata = {
 
 export default async function VerifyPage() {
   const user = await currentUser();
-  let claims: Claim[] = [];
-  if (user) {
-    const db = supabaseAdmin();
-    const [{ data: rows }, { data: grants }] = await Promise.all([
-      db
-        .from("domain_claims")
-        .select("id, origin, host, token, status, file_status, dns_status, detail, checked_at, verified_at")
-        .eq("account_id", user.id)
-        .order("issued_at", { ascending: false })
-        .limit(50),
-      db
-        .from("grants")
-        .select("scope, expires_at")
-        .eq("account_id", user.id)
-        .eq("kind", "app_origin")
-        .is("revoked_at", null),
-    ]);
-    const expiry = new Map((grants ?? []).map((g) => [g.scope as string, g.expires_at as string]));
-    claims = (rows ?? []).map((c) => ({ ...c, expires_at: expiry.get(c.origin) ?? null })) as Claim[];
-  }
+  const claims = user ? await claimsForAccount(user.id) : [];
 
   return (
     <>
