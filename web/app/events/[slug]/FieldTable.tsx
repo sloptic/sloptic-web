@@ -167,16 +167,17 @@ export default function FieldTable({
   // answers that only by accident.
   const [sort, setSort] = useState<{ key: "name" | "status"; asc: boolean }>({ key: "status", asc: true });
 
-  // Three disjoint groups: graded (a report exists), not graded (still gradeable), skipped. Tick
-  // none to see everything; tick any subset to see just those groups.
+  // Three disjoint groups, keyed on grade STATUS: graded means a finished report exists. A link
+  // alone is not a grade — this run held ten failed grades whose links would otherwise have them
+  // counted as graded while the card said 39.
   const anyFilter = showGraded || showUngraded || showSkipped;
   const filtered = !anyFilter
     ? entries
     : entries.filter(
         (e) =>
           (showSkipped && !!e.skip_reason) ||
-          (showGraded && !e.skip_reason && !!e.grade_id) ||
-          (showUngraded && !e.skip_reason && !e.grade_id)
+          (showGraded && !e.skip_reason && e.status === "done") ||
+          (showUngraded && !e.skip_reason && e.status !== "done")
       );
   const q = query.trim().toLowerCase();
   const searched = q ? filtered.filter((e) => projectName(e.project_url).toLowerCase().includes(q)) : filtered;
@@ -244,7 +245,7 @@ export default function FieldTable({
               setPage(0);
             }}
           />
-          graded ({entries.filter((e) => !e.skip_reason && e.grade_id).length})
+          graded ({entries.filter((e) => !e.skip_reason && e.status === "done").length})
         </label>
         <label className="field-filter">
           <input

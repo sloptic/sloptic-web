@@ -146,7 +146,16 @@ export default function EventActions({
   }
   async function act(fn: () => Promise<string | null>) {
     setBusy(true); setNote(null);
-    try { const m = await fn(); if (m) setNote(m); await load(); }
+    try {
+      const m = await fn();
+      if (m) {
+        setNote(m);
+        // A note describes the moment it was produced. The poll refreshes the state around it, so
+        // the note retires itself instead of contradicting what the card now says.
+        setTimeout(() => setNote((cur) => (cur === m ? null : cur)), 12_000);
+      }
+      await load();
+    }
     catch (e) { setNote(e instanceof Error ? e.message : "Something went wrong."); }
     finally { setBusy(false); }
   }
