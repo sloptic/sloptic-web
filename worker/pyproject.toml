@@ -6,6 +6,9 @@ requires-python = ">=3.11"
 dependencies = [
     "psycopg[binary]>=3.2",
     "python-dotenv>=1.0",
+    # The DNS half of owner verification. stdlib resolves names to addresses and cannot read TXT,
+    # and the TXT record is the factor that proves control of the ZONE rather than of the server.
+    "dnspython>=2.6",
     # sloptic is the pinned GRADER, consumed not forked. It is not on PyPI, so install the sibling clone
     # in editable mode alongside this package (see README): pip install -e ../../sloptic-main
     # plus its browser deps for the passive a11y/CWV probes:

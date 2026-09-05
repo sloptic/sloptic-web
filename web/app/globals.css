@@ -3380,3 +3380,24 @@ h1.report-url {
   max-height: 18rem;
   overflow-y: auto;
 }
+
+/* The verification token, which people copy into a file and a DNS record. Selectable, wrapping, and
+   monospace: it is long, and a token that wraps mid-character or scrolls out of view gets pasted
+   wrong, which then reads to the owner as verification being broken. */
+.token-block {
+  margin: 0.6rem 0 0;
+  padding: 0.6rem 0.7rem;
+  background: var(--paper-sunk, rgba(127, 127, 127, 0.08));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  user-select: all;
+}
+
+/* Each proof carries its own state, so the card says which half is outstanding at a glance. */
+.card[data-state="ok"] { border-color: var(--good, currentColor); }
+.card[data-state="blocked"] { opacity: 0.85; }

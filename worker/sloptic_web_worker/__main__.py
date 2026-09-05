@@ -30,7 +30,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from . import config, db, grader, resolve_event, verify_event
+from . import config, db, egress, grader, resolve_event, verify_domain, verify_event
 from .egress import install as install_egress
 from .grade_child import EXIT_ENTRY_CHALLENGE
 
@@ -238,6 +238,56 @@ def _retry_pass(origin: str, mode: str, only_probes: list | None) -> dict:
             os.unlink(out.name)
         except OSError:
             pass
+
+
+
+def process_domain_checks(conn) -> int:
+    """Settle any owner claims due for a look. Returns how many were checked.
+
+    Inline like the event checks: one HTTP GET and one DNS query against one host, seconds of work,
+    none of the wedge risk that put grading in a child process.
+    """
+    n = 0
+    while n < 5:                      # a few per pass, so a backlog drains without starving grading
+        claim = db.claim_domain_check(conn)
+        if claim is None:
+            break
+        n += 1
+        try:
+            out = verify_domain.check(claim.origin, claim.host, claim.token)
+        except egress.EgressNotReady as e:
+            # The sandbox is not up. Not the owner's problem and not a verdict on their proofs, so
+            # the claim keeps waiting rather than being told anything false.
+            print(f"[owner] {claim.origin}: {e}", flush=True)
+            db.record_domain_check(conn, claim.id, "blocked", "blocked",
+                                   "verification is paused on our side", 15 * 60)
+            continue
+        except Exception as e:  # noqa: BLE001
+            # Never let this reach the loop's catch-all, which records nothing on the row: a claim
+            # failing every five minutes and saying so nowhere a reader can look is this project's
+            # recurring bug.
+            detail = f"worker error: {type(e).__name__}: {e}"
+            traceback.print_exc()
+            print(f"[owner] {claim.origin}: {detail}", flush=True)
+            db.record_domain_check(conn, claim.id, "blocked", "blocked", detail, 15 * 60)
+            continue
+
+        if out.verified:
+            result = db.verify_domain_claim(conn, claim, out.detail, config.GRANT_DAYS)
+            if result == "granted":
+                print(f"[owner] verified {claim.origin} for {claim.account_id}", flush=True)
+            else:
+                print(f"[owner] {claim.origin}: both proofs found, but the account has not accepted "
+                      f"the terms, so no grant was written", flush=True)
+            continue
+
+        # Not verified yet, and WHY decides how soon to look again. A block is our problem and backs
+        # off hard; a missing proof is something the owner is still publishing, so we look sooner.
+        blocked = "blocked" in (out.file.status, out.dns.status)
+        retry = 15 * 60 if blocked else 60
+        db.record_domain_check(conn, claim.id, out.file.status, out.dns.status, out.detail, retry)
+        print(f"[owner] {claim.origin}: file={out.file.status} dns={out.dns.status}", flush=True)
+    return n
 
 
 def process_retries(conn) -> int:
@@ -535,6 +585,7 @@ def main() -> None:
             # Event checks are seconds of HTTP while a grade runs for minutes, so they are settled
             # every pass rather than waiting behind the grade queue.
             worked = process_event_checks(conn) > 0 or worked
+            worked = process_domain_checks(conn) > 0 or worked
             worked = process_event_runs(conn) > 0 or worked
             # Say WHY we are idle, but only when the reason changes: this loop runs every 5s.
             blocked = rep.blocked(conn)

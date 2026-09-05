@@ -359,6 +359,141 @@ def sweep_retention(conn: psycopg.Connection) -> tuple[int, int]:
     return first(reports), first(ips)
 
 
+# --- owner (domain) verification -----------------------------------------------------------------
+
+@dataclass
+class DomainClaim:
+    id: str
+    account_id: str
+    origin: str
+    host: str
+    token: str
+    attempts: int
+
+
+def claim_domain_check(conn: psycopg.Connection) -> DomainClaim | None:
+    """Take one owner claim that is due for a look, or None.
+
+    Same shape as claim_event_check: SKIP LOCKED, and the due time is pushed out immediately so a
+    slow check cannot be handed out twice while it runs.
+    """
+    row = conn.execute(
+        """
+        UPDATE domain_claims
+           SET attempts = attempts + 1,
+               check_due_at = now() + interval '5 minutes'
+         WHERE id = (
+               SELECT id FROM domain_claims
+                WHERE status = 'pending' AND check_due_at <= now()
+                ORDER BY check_due_at
+                FOR UPDATE SKIP LOCKED
+                LIMIT 1
+         )
+     RETURNING id, account_id, origin, host, token, attempts;
+        """
+    ).fetchone()
+    if row is None:
+        return None
+    return DomainClaim(id=str(row["id"]), account_id=str(row["account_id"]), origin=row["origin"],
+                       host=row["host"], token=row["token"], attempts=row["attempts"])
+
+
+def record_domain_check(conn: psycopg.Connection, claim_id: str, file_status: str, dns_status: str,
+                        detail: str, retry_in_s: float) -> None:
+    """Write what the last look saw, and when to look again.
+
+    The claim stays PENDING. A factor that is merely missing is something the owner is still in the
+    middle of publishing, and a blocked one is our failure to look, so neither is a verdict.
+    """
+    conn.execute(
+        """
+        UPDATE domain_claims
+           SET file_status = %(f)s, dns_status = %(d)s, detail = left(%(det)s, 2000),
+               checked_at = now(),
+               check_due_at = now() + make_interval(secs => %(retry)s)
+         WHERE id = %(id)s;
+        """,
+        {"f": file_status, "d": dns_status, "det": detail, "retry": retry_in_s, "id": claim_id},
+    )
+
+
+def verify_domain_claim(conn: psycopg.Connection, claim: DomainClaim, detail: str,
+                        grant_days: int) -> str:
+    """Both factors answered ok: mark the claim verified and write the grant, in one transaction.
+
+    Returns 'granted', or 'blocked_on_terms' when the account has not accepted the terms. Enforced
+    rather than worked around, exactly as the event path does it: the attestation is one of the
+    layers the active tier rests on, and a grant issued without it is one nobody agreed to.
+    """
+    with conn.transaction():
+        accepted = conn.execute(
+            "SELECT terms_accepted_at FROM profiles WHERE id = %s;", (claim.account_id,)
+        ).fetchone()
+        if not accepted or accepted["terms_accepted_at"] is None:
+            conn.execute(
+                """
+                UPDATE domain_claims
+                   SET file_status = 'ok', dns_status = 'ok', checked_at = now(),
+                       detail = left(%(d)s, 2000),
+                       check_due_at = now() + interval '1 hour'
+                 WHERE id = %(id)s;
+                """,
+                {"d": f"both proofs found, but the account has not accepted the terms; {detail}",
+                 "id": claim.id},
+            )
+            return "blocked_on_terms"
+
+        conn.execute(
+            """
+            UPDATE domain_claims
+               SET status = 'verified', file_status = 'ok', dns_status = 'ok',
+                   checked_at = now(), verified_at = now(), detail = left(%(d)s, 2000)
+             WHERE id = %(id)s;
+            """,
+            {"d": detail, "id": claim.id},
+        )
+        # Scoped to the ORIGIN, which is what a grade compares against, and upserted so a
+        # re-verification refreshes the window rather than stacking a second authorization.
+        conn.execute(
+            """
+            INSERT INTO grants (account_id, kind, scope, evidence, expires_at)
+            VALUES (%(acct)s, 'app_origin', %(scope)s, %(ev)s,
+                    now() + make_interval(days => %(days)s))
+            ON CONFLICT (account_id, kind, scope) WHERE revoked_at IS NULL
+            DO UPDATE SET granted_at = now(), evidence = EXCLUDED.evidence,
+                          expires_at = EXCLUDED.expires_at;
+            """,
+            {"acct": claim.account_id, "scope": claim.origin, "days": grant_days,
+             "ev": json.dumps({"proof": "two_factor_origin_control",
+                               "file": f"https://{claim.host}/.well-known/sloptic-verification.txt",
+                               "dns": f"_sloptic.{claim.host}",
+                               "detail": detail[:2000]})},
+        )
+    return "granted"
+
+
+def expire_stale_domain_claims(conn: psycopg.Connection, days: int) -> int:
+    """Fail claims whose proofs never appeared, and only ones we could actually LOOK at.
+
+    A claim that has only ever been blocked is evidence of nothing, and failing it would blame an
+    owner for our own inability to reach them.
+    """
+    rows = conn.execute(
+        """
+        UPDATE domain_claims
+           SET status = 'failed',
+               detail = left(coalesce(detail, '') ||
+                   ' | expired: the proofs were never both found', 2000)
+         WHERE status = 'pending'
+           AND issued_at < now() - make_interval(days => %s)
+           AND (file_status IN ('ok', 'not_found') OR dns_status IN ('ok', 'not_found'))
+     RETURNING 1;
+        """,
+        (days,),
+    ).fetchall()
+    return len(rows or [])
+
+
 # --- organizer event verification -----------------------------------------------------------------
 
 @dataclass
