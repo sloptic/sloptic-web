@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
   if (body.mode === "active") {
     if (!user) {
       return NextResponse.json(
-        { error: "Sign in to run the full battery on a domain you have verified." },
+        { error: "Sign in to grade actively on a domain you have verified." },
         { status: 401 }
       );
     }

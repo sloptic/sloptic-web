@@ -331,7 +331,7 @@ function GradeActively({ origin }: { origin: string }) {
           }
         }}
       >
-        {busy ? "starting..." : "Run the full battery"}
+        {busy ? "starting..." : "Grade actively"}
       </button>
       {error && <span className="report-keep-err">{error}</span>}
     </div>
