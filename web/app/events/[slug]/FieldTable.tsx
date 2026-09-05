@@ -160,16 +160,24 @@ export default function FieldTable({
   // Two boxes over one field, so they read as a union: tick nothing and you see everything, tick
   // both and you also see everything, since eligible and skipped are the two halves. A pair of
   // checkboxes that can select nothing at all would just be a way to empty the table.
-  const [showEligible, setShowEligible] = useState(false);
+  const [showGraded, setShowGraded] = useState(false);
+  const [showUngraded, setShowUngraded] = useState(false);
   const [showSkipped, setShowSkipped] = useState(false);
   // Status by default: the field is read to find out what happened to it, and alphabetical order
   // answers that only by accident.
   const [sort, setSort] = useState<{ key: "name" | "status"; asc: boolean }>({ key: "status", asc: true });
 
-  const filtered =
-    showEligible === showSkipped
-      ? entries
-      : entries.filter((e) => (showSkipped ? e.skip_reason : !e.skip_reason));
+  // Three disjoint groups: graded (a report exists), not graded (still gradeable), skipped. Tick
+  // none to see everything; tick any subset to see just those groups.
+  const anyFilter = showGraded || showUngraded || showSkipped;
+  const filtered = !anyFilter
+    ? entries
+    : entries.filter(
+        (e) =>
+          (showSkipped && !!e.skip_reason) ||
+          (showGraded && !e.skip_reason && !!e.grade_id) ||
+          (showUngraded && !e.skip_reason && !e.grade_id)
+      );
   const q = query.trim().toLowerCase();
   const searched = q ? filtered.filter((e) => projectName(e.project_url).toLowerCase().includes(q)) : filtered;
   const rows = [...searched].sort((a, b) => {
@@ -183,6 +191,7 @@ export default function FieldTable({
   // left ungraded should take all of it, and paging through 8 pages to tick each one is the tedium
   // this is meant to remove.
   const selectable = rows.filter((e) => !e.skip_reason && !e.grade_id && !e.status).map((e) => e.project_url);
+
   // Ticks are re-read against the live field on every poll, so one that another organizer graded in
   // the meantime stops counting instead of sitting in the total as a queue that will never happen.
   const pickedNow = selectable.filter((u) => picked.has(u));
@@ -195,6 +204,9 @@ export default function FieldTable({
   const last = Math.max(0, Math.ceil(rows.length / PAGE) - 1);
   const from = Math.min(page, last) * PAGE;
   const shown = rows.slice(from, from + PAGE);
+  const pageSelectable = shown
+    .filter((e) => !e.skip_reason && !e.grade_id && !e.status)
+    .map((e) => e.project_url);
 
   return (
     <details
@@ -226,13 +238,24 @@ export default function FieldTable({
         <label className="field-filter">
           <input
             type="checkbox"
-            checked={showEligible}
+            checked={showGraded}
             onChange={(e) => {
-              setShowEligible(e.target.checked);
+              setShowGraded(e.target.checked);
               setPage(0);
             }}
           />
-          grading eligible ({entries.filter((e) => !e.skip_reason).length})
+          graded ({entries.filter((e) => !e.skip_reason && e.grade_id).length})
+        </label>
+        <label className="field-filter">
+          <input
+            type="checkbox"
+            checked={showUngraded}
+            onChange={(e) => {
+              setShowUngraded(e.target.checked);
+              setPage(0);
+            }}
+          />
+          not graded ({entries.filter((e) => !e.skip_reason && !e.grade_id).length})
         </label>
         <label className="field-filter">
           <input
@@ -257,6 +280,20 @@ export default function FieldTable({
             />
             select all {selectable.length} not yet graded
           </label>
+          {pageSelectable.length > 0 && (
+            <button
+              className="linkish"
+              type="button"
+              onClick={() => setPicked((p) => new Set([...p, ...pageSelectable]))}
+            >
+              select this page ({pageSelectable.length})
+            </button>
+          )}
+          {pickedNow.length > 0 && (
+            <button className="linkish" type="button" onClick={() => setPicked(new Set())}>
+              clear
+            </button>
+          )}
           <button
             className="button"
             type="button"
