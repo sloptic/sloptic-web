@@ -6,7 +6,7 @@ proof we could not LOOK at.
 """
 from __future__ import annotations
 
-from sloptic_web_worker import db, verify_domain
+from sloptic_web_worker import config, db, verify_domain
 
 
 def _claim(conn, account, *, origin="https://example.com", host="example.com",
@@ -482,16 +482,25 @@ class TestWatchingAVerifiedDomain:
         assert again is not None
         assert again.status == "verified"
 
-    def test_a_verified_claim_is_watched_daily_rather_than_chased(self, conn, account):
-        # Somebody else's server. One fetch a day, not one every five minutes.
+    def test_a_verified_claim_is_watched_rather_than_chased(self, conn, account):
+        """Both proofs hold, so nothing is learned by asking again soon, and this is somebody else's
+        server we are fetching from.
+
+        Asserted against the configured cadence rather than a number written out here. The previous
+        version hard-coded "about a day" and then failed the moment the cadence was tuned, which
+        tested my memory of the constant rather than the behaviour.
+        """
         _accept_terms(conn, account)
         _claim(conn, account)
         db.verify_domain_claim(conn, db.claim_domain_check(conn), "both found", 90)
 
-        hours = conn.execute(
-            "SELECT extract(epoch from (check_due_at - now()))/3600 AS h FROM domain_claims"
-        ).fetchone()["h"]
-        assert 20 <= hours <= 24
+        seconds = float(conn.execute(
+            "SELECT extract(epoch from (check_due_at - now())) AS s FROM domain_claims"
+        ).fetchone()["s"])
+        assert config.DOMAIN_WATCH_SECONDS - 60 <= seconds <= config.DOMAIN_WATCH_SECONDS
+        # The property that actually matters: watching is far slower than repairing, or a healthy
+        # domain would be polled as hard as a broken one.
+        assert config.DOMAIN_WATCH_SECONDS > config.DOMAIN_REPAIR_SECONDS * 10
 
     def test_recording_a_look_never_touches_the_grant(self, conn, account):
         """The trap this design exists to avoid.
