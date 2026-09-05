@@ -23,7 +23,12 @@ function retention(grade: { account_id?: unknown; finished_at?: string | null })
 }
 
 // GET /api/grade/:id  ->  poll status; includes the result once status === "done".
+/** Report ids are uuids and the id IS the capability, so anything else is a typo or a probe.
+ *  Answering both with the same 404 keeps the two indistinguishable. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  if (!UUID.test(params.id)) return NextResponse.json({ error: "Not found." }, { status: 404 });
   const db = supabaseAdmin();
 
   // `progress` is display-only and arrived in a later migration, so ask for it but never let its
@@ -187,6 +192,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 // Once an account claims a grade, only that account may delete it: a claim is the point at which
 // someone takes responsibility for the row, and a stranger with an old link must not undo it.
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  // Already gone is the outcome a delete asked for, and a malformed id names nothing to delete.
+  if (!UUID.test(params.id)) return NextResponse.json({ deleted: true });
   const db = supabaseAdmin();
 
   const { data: grade, error } = await db

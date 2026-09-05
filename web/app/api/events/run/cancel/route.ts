@@ -9,8 +9,11 @@ export const dynamic = "force-dynamic";
 //
 // Queued grades become 'cancelled' (distinct from failed: nothing went wrong, the organizer
 // stopped them), the entries they belonged to are unlinked so those apps are gradeable again,
-// and the run is marked cancelled. Grades already RUNNING are allowed to finish: a grade is
-// minutes from landing, and their reports simply arrive on a run that no longer waits for them.
+// and the run is marked cancelled. Grades already RUNNING are killed by the supervisor on its next
+// pass (see running_on_cancelled_runs and the kill loop in the worker's __main__): they hold
+// concurrency slots a fresh run would starve behind, and a cancel is an instruction about traffic
+// now, not a preference about later. This comment used to say they were allowed to finish, which
+// was true before that change and is the wording the UI was once written against.
 // The worker's own db.cancel_run does the same thing in one transaction; this path exists because
 // the organizer's button should not have to wait for a worker poll.
 export async function POST(req: NextRequest) {

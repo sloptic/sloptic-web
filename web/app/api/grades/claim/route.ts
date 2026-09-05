@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
     .update({ account_id: user.id })
     .in("id", ids)
     .is("account_id", null)
+    .is("event_run_id", null)
     .select("id");
 
   if (error) return NextResponse.json({ error: "Could not claim." }, { status: 500 });

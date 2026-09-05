@@ -36,9 +36,16 @@ export type Relation = {
 };
 
 type Op = "eq" | "neq" | "in" | "is" | "lt" | "lte" | "gt" | "gte";
-type Filter = { op: Op; column: string; value: unknown };
+/** `negated` is PostgREST's `not.`: the same comparison, inverted, which is how a route asks for
+ *  "grade_id is not null". */
+type Filter = { op: Op; column: string; value: unknown; negated?: boolean };
 
 function matches(row: Row, f: Filter): boolean {
+  const hit = compares(row, f);
+  return f.negated ? !hit : hit;
+}
+
+function compares(row: Row, f: Filter): boolean {
   const v = row[f.column];
   switch (f.op) {
     case "eq":
@@ -73,15 +80,27 @@ export class FakeSupabase {
   store: Store;
   uniques: UniqueIndex[];
   relations: Relation[];
+  /** Per-table column defaults, filled in on insert when the payload omits the column. The schema's
+   *  DEFAULTs are load-bearing for the routes: a run inserted without a status is 'resolving' in the
+   *  database, which is what makes it live, and therefore what event_runs_one_live_idx sees. */
+  defaults: Record<string, Row>;
   /** Every query the code ran, in order. Useful for asserting a route did NOT touch a table. */
   calls: { table: string; kind: string; filters: Filter[] }[] = [];
   /** Set to fail the next matching operation, to test error paths. */
   failures: { table: string; kind?: string; error: PostgrestError }[] = [];
 
-  constructor(opts: { store?: Store; uniques?: UniqueIndex[]; relations?: Relation[] } = {}) {
+  constructor(
+    opts: {
+      store?: Store;
+      uniques?: UniqueIndex[];
+      relations?: Relation[];
+      defaults?: Record<string, Row>;
+    } = {}
+  ) {
     this.store = opts.store ? clone(opts.store) : {};
     this.uniques = opts.uniques ?? [];
     this.relations = opts.relations ?? [];
+    this.defaults = opts.defaults ?? {};
   }
 
   rows(table: string): Row[] {
@@ -91,6 +110,38 @@ export class FakeSupabase {
 
   from(table: string) {
     return new Builder(this, table);
+  }
+
+  /** Postgres functions the code calls through PostgREST. `bump_rate_limit` ships implemented,
+   *  because the point of moving the rate limit into a function was atomicity and a fake that
+   *  cannot be raced would hide exactly the bug that motivated it. Register others as needed. */
+  rpcHandlers: Record<string, (args: Record<string, unknown>) => Result<unknown>> = {
+    bump_rate_limit: (args) => {
+      const ipHash = String(args.p_ip_hash);
+      const windowStart = String(args.p_window_start);
+      const max = Number(args.p_max);
+      const rows = this.rows("rate_limits");
+      let row = rows.find((r) => r.ip_hash === ipHash && r.window_start === windowStart);
+      if (!row) {
+        row = { ip_hash: ipHash, window_start: windowStart, count: 0 };
+        rows.push(row);
+      }
+      // Read and increment in one step, as INSERT ... ON CONFLICT DO UPDATE does under its row
+      // lock. The refused attempt is charged too, matching migration 0026.
+      row.count = Number(row.count ?? 0) + 1;
+      return { data: Number(row.count) <= max, error: null };
+    },
+  };
+
+  async rpc(name: string, args: Record<string, unknown> = {}): Promise<Result<unknown>> {
+    this.calls.push({ table: `rpc:${name}`, kind: "rpc", filters: [] });
+    const failure = this.failures.findIndex((f) => f.table === `rpc:${name}`);
+    if (failure !== -1) {
+      return { data: null, error: this.failures.splice(failure, 1)[0].error };
+    }
+    const handler = this.rpcHandlers[name];
+    if (!handler) throw new Error(`no fake for rpc "${name}": register one on rpcHandlers`);
+    return handler(args);
   }
 
   /** The auth surface the routes use. Only what they call. */
@@ -113,10 +164,34 @@ export class FakeSupabase {
     const failure = this.failureFor(b.table, b.kind);
     if (failure) return { data: null, error: failure, count: null };
 
+    if (b.kind === "upsert") {
+      const touched: Row[] = [];
+      for (const raw of b.payload) {
+        const existing = this.rows(b.table).find((r) => b.conflict.every((c) => r[c] === raw[c]));
+        if (existing) {
+          Object.assign(existing, raw);
+          touched.push(existing);
+        } else {
+          const row: Row = {
+            id: raw.id ?? `id-${this.rows(b.table).length + 1}`,
+            ...(this.defaults[b.table] ?? {}),
+            ...raw,
+          };
+          this.rows(b.table).push(row);
+          touched.push(row);
+        }
+      }
+      return this.shape(b, touched);
+    }
+
     if (b.kind === "insert") {
       const inserted: Row[] = [];
       for (const raw of b.payload) {
-        const row: Row = { id: raw.id ?? `id-${this.rows(b.table).length + 1}`, ...raw };
+        const row: Row = {
+          id: raw.id ?? `id-${this.rows(b.table).length + 1}`,
+          ...(this.defaults[b.table] ?? {}),
+          ...raw,
+        };
         const violated = this.uniques.find(
           (u) =>
             u.table === b.table &&
@@ -215,7 +290,7 @@ export class FakeSupabase {
 /** The chainable query builder. Thenable, so `await db.from(...).select(...)` works, and every
  *  filter method returns `this` the way PostgREST's does. */
 class Builder implements PromiseLike<Result<unknown>> {
-  kind: "select" | "insert" | "update" | "delete" = "select";
+  kind: "select" | "insert" | "upsert" | "update" | "delete" = "select";
   columns = "*";
   filters: Filter[] = [];
   payload: Row[] = [];
@@ -223,6 +298,8 @@ class Builder implements PromiseLike<Result<unknown>> {
   limitTo: number | null = null;
   headOnly = false;
   cardinality: "many" | "single" | "maybeSingle" = "many";
+  /** Columns an upsert conflicts on, the PostgREST `onConflict` argument. */
+  conflict: string[] = ["id"];
   /** Set once select() is called after insert/update/delete, which is how PostgREST returns rows. */
   private returning = false;
 
@@ -240,6 +317,13 @@ class Builder implements PromiseLike<Result<unknown>> {
     this.payload = Array.isArray(payload) ? payload : [payload];
     return this;
   }
+  /** Insert or merge on a conflict target, which is how the rate limiter counts a window. */
+  upsert(payload: Row | Row[], opts?: { onConflict?: string }) {
+    this.kind = "upsert";
+    this.payload = Array.isArray(payload) ? payload : [payload];
+    this.conflict = (opts?.onConflict ?? "id").split(",").map((c) => c.trim()).filter(Boolean);
+    return this;
+  }
   update(patch: Row) {
     this.kind = "update";
     this.payload = [patch];
@@ -250,6 +334,11 @@ class Builder implements PromiseLike<Result<unknown>> {
     return this;
   }
   eq(column: string, value: unknown) { return this.filter("eq", column, value); }
+  /** `.not("grade_id", "is", null)`, the one negated form the routes write. */
+  not(column: string, op: Op, value: unknown) {
+    this.filters.push({ op, column, value, negated: true });
+    return this;
+  }
   neq(column: string, value: unknown) { return this.filter("neq", column, value); }
   in(column: string, value: unknown[]) { return this.filter("in", column, value); }
   is(column: string, value: unknown) { return this.filter("is", column, value); }
@@ -290,7 +379,12 @@ class Builder implements PromiseLike<Result<unknown>> {
 
 /** The usual shape: build a client over a seeded store. */
 export function fakeDb(
-  opts: { store?: Store; uniques?: UniqueIndex[]; relations?: Relation[] } = {}
+  opts: {
+    store?: Store;
+    uniques?: UniqueIndex[];
+    relations?: Relation[];
+    defaults?: Record<string, Row>;
+  } = {}
 ): FakeSupabase {
   return new FakeSupabase(opts);
 }

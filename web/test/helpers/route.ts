@@ -12,7 +12,7 @@
  *        return { supabaseAdmin: () => getDb() };
  *      });
  *      vi.mock("@/lib/auth", async () => {
- *        const { getUser } = await import("../helpers/route");
+ *        const { getUser, getDb } = await import("../helpers/route");
  *        return { currentUser: async () => getUser(), supabaseSession: () => getDb() };
  *      });
  *

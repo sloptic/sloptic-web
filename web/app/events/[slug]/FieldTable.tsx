@@ -75,7 +75,8 @@ const STATUS_RANK: Record<string, number> = {
   queued: 2,
   pending: 3,
   failed: 4,
-  skipped: 5,
+  cancelled: 5,
+  skipped: 6,
 };
 
 function statusKey(e: FieldEntry): number {
@@ -367,6 +368,8 @@ export default function FieldTable({
                     "waiting"
                   ) : e.status === "failed" ? (
                     "did not finish"
+                  ) : e.status === "cancelled" ? (
+                    "stopped"
                   ) : e.grade_id ? (
                     "graded"
                   ) : canGrade && runId ? (
@@ -376,7 +379,7 @@ export default function FieldTable({
                   )}
                 </td>
                 <td className="band-note">
-                  {e.grade_id ? (
+                  {e.grade_id && e.status !== "cancelled" ? (
                     <>
                       <a href={`/grade/${e.grade_id}`}>report</a>
                       {e.retryDueAt && <RetryDue at={e.retryDueAt} held={paused} />}
@@ -401,7 +404,11 @@ export default function FieldTable({
         </table>
       </div>
 
-      {rows.some((e) => e.retryDueAt || e.marks) && (
+      {rows.some(
+        (e) =>
+          e.retryDueAt ||
+          (e.marks && (e.marks.retry || e.marks.none || e.marks.partial || e.marks.full || e.marks.limited))
+      ) && (
         <p className="marks-key">
           <b>B</b> retry pending, <b>N</b> recovered none, <b>P</b> partial, <b>F</b> full, <b>L</b> limited battery
         </p>
