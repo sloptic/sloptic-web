@@ -430,7 +430,7 @@ export default function Home() {
             <p className="tier-req">verify the domain</p>
             <p className="tier-desc">
               Sign in, then publish a token we give you at{" "}
-              <code>/.well-known/sloptic-verification.txt</code> and in a DNS record.{" "}
+              <code>/.well-known/sloptic-verification.txt</code> and in a DNS record. Not open yet.{" "}
               <a href="/verify">What verifying involves.</a>
             </p>
           </li>
