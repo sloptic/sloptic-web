@@ -103,8 +103,24 @@ jobs:
       - name: Worker compiles
         run: python -m compileall -q worker/sloptic_web_worker
 
-      - name: Install
-        run: pip install --quiet "psycopg[binary]>=3.2" python-dotenv pytest
+      # The GRADER first. It is a dependency, not a copy (CLAUDE.md), the worker imports it, and
+      # several suites reach it transitively through __main__ and grader.py. No PUBLISHED version
+      # satisfies those imports: sloptic.devpost arrives in 2.2.0 and the tags stop at v2.1.0, so
+      # PyPI's newest is missing a module the worker imports at start up. CI therefore installs the
+      # same branch the worker box runs, which is the honest description of where this project is.
+      # When 2.2.0 ships, this becomes a pinned version and the clone goes away.
+      - name: Install the grader
+        run: |
+          git clone --depth 1 --branch v2-dev https://github.com/sloptic/sloptic-main.git /tmp/sloptic-main
+          pip install --quiet -e /tmp/sloptic-main
+
+      # From pyproject, not a hand-written list. The list was the bug: it predated dnspython and
+      # httpx, so CI kept installing a subset that no longer matched what the code imports, and the
+      # failure surfaced as a missing module rather than as a missing declaration.
+      - name: Install the worker
+        run: |
+          pip install --quiet -e worker
+          pip install --quiet pytest
 
       # Against a real Postgres, because the worker's logic IS its SQL: the lane ordering in
       # claim_job, FOR UPDATE SKIP LOCKED, the guards that make a pause outrank a claim, the partial
