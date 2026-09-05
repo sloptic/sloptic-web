@@ -188,3 +188,28 @@ class TestExpiry:
         assert db.expire_stale_domain_claims(conn, 14) == 0
 
         assert _row(conn, cid)["status"] == "pending"
+
+
+class TestDegradingRatherThanCrashing:
+    def test_a_missing_dns_library_blocks_the_factor_instead_of_taking_the_worker_down(self, monkeypatch):
+        """A feature's optional dependency must not stop grading.
+
+        Importing dnspython at module scope crash-looped the whole service on a box that had the new
+        code and not the new package: grading, event checks and retries all died for a library one
+        function uses. This asserts both halves of the fix, that the import is deferred and that the
+        absence reads as 'we could not look' rather than 'your record is missing'.
+        """
+        import builtins
+
+        real = builtins.__import__
+
+        def without_dns(name, *args, **kwargs):
+            if name.startswith("dns"):
+                raise ModuleNotFoundError("No module named 'dns'")
+            return real(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", without_dns)
+        factor = verify_domain.check_dns("example.com", "sloptic-whatever")
+
+        assert factor.status == "blocked"
+        assert "dnspython" in factor.detail

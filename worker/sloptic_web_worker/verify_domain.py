@@ -21,8 +21,6 @@ from dataclasses import dataclass
 from hmac import compare_digest
 from urllib.parse import urlparse
 
-import dns.exception
-import dns.resolver
 import httpx
 
 from . import egress
@@ -106,7 +104,21 @@ def check_file(origin: str, token: str) -> Factor:
 
 
 def check_dns(host: str, token: str) -> Factor:
-    """Look for the token in a TXT record at _sloptic.<host>."""
+    """Look for the token in a TXT record at _sloptic.<host>.
+
+    dnspython is imported HERE, not at module scope, and that is not a style choice. Importing it at
+    the top made a missing dependency crash the whole worker at boot: grading, event checks, retries
+    and all, for want of a library that only this one function uses. A feature that cannot run should
+    disable itself, not take down the service it was added to.
+    """
+    try:
+        import dns.exception
+        import dns.resolver
+    except ModuleNotFoundError:
+        # Reported as blocked, which is exactly what it is: we could not look. Never not_found, or an
+        # owner would be told their record is missing because OUR worker is missing a library.
+        return Factor("blocked", "DNS checking is unavailable on this worker (dnspython not installed)")
+
     name = f"{DNS_LABEL}.{host}"
     try:
         answers = dns.resolver.resolve(name, "TXT", lifetime=_TIMEOUT)

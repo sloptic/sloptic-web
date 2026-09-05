@@ -9,6 +9,10 @@ dependencies = [
     # The DNS half of owner verification. stdlib resolves names to addresses and cannot read TXT,
     # and the TXT record is the factor that proves control of the ZONE rather than of the server.
     "dnspython>=2.6",
+    # Declared because verify_domain imports it directly. It was already present transitively
+    # through the grader, which is not the same as being ours to rely on: the day the grader drops
+    # it or pins it differently, an undeclared import becomes a crash at boot.
+    "httpx>=0.27",
     # sloptic is the pinned GRADER, consumed not forked. It is not on PyPI, so install the sibling clone
     # in editable mode alongside this package (see README): pip install -e ../../sloptic-main
     # plus its browser deps for the passive a11y/CWV probes:
