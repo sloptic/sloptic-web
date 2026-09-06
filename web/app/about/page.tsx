@@ -109,7 +109,7 @@ export default function AboutPage() {
             <tbody>
               <tr>
                 <th scope="row">what it assumes</th>
-                <td>what you tell it to look for, or what the app is meant to do</td>
+                <td>what you tell it to look for or what the app is meant to do</td>
                 <td className="mine">nothing about what the app is for</td>
               </tr>
               <tr>
@@ -120,7 +120,7 @@ export default function AboutPage() {
               <tr>
                 <th scope="row">what it hands back</th>
                 <td>a list of findings</td>
-                <td className="mine">one score, on a fixed scale</td>
+                <td className="mine">a score</td>
               </tr>
               <tr>
                 <th scope="row">what it is for</th>
