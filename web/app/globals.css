@@ -3509,3 +3509,16 @@ h1.report-url {
 .upgrade-row {
   margin: 0.9rem 0 0;
 }
+
+/* Build output inside the surface block: present, countable, and out of the way. */
+.surface-assets {
+  margin: 0.7rem 0 0;
+}
+.surface-assets > summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.surface-assets > summary::-webkit-details-marker { display: none; }
+.surface-assets > summary:hover { color: var(--ink); }

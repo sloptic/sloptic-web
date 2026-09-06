@@ -959,7 +959,13 @@ function Surface({ surface }: { surface: Record<string, unknown> | null }) {
   if (routes === null && forms === null && endpoints === null && routesList.length === 0 && flags.length === 0)
     return null;
 
-  const shown = routesList.slice(0, 80);
+  // Pages and build output, apart. A reader opening this wants to know what of THEIR app was
+  // reached; a list led by webpack chunks answers a question nobody asked. The grader now orders it
+  // this way too, but a report has to read correctly against grades stored before that.
+  const isBuildOutput = (r: string) =>
+    /\/(?:_next|_nuxt|_astro|static|assets|build|dist)\/|\.(?:js|mjs|cjs|css|map|woff2?|ttf|eot|png|jpe?g|gif|svg|ico|webp|avif)$/i.test(r);
+  const pages = routesList.filter((r) => !isBuildOutput(r));
+  const assets = routesList.filter(isBuildOutput);
   const bits = [
     routes !== null ? `${routes} routes` : null,
     forms !== null ? `${forms} forms` : null,
@@ -975,17 +981,30 @@ function Surface({ surface }: { surface: Record<string, unknown> | null }) {
       </summary>
       <div className="surface-body">
         {flags.length > 0 && <p className="surface-flags">Saw: {flags.join(", ")}</p>}
-        {shown.length > 0 && (
+        {pages.length > 0 && (
           <>
             <p className="surface-flags">
-              Routes{routesList.length < (routes ?? 0) ? ` (showing ${shown.length} of ${routes})` : ""}:
+              Pages{routesList.length < (routes ?? 0) ? ` (${pages.length} of ${routes} routes reached)` : ""}:
             </p>
             <ul className="surface-routes">
-              {shown.map((r) => (
+              {pages.map((r) => (
                 <li key={r}>{r}</li>
               ))}
             </ul>
           </>
+        )}
+        {assets.length > 0 && (
+          // Folded away by default. These are real routes and the grade did fetch them, so hiding
+          // them entirely would misrepresent the coverage, but nobody opens a report to read
+          // bundle filenames.
+          <details className="surface-assets">
+            <summary>Build output and assets ({assets.length})</summary>
+            <ul className="surface-routes">
+              {assets.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          </details>
         )}
       </div>
     </details>
