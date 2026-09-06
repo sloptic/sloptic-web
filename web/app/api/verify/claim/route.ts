@@ -5,7 +5,7 @@ import { currentUser } from "@/lib/auth";
 import { normalizeTarget, UrlRejected } from "@/lib/origin";
 import { egressPrecheck } from "@/lib/egress";
 import { platformSuffix, PLATFORM_REFUSAL } from "@/lib/platform";
-import { hashIp, clientIp } from "@/lib/ratelimit";
+import { hashIp, clientIp, allow, bucket, VERIFY_LIMIT, MAX_LIVE_CLAIMS } from "@/lib/ratelimit";
 import { claimsForAccount } from "@/lib/domain-claims";
 
 export const runtime = "nodejs";
@@ -23,6 +23,18 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+
+  // The same quota the grade path has, and for the same reason its comment gives: this is the other
+  // route that makes the worker connect to a host the caller chose. Without it, normalizeTarget
+  // accepts any port, so one signed-in account could file a claim per port and have the worker walk
+  // a stranger's port range from a residential address, reading the result back off its own account
+  // page. A separate bucket from grading, so neither spends the other's allowance.
+  if (!(await allow(bucket("verify", req.headers), VERIFY_LIMIT))) {
+    return NextResponse.json(
+      { error: "Too many verification attempts. Try again later." },
+      { status: 429 }
+    );
+  }
 
   let body: { url?: unknown; attest?: unknown };
   try {
@@ -69,6 +81,22 @@ export async function POST(req: NextRequest) {
     .in("status", ["pending", "verified"])
     .maybeSingle();
   if (existing) return NextResponse.json({ claim: existing, existing: true });
+
+  // A rate limit bounds how fast claims arrive; this bounds how many stand. Each live claim is a
+  // standing instruction to the worker to keep connecting to that origin on its own timer, so a
+  // burst that stops does not stop the traffic. Counted after the reuse check above, so re-claiming
+  // an origin already held never trips it.
+  const { count: live } = await db
+    .from("domain_claims")
+    .select("id", { count: "exact", head: true })
+    .eq("account_id", user.id)
+    .in("status", ["pending", "verified"]);
+  if ((live ?? 0) >= MAX_LIVE_CLAIMS) {
+    return NextResponse.json(
+      { error: `You can verify up to ${MAX_LIVE_CLAIMS} sites. Give one up to add another.` },
+      { status: 429 }
+    );
+  }
 
   const token = `sloptic-${randomBytes(32).toString("base64url")}`;
   const { data, error } = await db

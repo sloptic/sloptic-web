@@ -17,6 +17,7 @@ needs the registrar or the DNS provider. Two files at two paths would be one fac
 from __future__ import annotations
 
 import secrets
+import time
 from dataclasses import dataclass
 from hmac import compare_digest
 from urllib.parse import urlparse
@@ -35,9 +36,31 @@ DNS_LABEL = "_sloptic"
 TOKEN_BYTES = 32
 
 # A token file is a line of text. Anything larger is not our file, and reading it would be an invitation
-# to stream a response at us.
+# to stream a response at us. Enforced WHILE READING (see check_file): capping r.text after the fact
+# caps nothing, because by then the whole body is already in memory.
 _MAX_TOKEN_BODY = 4096
 _TIMEOUT = 10.0
+# httpx timeouts are per OPERATION: the read timeout restarts on every chunk that arrives, so a
+# server dribbling one byte every nine seconds is never "slow" by that measure and the fetch hangs
+# for ever. This is the wall-clock ceiling on the whole exchange. It matters more than it looks:
+# check_file runs inline in the supervisor loop, so a fetch that never returns stops grading,
+# claiming and cancelling too, while the heartbeat thread keeps reporting the last state it cached.
+_TOTAL_DEADLINE = 20.0
+
+
+def _token_eq(seen: str, token: str) -> bool:
+    """compare_digest, but it cannot raise on what a stranger serves us.
+
+    compare_digest refuses str arguments containing non-ASCII ("comparing strings with non-ASCII
+    characters is not supported"), and a catch-all 200 that renders "Pagina no encontrada" is an
+    ordinary thing for an app to do. Uncaught, that TypeError left the claim recorded as blocked for
+    ever: the owner is told "we could not check, we will try again" on a page we will never manage to
+    check, and the stale-claim sweep never reaches it either. Our tokens are ASCII by construction,
+    so anything that is not ASCII is not the token, and comparing the encoded bytes decides that in
+    constant time rather than by raising.
+    """
+    return compare_digest(seen.encode("utf-8", "surrogatepass"),
+                          token.encode("utf-8", "surrogatepass"))
 
 
 def new_token() -> str:
@@ -81,24 +104,41 @@ def check_file(origin: str, token: str) -> Factor:
         # Resolves somewhere internal. Not "no token": a refusal to look at all.
         return Factor("blocked", f"refused to fetch: {e}")
 
+    deadline = time.monotonic() + _TOTAL_DEADLINE
     try:
         with httpx.Client(follow_redirects=False, timeout=_TIMEOUT) as client:
-            r = client.get(url, headers={"user-agent": "sloptic-verification/1.0"})
+            # Streamed, so the cap below is a limit on what we ever hold rather than a slice of what
+            # we already read. The status is available before the body arrives, so the two answers
+            # that end the question end it without reading anything at all.
+            with client.stream("GET", url,
+                               headers={"user-agent": "sloptic-verification/1.0"}) as r:
+                if r.status_code in (404, 410):
+                    # The only two answers that mean the file is genuinely absent.
+                    return Factor("not_found", f"HTTP {r.status_code}")
+                if r.status_code >= 300:
+                    return Factor("blocked", f"HTTP {r.status_code}")
+
+                buf = bytearray()
+                for chunk in r.iter_bytes(1024):
+                    if time.monotonic() > deadline:
+                        return Factor("blocked", f"no answer within {_TOTAL_DEADLINE:.0f}s")
+                    buf.extend(chunk)
+                    if len(buf) > _MAX_TOKEN_BODY:
+                        # Stop pulling. A token file is one line, so this is not a truncated token,
+                        # it is a different thing entirely, and reading the rest to confirm that is
+                        # exactly the invitation we are declining.
+                        return Factor("not_found",
+                                      f"what is served there is larger than {_MAX_TOKEN_BODY} bytes, "
+                                      "so it is not this claim's token")
     except Exception as e:  # noqa: BLE001 - transport of any kind is "could not look"
         return Factor("blocked", f"{type(e).__name__}: {e}")
 
-    if r.status_code in (404, 410):
-        # The only two answers that mean the file is genuinely absent.
-        return Factor("not_found", f"HTTP {r.status_code}")
-    if r.status_code >= 300:
-        return Factor("blocked", f"HTTP {r.status_code}")
-
-    body = r.text[:_MAX_TOKEN_BODY].strip()
+    body = buf.decode("utf-8", "replace").strip()
     if not body:
         return Factor("blocked", "empty body")
-    # compare_digest, never a substring test: a page that merely CONTAINS the token (a comment, a
-    # log viewer, an error page echoing the URL) is not the same as a file that IS the token.
-    if compare_digest(body, token):
+    # Never a substring test: a page that merely CONTAINS the token (a comment, a log viewer, an
+    # error page echoing the URL) is not the same as a file that IS the token.
+    if _token_eq(body, token):
         return Factor("ok")
     return Factor("not_found", "a file is served there, but it is not this claim's token")
 
@@ -176,9 +216,9 @@ def check_dns(host: str, token: str) -> Factor:
 
     for rdata in answers:
         # A TXT record is a list of strings; providers split long values and quote them.
-        value = "".join(part.decode() if isinstance(part, bytes) else str(part)
+        value = "".join(part.decode("utf-8", "replace") if isinstance(part, bytes) else str(part)
                         for part in rdata.strings).strip()
-        if compare_digest(value, token):
+        if _token_eq(value, token):
             return Factor("ok")
     return Factor("not_found", "a TXT record is published, but it is not this claim's token")
 

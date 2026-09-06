@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { currentUser } from "@/lib/auth";
+import { allow, bucket, VERIFY_LIMIT } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +13,16 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+
+  // Each call sets check_due_at to now, so an unlimited loop here is an unlimited stream of
+  // connections to the claimed origin, on demand, from the worker's address. The claim being the
+  // caller's own does not make the destination theirs.
+  if (!(await allow(bucket("verify", req.headers), VERIFY_LIMIT))) {
+    return NextResponse.json(
+      { error: "Too many checks. Try again later." },
+      { status: 429 }
+    );
+  }
 
   let body: { id?: string };
   try {
