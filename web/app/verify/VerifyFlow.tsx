@@ -364,7 +364,7 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
                         menus: provider walkthroughs go stale and a stale instruction reads as
                         authoritative. */}
                     <details className="how-to">
-                      <summary>How</summary>
+                      <summary>How?</summary>
                       <p>
                         Put the file in the folder your site serves as-is. That is{" "}
                         <code>public/.well-known/</code> for Next.js, Vite and Astro, and the web
@@ -386,7 +386,7 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
                       take a while to propagate, which is normal.
                     </p>
                     <details className="how-to">
-                      <summary>How</summary>
+                      <summary>How?</summary>
                       <p>
                         Go to whoever runs your DNS, which is usually your registrar, and add a TXT
                         record. Most panels want just <code>_sloptic</code> in the host or name
