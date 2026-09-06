@@ -932,16 +932,35 @@ function RankDetail({ r }: { r: GradeResult }) {
   );
 }
 
+/** How many of a list to show before the reader asks for the rest. */
+const SURFACE_PAGE = 12;
+
 /** What discovery saw on the app: the routes it mapped, the forms and endpoints it found, and the
- *  capabilities it noticed. Collapsed by default; the numbers live in the summary, the lists inside.
- *  Routes are capped in the display because a big app's list can run hundreds deep. */
+ *  capabilities it noticed. Collapsed by default; the numbers live in the summary, the lists inside,
+ *  one kind at a time. */
 function Surface({ surface }: { surface: Record<string, unknown> | null }) {
+  const [tab, setTab] = useState<"routes" | "forms" | "endpoints">("routes");
+  const [expanded, setExpanded] = useState(false);
+
   if (!surface || Object.keys(surface).length === 0) return null;
   const num = (k: string): number | null => (typeof surface[k] === "number" ? (surface[k] as number) : null);
+  const list = (k: string): string[] => (Array.isArray(surface[k]) ? (surface[k] as string[]) : []);
   const routes = num("routes");
   const forms = num("forms");
   const endpoints = num("endpoints");
-  const routesList = Array.isArray(surface.routes_list) ? (surface.routes_list as string[]) : [];
+  // Pages before build output. The grader records them in crawl order, which on a bundled app puts
+  // the homepage first and then eleven webpack chunks, and a reader opening this wants to know which
+  // of THEIR pages was reached. Done here rather than in the grader: that list is also read by the
+  // corpus tooling to choose routes to interact with, so reordering it there changes what gets
+  // probed, and this is a report.
+  const isBuildOutput = (r: string) =>
+    /\/(?:_next|_nuxt|_astro|static|assets|build|dist)\/|\.(?:js|mjs|cjs|css|map|woff2?|ttf|eot|png|jpe?g|gif|svg|ico|webp|avif)$/i.test(r);
+  const rawRoutes = list("routes_list");
+  const routesList = [...rawRoutes.filter((r) => !isBuildOutput(r)), ...rawRoutes.filter(isBuildOutput)];
+  // Written by the grader when it records them. Absent on every grade taken before it did, so the
+  // tab says the count is all we kept rather than pretending the app had nothing.
+  const formsList = list("forms_list");
+  const endpointsList = list("endpoints_list");
   const landingPath = typeof surface.landing_path === "string" ? surface.landing_path : null;
   const flags = (
     [
@@ -959,19 +978,21 @@ function Surface({ surface }: { surface: Record<string, unknown> | null }) {
   if (routes === null && forms === null && endpoints === null && routesList.length === 0 && flags.length === 0)
     return null;
 
-  // Pages and build output, apart. A reader opening this wants to know what of THEIR app was
-  // reached; a list led by webpack chunks answers a question nobody asked. The grader now orders it
-  // this way too, but a report has to read correctly against grades stored before that.
-  const isBuildOutput = (r: string) =>
-    /\/(?:_next|_nuxt|_astro|static|assets|build|dist)\/|\.(?:js|mjs|cjs|css|map|woff2?|ttf|eot|png|jpe?g|gif|svg|ico|webp|avif)$/i.test(r);
-  const pages = routesList.filter((r) => !isBuildOutput(r));
-  const assets = routesList.filter(isBuildOutput);
   const bits = [
     routes !== null ? `${routes} routes` : null,
     forms !== null ? `${forms} forms` : null,
     endpoints !== null ? `${endpoints} endpoints` : null,
     landingPath ? `entered at ${landingPath}` : null,
   ].filter(Boolean);
+
+  const TABS = [
+    { key: "routes" as const, items: routesList, total: routes },
+    { key: "forms" as const, items: formsList, total: forms },
+    { key: "endpoints" as const, items: endpointsList, total: endpoints },
+  ];
+  const current = TABS.find((t) => t.key === tab) ?? TABS[0];
+  const shown = expanded ? current.items : current.items.slice(0, SURFACE_PAGE);
+  const more = current.items.length - shown.length;
 
   return (
     <details className="surface-block">
@@ -981,30 +1002,49 @@ function Surface({ surface }: { surface: Record<string, unknown> | null }) {
       </summary>
       <div className="surface-body">
         {flags.length > 0 && <p className="surface-flags">Saw: {flags.join(", ")}</p>}
-        {pages.length > 0 && (
+
+        <div className="surface-tabs" role="group" aria-label="what to list">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              className={tab === t.key ? "on" : ""}
+              aria-pressed={tab === t.key}
+              onClick={() => {
+                setTab(t.key);
+                setExpanded(false);
+              }}
+            >
+              {t.key}
+              {t.total !== null && <span className="surface-tab-n">{t.total}</span>}
+            </button>
+          ))}
+        </div>
+
+        {shown.length > 0 ? (
           <>
-            <p className="surface-flags">
-              Pages{routesList.length < (routes ?? 0) ? ` (${pages.length} of ${routes} routes reached)` : ""}:
-            </p>
             <ul className="surface-routes">
-              {pages.map((r) => (
+              {shown.map((r) => (
                 <li key={r}>{r}</li>
               ))}
             </ul>
+            {more > 0 && (
+              <button className="link-button" type="button" onClick={() => setExpanded(true)}>
+                show more ({more})
+              </button>
+            )}
+            {current.total !== null && current.total > current.items.length && (
+              // The grader keeps a capped list, so a big app has more than it recorded. Saying so
+              // beats showing forty and implying that was all of them.
+              <p className="fineprint">
+                {current.items.length} of {current.total} recorded.
+              </p>
+            )}
           </>
-        )}
-        {assets.length > 0 && (
-          // Folded away by default. These are real routes and the grade did fetch them, so hiding
-          // them entirely would misrepresent the coverage, but nobody opens a report to read
-          // bundle filenames.
-          <details className="surface-assets">
-            <summary>Build output and assets ({assets.length})</summary>
-            <ul className="surface-routes">
-              {assets.map((r) => (
-                <li key={r}>{r}</li>
-              ))}
-            </ul>
-          </details>
+        ) : (
+          <p className="fineprint">
+            {current.total ? `${current.total} found. This grade did not record which ones.` : "None found."}
+          </p>
         )}
       </div>
     </details>

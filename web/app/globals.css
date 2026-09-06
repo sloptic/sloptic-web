@@ -3510,6 +3510,36 @@ h1.report-url {
   margin: 0.9rem 0 0;
 }
 
+/* routes / forms / endpoints, one list at a time. Same two-way control language as the battery and
+   axis toggles, so a segmented control means the same thing everywhere on a report. */
+.surface-tabs {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 0.6rem 0 0.7rem;
+}
+.surface-tabs button {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.28rem 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.surface-tabs button.on {
+  background: var(--ink);
+  color: var(--paper);
+  cursor: default;
+}
+.surface-tabs button:not(.on):hover { color: var(--ink); }
+.surface-tabs button:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.surface-tab-n { font-size: 0.7rem; opacity: 0.75; }
+
 /* Build output inside the surface block: present, countable, and out of the way. */
 .surface-assets {
   margin: 0.7rem 0 0;
