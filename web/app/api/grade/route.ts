@@ -110,6 +110,61 @@ export async function POST(req: NextRequest) {
     mode = "active";
   }
 
+  // 5b. Already grading this origin? Hand back the grade that is doing it.
+  //
+  // The scenario this exists for: an active grade is challenged at entry, a retry is booked for a
+  // few minutes later, and the submitter tries again before it runs. Without this they get a SECOND
+  // full battery aimed at an origin that just refused us, which is the behaviour CLAUDE.md rules out
+  // ("respect bot challenges; never build anything that defeats them"), and the retry that was
+  // designed for exactly this case is still pending underneath it.
+  //
+  // Scoped to the account, so one person resubmitting cannot be told about another's grade. The
+  // rate limit is per address and does not help here: five submissions an hour of the same URL is
+  // five batteries.
+  const inFlight = await db
+    .from("grades")
+    .select("id, status, origin, mode, retry_due_at")
+    .eq("origin", target.origin)
+    .is("event_run_id", null)
+    .eq("account_id", user?.id ?? null)
+    .in("status", ["queued", "running"])
+    .order("submitted_at", { ascending: false })
+    .limit(1);
+  const running = inFlight.data?.[0];
+  if (running) {
+    return NextResponse.json(
+      { id: running.id, status: running.status, origin: running.origin, mode: running.mode, existing: true },
+      { status: 202 }
+    );
+  }
+
+  // A finished grade whose blocked tail is still booked is the same situation one step later: the
+  // measurement is not over, and the pass that finishes it is already scheduled. Send them to the
+  // report that is tracking it rather than starting a rival.
+  const pendingRetry = await db
+    .from("grades")
+    .select("id, status, origin, mode, retry_due_at")
+    .eq("origin", target.origin)
+    .is("event_run_id", null)
+    .eq("account_id", user?.id ?? null)
+    .not("retry_due_at", "is", null)
+    .order("submitted_at", { ascending: false })
+    .limit(1);
+  const recovering = pendingRetry.data?.[0];
+  if (recovering) {
+    return NextResponse.json(
+      {
+        id: recovering.id,
+        status: recovering.status,
+        origin: recovering.origin,
+        mode: recovering.mode,
+        existing: true,
+        recovering: true,
+      },
+      { status: 202 }
+    );
+  }
+
   const { data, error } = await db
     .from("grades")
     .insert({

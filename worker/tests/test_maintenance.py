@@ -634,3 +634,39 @@ class TestDailyLaneBudgets:
         assert db.claim_job(conn, lanes) is None
         assert db.expire_queued_jobs(conn) == 0
         assert _row(conn, gid)["status"] == "queued"
+
+
+class TestTheChallengeBreakerCountsApps:
+    """The streak is a claim about US, so it has to be about many apps refusing us.
+
+    It counted GRADES, so one stubborn origin resubmitted enough times could trip a 48 hour backoff
+    on its own and stop grading for everybody, which is the opposite of the sentence the branch
+    prints while counting ("one app's WAF is not our standing").
+    """
+
+    def _rep(self, monkeypatch, trip_at=3):
+        from sloptic_web_worker import __main__ as supervisor
+
+        monkeypatch.setattr(config, "CHALLENGE_TRIP_STREAK", trip_at)
+        return supervisor._Reputation()
+
+    def test_one_origin_challenging_repeatedly_does_not_trip_it(self, monkeypatch):
+        rep = self._rep(monkeypatch)
+        for _ in range(10):
+            rep.observe("https://stubborn.example.com", "entry")
+        assert rep.backing_off() is False
+
+    def test_enough_different_origins_does_trip_it(self, monkeypatch):
+        rep = self._rep(monkeypatch)
+        for host in ("a", "b", "c"):
+            rep.observe(f"https://{host}.example.com", "entry")
+        assert rep.backing_off() is True
+
+    def test_reaching_any_app_clears_the_streak(self, monkeypatch):
+        # Getting through to one app is evidence our IP is fine, whatever the others did.
+        rep = self._rep(monkeypatch)
+        rep.observe("https://a.example.com", "entry")
+        rep.observe("https://b.example.com", "entry")
+        rep.observe("https://c.example.com", "")
+        rep.observe("https://d.example.com", "entry")
+        assert rep.backing_off() is False

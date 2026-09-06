@@ -269,13 +269,25 @@ describe("POST /api/grade, the egress sandbox", () => {
 
 describe("POST /api/grade, rate limit and quota", () => {
   it("allows up to the window maximum from one address and then refuses", async () => {
+    // A different origin each time, because the same one twice is now handed the grade already
+    // running rather than a second one, and this test is about the LIMIT, not about that.
     for (let i = 0; i < 5; i++) {
-      expect((await submit("https://example.com", "198.51.100.1")).status).toBe(202);
+      expect((await submit(`https://example-${i}.com`, "198.51.100.1")).status).toBe(202);
     }
-    const { status, body } = await read(await submit("https://example.com", "198.51.100.1"));
+    const { status, body } = await read(await submit("https://example-9.com", "198.51.100.1"));
     expect(status).toBe(429);
     expect(body.error).toMatch(/rate limit/i);
     expect(db.rows("grades")).toHaveLength(5);
+  });
+
+  it("charges the limit for a resubmission even though it starts nothing", async () => {
+    // The window is about how often somebody may ASK. Handing back an in-flight grade is cheaper
+    // than starting one, but it is still a request, and not counting it would make the same URL an
+    // unlimited way to poke the queue.
+    await submit("https://example.com", "198.51.100.5");
+    for (let i = 0; i < 4; i++) await submit("https://example.com", "198.51.100.5");
+    expect((await submit("https://example.com", "198.51.100.5")).status).toBe(429);
+    expect(db.rows("grades")).toHaveLength(1);
   });
 
   it("counts per address, so one exhausted submitter does not close the site", async () => {
@@ -403,5 +415,58 @@ describe("POST /api/grade, gaps between the contract and the code", () => {
     for (let i = 0; i < 5; i++) await spend(`198.51.100.${i}, 203.0.113.99`, "203.0.113.7");
     const { status } = await spend("10.9.8.7, 203.0.113.99", "203.0.113.7");
     expect(status).toBe(429);
+  });
+});
+
+
+describe("POST /api/grade, submitting the same origin again", () => {
+  it("hands back the grade already running instead of starting a second one", async () => {
+    const first = await read(await submit("https://example.com"));
+    const again = await read(await submit("https://example.com"));
+
+    expect(again.status).toBe(202);
+    expect(again.body.id).toBe(first.body.id);
+    expect(again.body.existing).toBe(true);
+    expect(db.rows("grades")).toHaveLength(1);
+  });
+
+  it("hands back a challenged grade whose retry is still booked", async () => {
+    // The case this exists for: an active grade is challenged at entry, a retry is booked minutes
+    // out, and the submitter tries again before it runs. A second full battery aimed at an origin
+    // that just refused us is the thing CLAUDE.md rules out building, and the pass that finishes the
+    // measurement is already scheduled underneath.
+    await submit("https://example.com");
+    const row = db.rows("grades")[0];
+    row.status = "done";
+    row.retry_due_at = new Date(Date.now() + 12 * 60_000).toISOString();
+
+    const again = await read(await submit("https://example.com"));
+
+    expect(again.body.id).toBe(row.id);
+    expect(again.body.recovering).toBe(true);
+    expect(db.rows("grades")).toHaveLength(1);
+  });
+
+  it("starts a fresh grade once the first is finished and nothing is pending", async () => {
+    // Not a lock on the origin: a settled grade is a measurement of a moment, and asking again after
+    // fixing something is the ordinary reason to come back.
+    await submit("https://example.com");
+    db.rows("grades")[0].status = "done";
+
+    await submit("https://example.com");
+
+    expect(db.rows("grades")).toHaveLength(2);
+  });
+
+  it("does not hand one submitter another's in-flight grade", async () => {
+    setUser({ id: "u-alice", email: "alice@example.com" });
+    await submit("https://example.com");
+    setUser({ id: "u-mallory", email: "mallory@example.com" });
+
+    await submit("https://example.com");
+
+    // Two grades, one each: whose grade is running is not something to tell a stranger, and Mallory
+    // asking must not attach her to Alice's report.
+    expect(db.rows("grades")).toHaveLength(2);
   });
 });

@@ -100,7 +100,7 @@ class _Reputation:
     def __init__(self) -> None:
         self.paused_until = 0.0
         self.pause_reason = ""
-        self.entry_streak = 0        # consecutive grades that never reached their app
+        self.challenged: set[str] = set()   # distinct origins that challenged us, unbroken
 
     def observe(self, origin: str, stage: str) -> None:
         """Record how a finished grade ended, and trip only on a long sustained dead streak.
@@ -111,16 +111,22 @@ class _Reputation:
         if not config.CHALLENGE_TRIP_STREAK:
             return
         if stage != "entry":
-            if self.entry_streak:
-                print(f"[breaker] reached {origin}; streak reset from {self.entry_streak}", flush=True)
-            self.entry_streak = 0
+            if self.challenged:
+                print(f"[breaker] reached {origin}; streak reset from {len(self.challenged)}", flush=True)
+            self.challenged.clear()
             return
-        self.entry_streak += 1
-        if self.entry_streak >= config.CHALLENGE_TRIP_STREAK:
-            self.trip(f"{self.entry_streak} consecutive grades challenged at entry")
+
+        # DISTINCT origins, which is what the streak was always supposed to mean. It counted grades,
+        # so one stubborn site resubmitted enough times could trip a 48 hour backoff on its own and
+        # stop grading for everybody, which is the opposite of the sentence this branch prints. Our
+        # standing is a claim about US: it needs many different apps refusing us, not one refusing us
+        # repeatedly.
+        self.challenged.add(origin)
+        if len(self.challenged) >= config.CHALLENGE_TRIP_STREAK:
+            self.trip(f"{len(self.challenged)} different apps challenged at entry, in a row")
         else:
-            print(f"[breaker] entry challenge {self.entry_streak}/{config.CHALLENGE_TRIP_STREAK} "
-                  f"({origin}); one app's WAF is not our standing, continuing", flush=True)
+            print(f"[breaker] entry challenge {len(self.challenged)}/{config.CHALLENGE_TRIP_STREAK} "
+                  f"distinct ({origin}); one app's WAF is not our standing, continuing", flush=True)
 
     def trip(self, reason: str) -> None:
         self.paused_until = time.time() + config.CHALLENGE_BACKOFF_SECONDS
