@@ -238,7 +238,13 @@ export default function GradePage({ params }: { params: { id: string } }) {
     return (
       <section className="pending">
         {crumb}
-        <h1>{view.origin ?? view.url}</h1>
+        <h1>
+          {view.origin ?? view.url}
+          {/* Which battery is running, said the same way the finished report says it. The two are
+              different measurements on different curves, so a wait of several minutes should not
+              leave that ambiguous. */}
+          {view.mode && <span className="tag">{view.mode}</span>}
+        </h1>
         <p className="status">
           {!stalled && <span className="tick" aria-hidden />}
           {view.status === "running"
