@@ -127,7 +127,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 sloptic
               </a>
               <p>
-                Black box web app ranking for any app you own
+                Web app grading for any app you own
               </p>
             </div>
 
