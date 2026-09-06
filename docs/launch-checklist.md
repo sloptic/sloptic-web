@@ -1,37 +1,24 @@
 # Launch checklist
 
 Everything still outstanding before sloptic.org ships, in priority order. Frozen list: work is
-struck off it, not added to it. Anything discovered later goes to a v1.1 list, not here.
+struck off it, not added to it. Anything discovered later goes to a v1.1 list, not here. Items keep
+their numbers as they are struck off, so the numbers stay quotable.
 
 Not on this list, and deliberately: the three grader issues deferred to v3.0.0 (see
 `memory/grader-frozen-until-launch`), and the Ubuntu-style probe details panel.
 
 ---
 
-## 1. Uptime monitoring on `/api/health` — Ian, ~15 min
+## 1. Uptime monitoring on `/api/health` — DONE
 
-Nothing tells you when the service breaks. The endpoint already reports what matters (grading
-switched off, no worker ever checked in, stale heartbeat, worker holding, queue unreadable) and
-returns a degraded status for each. Nothing polls it.
+Monitored. The endpoint returns 503 when degraded and 200 only when everything holds, so a plain
+status check is enough; no body parsing needed.
 
-First, because everything below assumes you find out when something goes wrong. The audit found a
-failure where the worker halts completely and the heartbeat thread keeps republishing its cached
-state, so "the health endpoint looked fine" is a thing that has already happened here.
+## 2. Favicon and OG image — DONE
 
-Note it does not cover email. Resend's free tier stops at 100 messages a day, and when it stops,
-sign-in mail silently fails. That is Resend's Logs page, not this monitor.
-
-## 2. Favicon and OG image — Claude to build, Ian to approve
-
-`web/public` holds only `.well-known`, and there are no icon files anywhere. The metadata in
-`app/layout.tsx` is otherwise complete (metadataBase, openGraph, twitter card, description), so
-every shared link currently renders as a text-only card.
-
-Two files by Next's filename convention, no code changes: `app/icon.png` and
-`app/opengraph-image.png`. The OG image can be generated from JSX with `ImageResponse` instead of
-being a binary nobody can edit. `twitter.card` moves to `summary_large_image` once one exists.
-
-Second because a launch is mostly people sharing links.
+Both shipped, generated from code rather than committed as binaries: `app/icon.svg` (vector, so it
+stays sharp on a hidpi tab strip), `app/apple-icon.png`, and `app/opengraph-image.tsx`. The mark
+also appears in the masthead, the colophon and the about page's head.
 
 ## 3. The provisional percentile says which way it moves — Ian's wording, Claude to apply
 
@@ -84,4 +71,6 @@ fetch's deadline and body cap. Rate limits on the verify routes. The anonymous d
 claim-expiry predicate. Health no longer leaking database errors. The grader's origin-scope leak
 (fixed upstream, frozen at `4c5cd54`). `hello@sloptic.org` with SPF, DKIM, DMARC and a 10/10
 mail-tester score. Custom SMTP through Resend, with both auth templates and `/auth/confirm` so the
-link in the mail is on our own domain.
+link in the mail is on our own domain. sloptic pinned to 2.2.0 from PyPI, both CI clones deleted,
+and a CI guard that regenerates the check facts and fails on drift. The landing sample rebuilt on
+real catalog penalties, and the sample and the report now render one shared band.
