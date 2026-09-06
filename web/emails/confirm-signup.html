@@ -1,0 +1,93 @@
+<!-- Supabase Auth -> Email Templates -> Confirm signup.
+     Kept here so the template is diffable: edited in the dashboard, it exists nowhere else and
+     nobody can tell when or why it changed.
+
+     The sibling of magic-link.html, and NOT optional. signInWithOtp picks the template by whether
+     the address already has an account: an existing user gets Magic Link, a new one gets this. So
+     this is the template every first-time visitor sees, which at launch is everybody, and leaving
+     it at Supabase's default means the stock mail is the first thing anyone receives from us.
+
+     Same design, different facts. A first-time reader is confirming an address rather than
+     returning, and the honest reassurance for the wrong recipient is that no account exists yet,
+     which is stronger than the one the magic link can offer.
+
+     Constraints this is written to, which are why it looks dated as HTML:
+       - Inline styles only. Mail clients strip <style> blocks unevenly, Gmail worst of all.
+       - Tables for layout, since Outlook renders flex and grid as nothing.
+       - No images. Clients block remote images by default, so anything load-bearing in one is
+         invisible on first open, which for a sign-in mail is every open.
+       - The raw URL is printed under the button. Some clients do not render the button, some
+         security scanners rewrite it, and a link you can copy is the fallback that always works.
+
+     The link is built from {{ .RedirectTo }} rather than {{ .ConfirmationURL }}, deliberately.
+     ConfirmationURL points at the Supabase API host, so the link read
+     https://<project-ref>.supabase.co/auth/v1/verify?token=... : a random string on a domain the
+     reader has never seen, in a mail asking them to click it. That is the shape of phishing, and no
+     wording fixes it, since "this is safe" is what an attacker writes too.
+
+     RedirectTo is the /auth/confirm URL the sign-in form asked for, and it always carries ?next=,
+     so appending &token_hash= stays a valid URL. app/auth/confirm/route.ts redeems it.
+
+     This holds only while /auth/confirm is listed under Supabase's allowed redirect URLs. If it is
+     not, Supabase substitutes the Site URL and the appended token hash lands on the wrong path. -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+       style="background:#f3f0e6;margin:0;padding:32px 12px;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+             style="max-width:460px;background:#faf8f0;border:1px solid #d8d3c1;border-radius:10px;">
+        <tr>
+          <td style="padding:28px 28px 0;">
+            <p style="margin:0;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:#6b6f61;">
+              Sloptic
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 28px 0;">
+            <h1 style="margin:0;font-size:20px;line-height:1.3;font-weight:600;color:#1e211b;">
+              Confirm your email
+            </h1>
+            <p style="margin:12px 0 0;font-size:15px;line-height:1.55;color:#474b40;">
+              Someone entered this address to make a Sloptic account. Confirm it to finish signing
+              up. This link works only once and will expire after an hour.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:22px 28px 0;">
+            <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=signup"
+               style="display:inline-block;background:#9e530d;color:#fdfaf2;text-decoration:none;
+                      font-size:15px;font-weight:600;padding:11px 20px;border-radius:7px;">
+              Confirm and sign in
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:18px 28px 0;">
+            <p style="margin:0;font-size:12px;line-height:1.5;color:#6b6f61;">
+              Or paste this into your browser:
+            </p>
+            <p style="margin:6px 0 0;font-size:12px;line-height:1.5;word-break:break-all;color:#474b40;">
+              {{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=signup
+            </p>
+            <p style="margin:6px 0 0;font-size:12px;line-height:1.5;color:#6b6f61;">
+              It should start with sloptic.org.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:22px 28px 28px;">
+            <p style="margin:0;padding-top:16px;border-top:1px solid #d8d3c1;
+                      font-size:12px;line-height:1.5;color:#6b6f61;">
+              If you did not ask for this, no account has been made and you can ignore it.
+            </p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:14px 0 0;font-size:12px;color:#6b6f61;">
+        sloptic.org
+      </p>
+    </td>
+  </tr>
+</table>

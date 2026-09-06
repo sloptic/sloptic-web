@@ -4,13 +4,21 @@ Supabase Auth's email templates are edited in the dashboard (Authentication -> E
 which means they exist in exactly one place, have no history, and change without a diff. These files
 are the source of truth: edit here, then paste into the dashboard.
 
-| File | Dashboard template |
-| --- | --- |
-| `magic-link.html` | Magic Link |
+| File | Dashboard template | Who receives it |
+| --- | --- | --- |
+| `confirm-signup.html` | Confirm signup | a first-time address |
+| `magic-link.html` | Magic Link | an address that already has an account |
 
-`signInWithOtp` is the only email-sending auth path the site uses (`app/signin/SignInForm.tsx`), so
-Magic Link is the only template that matters today. The others are left at Supabase's defaults
-because nothing triggers them.
+`signInWithOtp` is the only email-sending auth path the site uses
+(`app/signin/SignInForm.tsx`), but it sends **one of two templates** depending on whether the
+address already has an account. Both have to be styled, and Confirm signup matters more: it is what
+every first-time visitor sees, which at launch is everyone. The remaining templates (recovery,
+email change, invite) are left at Supabase's defaults because nothing here triggers them.
+
+The two differ only where the facts differ. A first-time reader is confirming an address rather
+than returning, and the reassurance for a wrong recipient is stronger on the signup side: no
+account has been made, rather than nothing has happened. The link carries `type=signup` instead of
+`type=magiclink`, which `app/auth/confirm/route.ts` accepts as one of its known types.
 
 ## Why they look like 2005
 
@@ -22,6 +30,7 @@ clients block remote images by default and a sign-in mail is read on first open 
 
 Set in the dashboard beside each template, not in these files.
 
+- Confirm signup: `Confirm your Sloptic account`
 - Magic Link: `Your Sloptic sign-in link`
 
 ## The link points at sloptic.org, not at Supabase
