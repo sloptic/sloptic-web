@@ -1,14 +1,21 @@
-<!-- The reduced mark: one triangle in the lens, not four cells.
-     The full mark (lib/brand.ts) puts three muted circles and one accent triangle inside the lens:
-     sameness, and the one thing that is not. At 16px the lens interior is about 8 real pixels
-     across, where four cells become one smudge, so the small mark keeps the idea and drops the
-     grid. Same drawing, fewer cells, rather than a different logo.
+<!-- The reduced mark: one triangle in the lens, not the four cells of the full mark
+     (lib/brand.ts). At 16px the lens interior is about eight real pixels across, where four cells
+     become one smudge, so the small mark keeps the idea and drops the grid.
+
+     The ring is a DECAGON, not a circle, and that is the whole joke. A ten-sided approximation
+     deviates from a true circle by about a fifth of a pixel at 16px, so as a favicon it simply is a
+     circle. Enlarge it and it is plainly a polygon: smooth at a glance, crude on inspection, which
+     is what the product is for. Miter joins, because rounding them would hide it.
+
+     One drawing at every size, deliberately. Using a real circle when small and a polygon when
+     large would not be a scale-dependent mark, it would be two logos.
+
      SVG rather than a generated PNG so it stays sharp on a hidpi tab strip. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <g fill="none" stroke="#1e211b" stroke-linecap="butt">
-    <circle cx="13.5" cy="13.5" r="10.5" stroke-width="4"/>
-    <!-- 34 degrees, not 45, and the joint is not rounded. That is where the drawn quality lives. -->
-    <path d="M21.2 20.5 L30 27" stroke-width="4.5"/>
+  <g fill="none" stroke="#1e211b" stroke-linecap="butt" stroke-linejoin="miter">
+    <path d="M13.500 3.000 L19.672 5.005 L23.486 10.255 L23.486 16.745 L19.672 21.995 L13.500 24.000 L7.328 21.995 L3.514 16.745 L3.514 10.255 L7.328 5.005 Z" stroke-width="4"/>
+    <!-- Off 45 degrees, and the joint is not rounded. That is where the drawn quality lives. -->
+    <path d="M21 20 L30 27" stroke-width="4.5"/>
   </g>
   <path d="M13.5 8 L19.2 18.2 L7.8 18.2 Z" fill="#9e530d"/>
 </svg>
