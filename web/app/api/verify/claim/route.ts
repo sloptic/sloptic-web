@@ -7,6 +7,7 @@ import { egressPrecheck } from "@/lib/egress";
 import { platformSuffix, PLATFORM_REFUSAL } from "@/lib/platform";
 import { hashIp, clientIp, allow, bucket, VERIFY_LIMIT, MAX_LIVE_CLAIMS } from "@/lib/ratelimit";
 import { claimsForAccount } from "@/lib/domain-claims";
+import { suspensionFor } from "@/lib/suspension";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +24,11 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+
+  // Suspended accounts spend no outbound traffic. Checked at every entry point, not only here: a
+  // suspension has to reach the paths that make the worker fetch something.
+  const suspended = await suspensionFor(user.id);
+  if (suspended) return NextResponse.json({ error: suspended.reason }, { status: 403 });
 
   // The same quota the grade path has, and for the same reason its comment gives: this is the other
   // route that makes the worker connect to a host the caller chose. Without it, normalizeTarget

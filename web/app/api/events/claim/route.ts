@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabase";
 import { currentUser } from "@/lib/auth";
 import { parseEventSlug, BadEvent } from "@/lib/devpost-slug";
+import { suspensionFor } from "@/lib/suspension";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,11 @@ function newToken(): string {
 export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+
+  // Suspended accounts spend no outbound traffic. Checked at every entry point, not only here: a
+  // suspension has to reach the paths that make the worker fetch something.
+  const suspended = await suspensionFor(user.id);
+  if (suspended) return NextResponse.json({ error: suspended.reason }, { status: 403 });
 
   let body: { event?: string };
   try {

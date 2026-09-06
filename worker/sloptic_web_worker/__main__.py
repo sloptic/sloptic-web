@@ -378,6 +378,13 @@ def process_retries(conn) -> int:
     # keyed on event_run_id, and deleting an event NULLs that column, so the strongest stop gesture
     # in the product was removing the only guard this lane had. The check belongs here, next to the
     # decision to send, and it is the one grade_child already uses so the two cannot drift.
+    # Both modes: a suspension has to reach booked work, and a passive pass is still our outbound
+    # traffic spent on behalf of an account we have cut off.
+    if db.account_suspended(conn, r.grade_id):
+        db.clear_retry(conn, r.grade_id)
+        print(f"[deny]  {r.grade_id}: retry pass not sent, account suspended", flush=True)
+        return 1
+
     if r.mode == "active":
         deny = _retry_denied(conn, r)
         if deny is not None:

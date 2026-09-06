@@ -306,6 +306,54 @@ class TestRenewal:
         assert _row(conn, cid)["renew_requested_at"] is not None
 
 
+class TestSuspension:
+    """A suspension has to reach work already queued. Stopping new submissions in the web routes
+    leaves whatever is in the queue still to be sent, which is a delay rather than a stop."""
+
+    def _grade(self, conn, account, *, origin="https://example.com"):
+        row = conn.execute(
+            """INSERT INTO grades (origin, submitted_url, mode, status, submitted_at, account_id)
+               VALUES (%s, %s, 'passive', 'running', now(), %s) RETURNING id""",
+            (origin, origin, account),
+        ).fetchone()
+        return str(row["id"])
+
+    def _suspend(self, conn, account, reason="abuse"):
+        conn.execute(
+            "INSERT INTO profiles (id, suspended_at, suspended_reason) VALUES (%s, now(), %s) "
+            "ON CONFLICT (id) DO UPDATE SET suspended_at = now(), suspended_reason = EXCLUDED.suspended_reason",
+            (account, reason),
+        )
+
+    def test_a_grade_from_a_suspended_account_is_refused(self, conn, account):
+        gid = self._grade(conn, account)
+        self._suspend(conn, account)
+
+        assert db.account_suspended(conn, gid) is True
+
+    def test_an_ordinary_account_is_not(self, conn, account):
+        _accept_terms(conn, account)
+        gid = self._grade(conn, account)
+
+        assert db.account_suspended(conn, gid) is False
+
+    def test_lifting_a_suspension_lets_the_account_grade_again(self, conn, account):
+        gid = self._grade(conn, account)
+        self._suspend(conn, account)
+        conn.execute("UPDATE profiles SET suspended_at = NULL WHERE id = %s", (account,))
+
+        assert db.account_suspended(conn, gid) is False
+
+    def test_an_anonymous_grade_has_no_account_to_suspend(self, conn):
+        row = conn.execute(
+            """INSERT INTO grades (origin, submitted_url, mode, status, submitted_at, account_id)
+               VALUES ('https://a.example', 'https://a.example', 'passive', 'running', now(), NULL)
+               RETURNING id"""
+        ).fetchone()
+
+        assert db.account_suspended(conn, str(row["id"])) is False
+
+
 class TestDegradingRatherThanCrashing:
     def test_a_missing_dns_library_blocks_the_factor_instead_of_taking_the_worker_down(self, monkeypatch):
         """A feature's optional dependency must not stop grading.

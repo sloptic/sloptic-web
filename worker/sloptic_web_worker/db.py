@@ -459,6 +459,28 @@ def origin_proof_for_grade(conn: psycopg.Connection, job_id: str) -> tuple[str, 
     return (row["host"], row["token"]) if row else None
 
 
+def account_suspended(conn: psycopg.Connection, job_id: str) -> bool:
+    """Whether the account behind this grade is suspended.
+
+    Checked HERE as well as in the web routes, because those only stop a grade being STARTED. A
+    grade queued before the suspension is traffic that has not been sent yet, and a suspension that
+    leaves an hour of queued work running is not a stop, it is a delay. Same shape as the
+    authorization re-check beside it: asked immediately before anything leaves the machine.
+
+    An anonymous grade has no account and cannot be suspended; per-address limits are its bound.
+    """
+    row = conn.execute(
+        """
+        SELECT p.suspended_at
+          FROM grades g
+          JOIN profiles p ON p.id = g.account_id
+         WHERE g.id = %s AND p.suspended_at IS NOT NULL;
+        """,
+        (job_id,),
+    ).fetchone()
+    return row is not None
+
+
 def verify_domain_claim(conn: psycopg.Connection, claim: DomainClaim, detail: str,
                         grant_days: int) -> str:
     """Both factors answered ok: mark the claim verified and write the grant, in one transaction.

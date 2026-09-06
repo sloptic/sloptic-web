@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { currentUser } from "@/lib/auth";
 import { allow, bucket, VERIFY_LIMIT } from "@/lib/ratelimit";
+import { suspensionFor } from "@/lib/suspension";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,11 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+
+  // Suspended accounts spend no outbound traffic. Checked at every entry point, not only here: a
+  // suspension has to reach the paths that make the worker fetch something.
+  const suspended = await suspensionFor(user.id);
+  if (suspended) return NextResponse.json({ error: suspended.reason }, { status: 403 });
 
   if (!(await allow(bucket("verify", req.headers), VERIFY_LIMIT))) {
     return NextResponse.json({ error: "Too many checks. Try again later." }, { status: 429 });

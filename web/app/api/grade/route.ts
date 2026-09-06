@@ -5,6 +5,7 @@ import { egressPrecheck } from "@/lib/egress";
 import { allow, clientIp, hashIp } from "@/lib/ratelimit";
 import { gradingOpen, GRADING_CLOSED_MESSAGE, maxQueueDepth, QUEUE_FULL_MESSAGE } from "@/lib/flags";
 import { currentUser } from "@/lib/auth";
+import { suspensionFor } from "@/lib/suspension";
 
 export const runtime = "nodejs"; // needs node:dns / node:crypto; not edge
 export const dynamic = "force-dynamic";
@@ -71,6 +72,11 @@ export async function POST(req: NextRequest) {
   // lands unowned and quietly expires unless they later go and claim it, which makes signing in
   // look like it does nothing.
   const user = await currentUser();
+
+  // Suspended accounts spend no outbound traffic. Checked at every entry point, not only here: a
+  // suspension has to reach the paths that make the worker fetch something.
+  const suspended = await suspensionFor(user?.id);
+  if (suspended) return NextResponse.json({ error: suspended.reason }, { status: 403 });
 
   // 5a. The battery. PASSIVE unless this ACCOUNT has proved it owns this origin, and the server
   // decides that, never the caller: the client may ask, and asking is all it can do.

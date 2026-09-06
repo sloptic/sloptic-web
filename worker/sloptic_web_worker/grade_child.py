@@ -62,6 +62,14 @@ def main(argv: list[str]) -> int:
         if job.mode not in ("passive", "active"):
             raise ValueError(f"unsupported mode {job.mode!r}")
 
+        # Before the sandbox, because this one costs a query and no packets. A grade queued before
+        # its account was suspended is traffic that has not left yet, and the web routes only stop
+        # new submissions.
+        if db.account_suspended(conn, job.id):
+            db.mark_failed(conn, job.id, "this account is suspended")
+            print(f"[deny]  {job.id}: account suspended", flush=True)
+            return EXIT_FAILED
+
         # P0 safety gate. Fails closed until the egress sandbox is enabled.
         guard_target(job.origin, _host_of(job.origin))
 

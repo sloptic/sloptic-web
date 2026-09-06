@@ -93,3 +93,19 @@ the worker is pointed anywhere that looks like production.
 
 Without `TEST_DATABASE_URL` the suite skips rather than fails, so it stays out of the way when you
 are working on something else.
+
+## Suspending an account
+
+The narrow response to one account misbehaving, next to `GRADING_OPEN=0`, which stops everybody.
+Set the column; every web entry point and the worker both check it.
+
+    update profiles set suspended_at = now(),
+           suspended_reason = 'Repeatedly grading sites you do not own.'
+     where email = 'them@example.com';
+
+`suspended_reason` is shown to the account, so write it as a sentence to a person. Null falls back
+to a generic line. Lift it with `set suspended_at = null`.
+
+The account can still sign in and read its own reports. What stops is anything that spends our
+outbound traffic: grades, event runs, and domain verification. The worker checks again immediately
+before it sends anything, so work queued before the suspension does not run.
