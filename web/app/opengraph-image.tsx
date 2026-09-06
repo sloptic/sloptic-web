@@ -73,7 +73,7 @@ export default async function Image() {
         >
           {/* Says what the number means without needing the site open. "Lower is better" is the
               one thing a stranger gets wrong about a slop score. */}
-          <div style={{ display: "flex" }}>one number for how well it holds up, lower is better</div>
+          <div style={{ display: "flex" }}>A score representing how much slop your app has, the lower the better</div>
           <div style={{ display: "flex", color: INK }}>sloptic.org</div>
         </div>
       </div>

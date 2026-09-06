@@ -1114,7 +1114,7 @@ section.report h2 {
   margin: 0 0 2.25rem;
 }
 
-/* Definition rows (the score, tiers) ------------------------------------- */
+/* Definition rows ------------------------------------------------------- */
 .rows {
   border-top: 1px solid var(--line);
 }
@@ -1202,63 +1202,6 @@ code {
   margin: 0.35rem 0;
 }
 
-/* Access tiers: three parallel options that escalate, so they sit side by side
-   rather than in the definition list the score section uses. */
-.tier-grid {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.25rem;
-}
-@media (max-width: 46rem) {
-  .tier-grid {
-    grid-template-columns: 1fr;
-  }
-}
-.tier {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  padding: 1.1rem 1.15rem 1.25rem;
-}
-/* the rule thickens as the tier demands more of you */
-.tier[data-step="1"] {
-  border-top: 2px solid var(--line-strong);
-}
-.tier[data-step="2"] {
-  border-top: 4px solid var(--accent);
-}
-.tier[data-step="3"] {
-  border-top: 6px solid var(--ink);
-}
-.tier h3 {
-  font-family: var(--font-mono);
-  font-size: 0.95rem;
-  font-weight: 600;
-  margin: 0;
-}
-.tier-req {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  color: var(--muted);
-  margin: 0.3rem 0 0.75rem;
-}
-.tier-desc {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.55;
-  color: var(--ink-soft);
-}
-.tier-desc a {
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-color: var(--accent);
-  text-underline-offset: 3px;
-}
-.tier-desc code {
-  font-size: 0.8em;
-}
 
 /* Reference table (the counts, on /checks) -------------------------------- */
 .table-scroll {

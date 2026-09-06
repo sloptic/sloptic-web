@@ -25,7 +25,7 @@ const mono = IBM_Plex_Mono({
 });
 
 const DESCRIPTION =
-  "Give Sloptic a live URL and get one number for how well the app holds up, the security, accessibility, and performance floor every app should have. Passive by default.";
+  "Give Sloptic a live URL and it will score the app the way a visitor would. The lower, the better.";
 
 // metadataBase is what makes every relative og:url and image absolute. Without it a shared link
 // renders as a bare URL in Slack, Discord and iMessage, which is where report and board links

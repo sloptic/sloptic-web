@@ -138,10 +138,9 @@ export default function Home() {
   return (
     <>
       <section className="hero">
-        <h1 className="lede">Grade a deployed web app.</h1>
+        <h1 className="lede">How much slop is in your app?</h1>
         <p className="deck">
-          Give Sloptic a live URL. It scores how well the app holds up on the things every app should
-          have, no matter what.
+          Paste a URL. Sloptic looks at it the way a visitor would and scores what it finds. Lower is better.
         </p>
 
         <form onSubmit={submit} className="grade-form">
@@ -182,18 +181,9 @@ export default function Home() {
         <div className="what-body">
           <h2 className="section-head">What is Sloptic?</h2>
           <p className="what-text">
-            Sloptic is a{" "}
-            <a
-              href="https://en.wikipedia.org/wiki/Black-box_testing"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              black box
-            </a>{" "}
-            web app grader. It checks the security, accessibility, quality, and 
-            performance traits that every app should get right, whatever it was 
-            built to do. Because those traits do not depend on an app's purpose, 
-            Sloptic can compare and rank apps against each other.
+            Sloptic is a web app grader. It checks how much slop your web app has, like a leaked
+            secret, a crash, a page taking forever to load, and more. As these are unacceptable to
+            any app, Sloptic can grade any app you point it at no matter what it does.
           </p>
         </div>
 
@@ -211,7 +201,7 @@ export default function Home() {
           <li className="flow-box">
             <span className="n">03</span>
             <p>
-              You get one score with a breakdown on every issue found and what was tested.
+              You get a score with a breakdown on every issue found and what was tested.
             </p>
           </li>
         </ol>
@@ -373,85 +363,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="section" id="score">
-        <h2 className="section-head">The score</h2>
-        <p className="section-intro">
-          One number so you can see how your app is doing at a glance and compare it to others.
-        </p>
-        <div className="rows">
-          <div className="row2">
-            <span className="term">Lower is better</span>
-            <p className="desc">
-              Like golf. A 0 means nothing was found. A messier app just scores
-              higher.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">It only counts problems</span>
-            <p className="desc">
-              You do not earn points for what you did right; the score only adds up what is wrong. An
-              app with nothing to fix and an app that fixed everything both score 0.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">Weighted by how much it matters</span>
-            <p className="desc">
-              A serious security hole adds more than a small nicety, yet the same problem repeated
-              across ten pages counts once.
-            </p>
-          </div>
-          <div className="row2">
-            <span className="term">Compared to real apps</span>
-            <p className="desc">
-              Your score is ranked against a large set of real apps, so the number comes with where you
-              stand among them.
-            </p>
-          </div>
-        </div>
-      </section>
 
-      <section className="section tiers" id="tiers">
-        <h2 className="section-head">Passive by default</h2>
-        <p className="section-intro">
-          Some checks would send real attack traffic at a site. Pointing those at a site you have not
-          shown you own would be wrong, therefore Sloptic never does by default.
-        </p>
-        <ol className="tier-grid">
-          <li className="tier" data-step="1">
-            <h3>Anyone</h3>
-            <p className="tier-req">no account</p>
-            <p className="tier-desc">
-              The passive checks run on any URL. They read what your app already shows the public, so
-              they are safe to point at anything, and they are most of what the score is made of.
-            </p>
-          </li>
-          <li className="tier" data-step="2">
-            <h3>Your own site</h3>
-            <p className="tier-req">verify the domain</p>
-            <p className="tier-desc">
-              Sign in, then publish a token we give you at{" "}
-              <code>/.well-known/sloptic-verification.txt</code> and in a DNS record. Not open yet.{" "}
-              <a href="/verify">What verifying involves.</a>
-            </p>
-          </li>
-          <li className="tier" data-step="3">
-            <h3>Running an event</h3>
-            <p className="tier-req">verify the event</p>
-            <p className="tier-desc">
-              Grade the web app entries in your hackathon on one scale, so they can be compared.{" "}
-              <a href="/organizers">How it works for organizers.</a>
-            </p>
-          </li>
-        </ol>
-        <div className="cta-row">
-          <a className="button secondary" href="/verify">
-            Why only some run
-          </a>
-          <a className="button secondary" href="/methodology">
-            How the grade works
-          </a>
-        </div>
-      </section>
 
       <section className="section" id="name">
         <div className="definition">
