@@ -37,10 +37,18 @@ export async function GET() {
 
   const problems: string[] = [];
   if (!open) problems.push("grading is switched off");
-  if (workerErr) problems.push(`worker status unreadable: ${workerErr.message}`);
+  if (workerErr) {
+    // The message is a PostgREST error, which names columns, roles and missing grants. This route
+    // is unauthenticated, so it says that a read failed and nothing about why.
+    console.warn("health: worker status unreadable:", workerErr.message);
+    problems.push("worker status unreadable");
+  }
   else if (ageSeconds === null) problems.push("no worker has ever checked in");
   else if (!workerAlive) problems.push(`worker heartbeat is ${ageSeconds}s old`);
-  if (queueErr) problems.push(`queue unreadable: ${queueErr.message}`);
+  if (queueErr) {
+    console.warn("health: queue unreadable:", queueErr.message);
+    problems.push("queue unreadable");
+  }
   // A live worker that is deliberately not claiming is still a grade that would not finish, which
   // is this route's own definition of degraded. The heartbeat says so ("holding" plus the reason:
   // a tripped challenge backoff holds both lanes for 48h, a spent daily budget holds one until
