@@ -45,7 +45,9 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     url: "/",
   },
-  twitter: { card: "summary", title: "Sloptic", description: DESCRIPTION },
+  // summary_large_image now that opengraph-image.tsx exists. With "summary" the card is a small
+  // square thumbnail, which crops a 1200x630 image to its middle and loses the wordmark.
+  twitter: { card: "summary_large_image", title: "Sloptic", description: DESCRIPTION },
 };
 
 // Apply a stored theme choice before paint so there is no light/dark flash. No stored choice = follow
