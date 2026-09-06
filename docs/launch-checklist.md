@@ -18,7 +18,8 @@ status check is enough; no body parsing needed.
 
 Both shipped, generated from code rather than committed as binaries: `app/icon.svg` (vector, so it
 stays sharp on a hidpi tab strip), `app/apple-icon.png`, and `app/opengraph-image.tsx`. The mark
-also appears in the masthead, the colophon and the about page's head.
+also appears in the masthead, the colophon and the about page's head. The live placement says "currently"
+rather than "provisionally".
 
 ## 3. The in-progress placement says "currently" — DONE
 
@@ -27,23 +28,19 @@ now, and it only falls: deduction-only scoring means the score only climbs, and 
 both frozen curves the number overstates the final placement by a median of 19 points at the
 halfway mark. "Currently" makes it a snapshot rather than a forecast.
 
-## 4. "Your grade is ready" and "Your event is ready" — Claude, ~a session
+## 4. "Your grade is ready" and "Your event is ready" — DONE
 
-A migration for the preference column, a sender in the worker, two templates, the account-page
-toggle, tests. ZeptoMail or Resend for delivery, separate from the auth path.
+One message when a grade reaches `done`, whether or not a recovery pass is still booked; one per
+event RUN when the whole field is graded, never one per app. Sent by the worker through Resend,
+separate from the auth mail. Opt-out on the account page.
 
-Three decisions needed before it starts:
+Needs `RESEND_API_KEY` and `NOTIFY_FROM` in the worker environment, or it stays off.
 
-- **When "ready" fires.** A grade reaches `done`, then the retry lane can re-run its blocked tail 12
-  and 28 minutes later and change the score. Sending at first `done` can quote a number the report
-  no longer shows. Recommendation: wait for retries to settle.
-- **Anonymous grades get nothing**, since no address is collected. That is most submissions.
-- **Opt-out toggle** on the account page, defaulted on.
+## 5. A per-account off switch — DONE
 
-## 5. A per-account off switch — Claude, ~1 hour
-
-Abuse from one signed-in account currently leaves the global kill switch (`GRADING_OPEN=0`) or
-hand-editing the database. Rate limits are per-IP, which does not help against an account.
+`profiles.suspended_at`, checked at every web entry point that spends outbound traffic and again in
+the worker, so work queued before the suspension does not run. Set it with SQL; see
+`worker/README.md`.
 
 ## 6. The retry quota decision — Ian
 
@@ -68,4 +65,5 @@ mail-tester score. Custom SMTP through Resend, with both auth templates and `/au
 link in the mail is on our own domain. sloptic pinned to 2.2.0 from PyPI, both CI clones deleted,
 and a CI guard that regenerates the check facts and fails on drift. The landing sample rebuilt on
 real catalog penalties, and the sample and the report now render one shared band. The mark placed
-in the masthead, the colophon and the about page's head.
+in the masthead, the colophon and the about page's head. The live placement says "currently"
+rather than "provisionally".
