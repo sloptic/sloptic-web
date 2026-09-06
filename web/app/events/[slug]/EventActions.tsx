@@ -192,6 +192,11 @@ export default function EventActions({
 
   const live = runs.find((r) => ["resolving", "ready", "grading"].includes(r.status));
   const pending = claim?.status === "pending";
+  // A claim we gave up on still has to say WHY, and it used to say nothing: the whole verify block
+  // was gated on `pending`, so failing a claim removed the one place its reason was shown. Someone
+  // who mistyped a Devpost slug got a page with no verification section at all, which reads as the
+  // feature being broken rather than as their address being wrong.
+  const gaveUp = claim?.status === "failed";
   const history = runs.filter((r) => r !== live);
   const lastRun = runs[0];
   // The field stays mounted for a finished run while its recovery passes are outstanding: the
@@ -235,15 +240,32 @@ export default function EventActions({
 
   return (
     <>
-      {pending && (
+      {(pending || gaveUp) && (
         <section className="section attached">
-          <h2 className="section-head">Verify this event</h2>
-          <p className="section-intro">
-            Add this link to your event&apos;s rules page on Devpost with visible text such as{" "}
-            <b>Grading policy</b>.
-          </p>
-          <p className="token-link"><code>{`${origin}/e/${claim.token}`}</code></p>
+          <h2 className="section-head">{gaveUp ? "We stopped checking" : "Verify this event"}</h2>
+          {gaveUp ? (
+            // No token and no instructions here on purpose. Telling someone to publish a link on a
+            // page that does not exist is busywork, and the only move left is to remove the event
+            // and add the right address.
+            <p className="section-intro">
+              {claim.check_status === "not_found"
+                ? `There is no event at ${slug}.devpost.com. Remove this event below and add it again with the right address.`
+                : "We gave up checking this event. Remove it below and add it again to start over."}
+            </p>
+          ) : (
+            <>
+              <p className="section-intro">
+                Add this link to your event&apos;s rules page on Devpost with visible text such as{" "}
+                <b>Grading policy</b>.
+              </p>
+              <p className="token-link"><code>{`${origin}/e/${claim.token}`}</code></p>
+            </>
+          )}
 
+          {/* The slip and the recheck button are for a claim still being looked at. A given-up claim
+              has its reason in the line above, and /api/events/recheck refuses a non-pending claim
+              anyway, so offering the button would be offering an error. */}
+          {!gaveUp && (
           <div className="verdict" data-state={verdictState(claim, checking)}>
             <p className="verdict-label">
               {checking ? (
@@ -268,6 +290,8 @@ export default function EventActions({
               </p>
             )}
           </div>
+          )}
+          {!gaveUp && (
           <div className="cta-row event-actions">
             <button className="button secondary" type="button" disabled={busy}
                     onClick={() => void act(async () => {
@@ -278,6 +302,7 @@ export default function EventActions({
               {checking ? "Checking" : "Check now"}
             </button>
           </div>
+          )}
         </section>
       )}
 
