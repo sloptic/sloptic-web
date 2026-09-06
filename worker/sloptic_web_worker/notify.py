@@ -56,14 +56,31 @@ def render(template: str, **fields: str) -> str:
 
 
 def send(to: str, subject: str, html: str) -> None:
-    """One message. Raises NotSent on anything that is not a success."""
+    """One message. Raises NotSent on anything that is not a success.
+
+    Carries List-Unsubscribe, so Gmail and the rest show their own unsubscribe control beside the
+    sender. That matters more than politeness here: someone mildly tired of these will otherwise
+    press "spam", which costs the send AND the sending reputation that every later message depends
+    on. A mailto rather than a one-click URL, because one-click (RFC 8058) needs an endpoint that
+    unsubscribes without a session, which needs a signed token, which is a lot of machinery for a
+    volume this small. The account toggle remains the real control; this is the exit for people who
+    will not go looking for it.
+    """
     if not enabled():
         raise NotSent("no RESEND_API_KEY; notification mail is off")
     try:
         r = httpx.post(
             "https://api.resend.com/emails",
             headers={"Authorization": f"Bearer {config.RESEND_API_KEY}"},
-            json={"from": config.NOTIFY_FROM, "to": [to], "subject": subject, "html": html},
+            json={
+                "from": config.NOTIFY_FROM,
+                "to": [to],
+                "subject": subject,
+                "html": html,
+                "headers": {
+                    "List-Unsubscribe": f"<mailto:{config.UNSUBSCRIBE_MAILBOX}?subject=unsubscribe>",
+                },
+            },
             timeout=_TIMEOUT,
         )
     except Exception as e:  # noqa: BLE001 - transport of any kind means "not sent"

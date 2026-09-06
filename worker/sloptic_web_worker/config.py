@@ -283,3 +283,8 @@ EMAIL_TEMPLATE_DIR = os.environ.get("EMAIL_TEMPLATE_DIR", "")
 # A pass sends at most this many, so a backlog cannot become a burst that trips a daily cap in one
 # go. Resend's free tier is 100 a day and the auth mail shares it.
 NOTIFY_BATCH = int(os.environ.get("NOTIFY_BATCH", "10"))
+# Where a List-Unsubscribe click lands. A mailbox rather than a one-click endpoint: RFC 8058
+# one-click needs a URL that unsubscribes with no session, which needs a signed token, and that is
+# more machinery than this volume justifies. Turning the toggle off in the account is still the real
+# control; this is the exit for someone who will not go looking for it.
+UNSUBSCRIBE_MAILBOX = os.environ.get("UNSUBSCRIBE_MAILBOX", "hello@sloptic.org")

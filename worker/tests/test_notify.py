@@ -135,15 +135,27 @@ class TestNotTwice:
 class TestRendering:
     def test_a_hostname_cannot_inject_markup(self, conn):
         # The origin is a URL a stranger submitted, and it reaches this mail.
-        html = notify.render("grade-ready.html",
-                             origin="<script>alert(1)</script>", score="12", url="https://x/")
+        html = notify.render("grade-ready.html", origin="<script>alert(1)</script>", score="12",
+                             url="https://x/", account_url="https://x/account")
 
         assert "<script>" not in html
         assert "&lt;script&gt;" in html
 
     def test_an_unfilled_placeholder_is_refused_rather_than_sent(self):
+        # The guard that catches a template gaining a field the sender does not fill. It has already
+        # earned its keep once: adding the unsubscribe link failed here before it could ship.
         with pytest.raises(notify.NotSent):
             notify.render("grade-ready.html", origin="a", score="1")
+
+    def test_every_message_offers_a_way_out(self):
+        # Someone mildly tired of these will otherwise press "spam", which costs the send and the
+        # sending reputation every later message depends on.
+        for template, fields in (
+            ("grade-ready.html", dict(origin="a", score="1", url="https://x/")),
+            ("event-ready.html", dict(slug="s", entries="2", url="https://x/")),
+        ):
+            html = notify.render(template, account_url="https://sloptic.org/account", **fields)
+            assert "https://sloptic.org/account" in html
 
     def test_sending_is_off_without_a_key(self):
         # A development worker must not mail strangers, and that is a no-op rather than an error.

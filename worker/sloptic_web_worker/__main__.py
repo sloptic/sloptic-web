@@ -461,6 +461,7 @@ def process_notifications(conn) -> int:
                     origin=n.subject_bit,
                     score=("%g" % n.slop) if n.slop is not None else "-",
                     url=f"{config.SITE_URL}/grade/{n.id}",
+                    account_url=f"{config.SITE_URL}/account",
                 )
                 subject = f"{n.subject_bit} scored {('%g' % n.slop) if n.slop is not None else '-'}"
             else:
@@ -469,6 +470,7 @@ def process_notifications(conn) -> int:
                     slug=n.subject_bit,
                     entries=str(n.entries or 0),
                     url=f"{config.SITE_URL}/events/{n.subject_bit}",
+                    account_url=f"{config.SITE_URL}/account",
                 )
                 subject = f"{n.subject_bit} is graded"
             notify.send(n.email, subject, html)

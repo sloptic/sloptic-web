@@ -122,8 +122,10 @@ One message when a grade reaches `done`, whether or not a recovery pass is still
 itself says a pass is pending and when. One message per event RUN when the whole field is graded,
 never one per app, so a 200-entry event is one message.
 
-Nobody is mailed who has no address (anonymous grades), turned it off (`profiles.notify_email`), or
-is suspended. Rows are marked only after a successful send, so a crash between the two costs a
+Nobody is mailed who has no address (anonymous grades), turned it off (`profiles.notify_email`, the
+toggle on the account page), or is suspended. Every message links to that toggle and carries a
+List-Unsubscribe header, so a client can offer its own unsubscribe rather than leaving "spam" as the
+easiest way out. Rows are marked only after a successful send, so a crash between the two costs a
 duplicate rather than a silence.
 
 Templates are in `web/emails/`, beside the auth ones, and are read from the checkout. Set
