@@ -10,7 +10,17 @@
        - The raw URL is printed under the button. Some clients do not render the button, some
          security scanners rewrite it, and a link you can copy is the fallback that always works.
 
-     {{ .ConfirmationURL }} is Supabase's substitution. Do not rename it. -->
+     The link is built from {{ .RedirectTo }} rather than {{ .ConfirmationURL }}, deliberately.
+     ConfirmationURL points at the Supabase API host, so the link read
+     https://<project-ref>.supabase.co/auth/v1/verify?token=... : a random string on a domain the
+     reader has never seen, in a mail asking them to click it. That is the shape of phishing, and no
+     wording fixes it, since "this is safe" is what an attacker writes too.
+
+     RedirectTo is the /auth/confirm URL the sign-in form asked for, and it always carries ?next=,
+     so appending &token_hash= stays a valid URL. app/auth/confirm/route.ts redeems it.
+
+     This holds only while /auth/confirm is listed under Supabase's allowed redirect URLs. If it is
+     not, Supabase substitutes the Site URL and the appended token hash lands on the wrong path. -->
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
        style="background:#f3f0e6;margin:0;padding:32px 12px;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">
   <tr>
@@ -36,7 +46,7 @@
         </tr>
         <tr>
           <td style="padding:22px 28px 0;">
-            <a href="{{ .ConfirmationURL }}"
+            <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=magiclink"
                style="display:inline-block;background:#9e530d;color:#fdfaf2;text-decoration:none;
                       font-size:15px;font-weight:600;padding:11px 20px;border-radius:7px;">
               Sign in to Sloptic
@@ -49,7 +59,7 @@
               Or paste this into your browser:
             </p>
             <p style="margin:6px 0 0;font-size:12px;line-height:1.5;word-break:break-all;color:#474b40;">
-              {{ .ConfirmationURL }}
+              {{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=magiclink
             </p>
             <p style="margin:0;font-size:12px;line-height:1.5;color:#6b6f61;">
               (don't worry, this is not a phishing link ;) )

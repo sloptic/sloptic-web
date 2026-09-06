@@ -28,7 +28,14 @@ export default function SignInForm({
   const [busy, setBusy] = useState(false);
 
   const supabase = createBrowserClient(url, anonKey);
-  const redirectTo = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback?next=${encodeURIComponent(next)}`;
+  const site = typeof window !== "undefined" ? window.location.origin : "";
+  // OAuth returns a code to exchange, so it lands on /auth/callback.
+  const oauthRedirectTo = `${site}/auth/callback?next=${encodeURIComponent(next)}`;
+  // The emailed link is built by the template from {{ .RedirectTo }} plus the token hash, so this
+  // is the base it appends to. It has to keep a query string for that append to stay valid, which
+  // ?next= always gives it. Whatever origin is used here must also be listed under Supabase's
+  // allowed redirect URLs, or Supabase silently falls back to the Site URL and next is lost.
+  const emailRedirectTo = `${site}/auth/confirm?next=${encodeURIComponent(next)}`;
 
   async function sendLink(e: React.FormEvent) {
     e.preventDefault();
@@ -36,7 +43,7 @@ export default function SignInForm({
     setError(null);
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: redirectTo },
+      options: { emailRedirectTo },
     });
     setBusy(false);
     if (error) setError(error.message);
@@ -45,7 +52,7 @@ export default function SignInForm({
 
   async function oauth(provider: "github" | "google") {
     setError(null);
-    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } });
+    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: oauthRedirectTo } });
     if (error) setError(error.message);
   }
 

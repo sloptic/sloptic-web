@@ -24,6 +24,25 @@ Set in the dashboard beside each template, not in these files.
 
 - Magic Link: `Your Sloptic sign-in link`
 
+## The link points at sloptic.org, not at Supabase
+
+`{{ .ConfirmationURL }}` resolves to the project's API host, so the magic link read
+`https://<project-ref>.supabase.co/auth/v1/verify?token=...`: a random string on a domain the
+reader has never seen, in a mail asking them to click it. That is the shape of a phishing mail, and
+no wording fixes it, because "this link is safe" is what an attacker writes too.
+
+So the template builds the link from `{{ .RedirectTo }}` instead, and `app/auth/confirm/route.ts`
+redeems the token hash. `RedirectTo` is the `/auth/confirm?next=...` URL the sign-in form asked for,
+and it always carries a query string, so appending `&token_hash=` stays valid.
+
+Two things this depends on:
+
+- **`/auth/confirm` must be listed under Supabase's allowed redirect URLs.** If it is not, Supabase
+  substitutes the Site URL and the appended token hash lands on the wrong path.
+- **OAuth still lands on `/auth/callback`.** That flow returns a `code` to exchange, not a token
+  hash, so the two are separate routes. Both call `mirrorProfile`, which is the only reason they
+  cannot drift on `terms_accepted_at`, the column the active tier rests on.
+
 ## Sending
 
 These go out through custom SMTP (ZeptoMail), not Supabase's built-in sender, which is capped at
