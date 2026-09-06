@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import BrandMark from "@/app/BrandMark";
 
 export const metadata: Metadata = {
   title: "About Sloptic",
@@ -68,7 +69,11 @@ export default function AboutPage() {
 
       <section className="section">
         <h2 className="section-head">The name</h2>
-        <div className="definition">
+        {/* The mark belongs beside this paragraph and nowhere else on the page: this is the section
+            that explains sloptic as slop plus optic, and the drawing is a lens. Its decagon ring is
+            also visible at this size, which is the point of it. */}
+        <div className="definition definition-with-mark">
+          <div className="definition-text">
           <p className="definition-word">
             sloptic <span className="definition-pron">/ˈslɒp.tɪk/</span>{" "}
             <span className="definition-pos">noun</span>
@@ -80,6 +85,8 @@ export default function AboutPage() {
             unhardened, into one comparable number, serenely indifferent to whatever it was meant to
             be.
           </p>
+          </div>
+          <BrandMark size={132} className="definition-mark" />
         </div>
       </section>
 

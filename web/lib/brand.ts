@@ -23,18 +23,48 @@
  *  and one triangle. Kept as a separate file rather than derived, since Next serves app/icon.svg by
  *  filename convention and cannot import from here.
  */
-export const MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <g fill="none" stroke="#1e211b" stroke-linecap="butt" stroke-linejoin="miter">
+/** The mark, drawn once, in whichever palette the surface can resolve.
+ *
+ *  Two surfaces need two palettes and it is the same drawing either way. Inlined into the page the
+ *  colours are CSS variables, so the mark follows the theme: hardcoded ink on the dark theme's dark
+ *  paper would be a mark nobody can see. Rendered into the OG card there is no CSS context at all,
+ *  so that caller passes literal hex.
+ */
+export function markSvg(
+  { ink, muted, accent, sized = false }:
+  { ink: string; muted: string; accent: string; sized?: boolean },
+): string {
+  // Sized only where an intrinsic size is needed (the OG card's data URI). Inline, the wrapper's
+  // CSS drives it, and baked-in attributes would fight the stylesheet.
+  const dims = sized ? ' width="64" height="64"' : "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"${dims}>
+  <g fill="none" stroke="${ink}" stroke-linecap="butt" stroke-linejoin="miter">
     <path d="M27.000 5.000 L39.931 9.202 L47.923 20.202 L47.923 33.798 L39.931 44.798 L27.000 49.000 L14.069 44.798 L6.077 33.798 L6.077 20.202 L14.069 9.202 Z" stroke-width="4.5"/>
     <path d="M43.5 42.5 L60 57" stroke-width="6.5"/>
   </g>
-  <g fill="#6b6f61">
+  <g fill="${muted}">
     <circle cx="19" cy="19" r="5.5"/>
     <circle cx="35" cy="19" r="5.5"/>
     <circle cx="19" cy="35" r="5.5"/>
   </g>
-  <path d="M35 28.6 L41.2 39.9 L28.8 39.9 Z" fill="#9e530d"/>
+  <path d="M35 28.6 L41.2 39.9 L28.8 39.9 Z" fill="${accent}"/>
 </svg>`;
+}
+
+/** Inline in the page: follows the theme, because the variables resolve where it is mounted. */
+export const MARK_THEMED = markSvg({
+  ink: "var(--ink)",
+  muted: "var(--muted)",
+  accent: "var(--accent)",
+});
+
+/** The site's light palette, literal, for surfaces with no stylesheet. */
+export const MARK_SVG = markSvg({
+  ink: "#1e211b",
+  muted: "#6b6f61",
+  accent: "#9e530d",
+  sized: true,
+});
 
 /** The mark as a data URI.
  *

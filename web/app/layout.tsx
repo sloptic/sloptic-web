@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import BrandMark from "./BrandMark";
 import ThemeToggle from "./ThemeToggle";
 import NavMenu from "./NavMenu";
 import MobileNav from "./MobileNav";
@@ -79,6 +80,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Analytics />
         <header className="masthead">
           <a className="wordmark" href="/">
+            <BrandMark size={22} />
             sloptic
           </a>
           <span className="masthead-note">grades any web app</span>
@@ -122,6 +124,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="colophon-inner">
             <div className="colophon-brand">
               <a className="wordmark" href="/">
+                <BrandMark size={20} />
                 sloptic
               </a>
               <p>

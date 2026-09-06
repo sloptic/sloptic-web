@@ -107,11 +107,27 @@ a {
   border-bottom: 1px solid var(--line);
 }
 .wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   font-family: var(--font-mono);
   font-weight: 600;
   font-size: 1.2rem;
   letter-spacing: -0.01em;
   text-decoration: none;
+}
+
+/* The mark inlines an <svg> whose colours are var(--ink) and friends, so it follows the theme. The
+   wrapper carries the size; the svg fills it, because baked-in width/height would fight this. */
+.brand-mark {
+  display: inline-block;
+  flex: 0 0 auto;
+  line-height: 0;
+}
+.brand-mark svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 .masthead-note {
   font-family: var(--font-mono);
@@ -1542,6 +1558,31 @@ code {
   padding: 1.1rem 0;
   max-width: 62ch;
 }
+/* The name section only: text left, mark right. The mark is the one place on the site it appears
+   large enough for the decagon to read, which is the whole joke, so it is not decoration here. */
+.definition-with-mark {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  max-width: 78ch;
+}
+.definition-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.definition-mark {
+  flex: 0 0 auto;
+}
+/* Below the breakpoint it stacks, mark first, because a 132px square wedged beside a paragraph on a
+   phone squeezes the text into a column too narrow to read. */
+@media (max-width: 34rem) {
+  .definition-with-mark {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 1.1rem;
+  }
+}
+
 .definition-word {
   font-family: var(--font-display);
   font-size: 1.35rem;
