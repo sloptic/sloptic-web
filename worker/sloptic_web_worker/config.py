@@ -46,6 +46,18 @@ EGRESS_SANDBOX_READY = os.environ.get("EGRESS_SANDBOX_READY", "").strip() in ("1
 # an abusive submitter), not a ration for normal use.
 DAILY_GRADE_BUDGET = int(os.environ.get("DAILY_GRADE_BUDGET", "300"))
 
+# RECOVERY PASSES ARE DELIBERATELY NOT COUNTED against either budget, and this is a decision rather
+# than an oversight. A challenged grade re-runs only its blocked tail, at most twice, so the overrun
+# is bounded and is proportional to how much a WAF took away in the first place.
+#
+# Counting them was considered and rejected. It would turn the budget into a cap on outbound work,
+# which is the truer thing to measure, but it would spend that cap on the busiest days by refusing
+# recovery passes, and a grade that never recovers its tail reports those probes as N/A. That is
+# lost recall wearing the face of a clean result, which is worse than a bounded overrun: the overrun
+# shows up in the logs, and the silent downgrade shows up as a score somebody trusts.
+#
+# Revisit if the logs ever show recovery passes as a meaningful share of a day's traffic.
+
 # Consecutive entry-challenged grades before the breaker trips. 25 is not a guess: it is
 # `_IP_BLOCK_SAMPLE` from the grader's scripts/retry_blocked.py, which was RELAXED UP from 8 after
 # observing that a real flag is INTERMITTENT (three late successes right after a nine-challenge

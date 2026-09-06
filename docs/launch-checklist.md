@@ -42,16 +42,18 @@ Needs `RESEND_API_KEY` and `NOTIFY_FROM` in the worker environment, or it stays 
 the worker, so work queued before the suspension does not run. Set it with SQL; see
 `worker/README.md`.
 
-## 6. The retry quota decision — Ian
+## 6. The retry quota decision — DONE
 
-Recovery passes count against neither daily lane budget. Bounded at two passes per grade, so it
-cannot run away, but it is undecided.
+Left as it is, on purpose: recovery passes do not count against either daily budget. A pass re-runs
+only the blocked tail and is capped at two, so the overrun is bounded. Counting them would refuse
+recovery on the busiest days, and an unrecovered tail reports as N/A, which is lost recall dressed
+as a clean result. Recorded in `worker/sloptic_web_worker/config.py` beside the budget itself.
 
-## 7. Mailbox hygiene — Ian, ~5 min
+## 7. Mailbox hygiene — Ian, nearly done
 
-- MX records are all priority 0; Zoho intends 10 / 20 / 50, which restores the failover ordering.
-- Confirm DKIM is enabled as default in Zoho's console, not merely published in DNS. The record
-  existing does not mean anything is signing with it.
+- MX priorities: DONE, 10 / 20 / 50, confirmed authoritative.
+- Still open: confirm DKIM is enabled as default in Zoho's console, not merely published in DNS. The
+  record existing does not mean anything is signing with it.
 
 ---
 
