@@ -3562,3 +3562,32 @@ h1.report-url {
   flex: 0 0 auto;
   accent-color: var(--accent);
 }
+
+/* The how-to under each proof. Closed by default and quiet when closed: it is help for the people
+   who need it, not a thing the page is about. */
+.how-to {
+  margin-top: 0.5rem;
+}
+.how-to > summary {
+  cursor: pointer;
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  padding: 0.15rem 0;
+}
+.how-to > summary:hover {
+  color: var(--ink);
+}
+.how-to[open] > summary {
+  margin-bottom: 0.4rem;
+}
+.how-to p {
+  margin: 0 0 0.5rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.how-to p:last-child {
+  margin-bottom: 0;
+}

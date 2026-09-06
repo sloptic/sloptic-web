@@ -359,12 +359,51 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
                       Serve it at <code>{c.origin}/.well-known/sloptic-verification.txt</code>, with
                       the token as the whole body.
                     </p>
+                    {/* Closed by default, so the page is unchanged for anyone who does not need it.
+                        Written around the ways this actually fails rather than around a provider's
+                        menus: provider walkthroughs go stale and a stale instruction reads as
+                        authoritative. */}
+                    <details className="how-to">
+                      <summary>How</summary>
+                      <p>
+                        Put the file in the folder your site serves as-is. That is{" "}
+                        <code>public/.well-known/</code> for Next.js, Vite and Astro, and the web
+                        root for nginx or Apache. Deploy it, then open the URL above in a browser.
+                        You should see the token and nothing else.
+                      </p>
+                      <p>
+                        If you see your 404 page instead, the file is not where you think it is. That
+                        still counts as a failure here even though the page loads, because we read
+                        the body, not the status.
+                      </p>
+                      <p>
+                        Some build tools skip folders starting with a dot. If the file is in your
+                        repo but not on your site, that is usually why.
+                      </p>
+                    </details>
                   </Factor>
                   <Factor label="The DNS record" status={c.dns_status} kind="record" checking={isChecking(c)}>
                     <p>
                       Add a TXT record at <code>_sloptic.{c.host}</code> with the same value. DNS can
                       take a while to propagate, which is normal.
                     </p>
+                    <details className="how-to">
+                      <summary>How</summary>
+                      <p>
+                        Go to whoever runs your DNS, which is usually your registrar, and add a TXT
+                        record. Most panels want just <code>_sloptic</code> in the host or name
+                        field, because they add your domain for you. If yours wants the full name,
+                        use <code>_sloptic.{c.host}</code>.
+                      </p>
+                      <p>
+                        Paste the token as the value with no quotes around it. Some panels add their
+                        own quotes, and if you add them too they end up inside the record.
+                      </p>
+                      <p>
+                        Then wait. DNS is not instant and a few minutes is normal, so this can sit
+                        orange for a while before it goes green.
+                      </p>
+                    </details>
                   </Factor>
                 </div>
               </>
