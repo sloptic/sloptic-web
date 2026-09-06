@@ -523,11 +523,6 @@ a {
   border: 1px solid var(--line-strong);
   padding: 0.15rem 0.5rem;
 }
-.sample-card {
-  border: 1px solid var(--line-strong);
-  background: var(--surface);
-  padding: 1.5rem 1.75rem;
-}
 .sample-meta {
   display: flex;
   justify-content: space-between;
@@ -545,25 +540,6 @@ a {
 .sample-mode {
   color: var(--muted);
   white-space: nowrap;
-}
-.sample-score {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  margin: 1.25rem 0 1.5rem;
-}
-.sample-num {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: clamp(3.5rem, 12vw, 5.5rem);
-  line-height: 0.85;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-}
-.sample-unit {
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  color: var(--muted);
 }
 .sample-axes {
   border-top: 1px solid var(--line);
@@ -642,28 +618,6 @@ a {
 }
 
 /* count vs slop-points */
-.unit-toggle {
-  display: flex;
-  gap: 0;
-  margin: 0 0 1rem;
-}
-.unit-toggle button {
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
-  padding: 0.3rem 0.7rem;
-  border: 1px solid var(--line-strong);
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-}
-.unit-toggle button + button {
-  border-left: 0;
-}
-.unit-toggle button[aria-pressed="true"] {
-  background: var(--ink);
-  color: var(--paper);
-  border-color: var(--ink);
-}
 
 .sample-legend {
   display: flex;

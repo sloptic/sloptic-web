@@ -5,43 +5,22 @@ import { track } from "@vercel/analytics";
 import { rememberGrade } from "@/lib/history";
 import { useRouter } from "next/navigation";
 import { AREAS, AREA_BLURBS, categoriesFor } from "@/lib/checks";
+import { provisionalCleanerThan } from "@/lib/corpus";
+import ScoreBand, { type AxisRow } from "./ScoreBand";
 
-// Sample grade, passive mode. Each axis splits three ways: what failed, what applied, what the mode
-// could have run. Read in checks or in slop points, since a handful of failed checks can cost more than
-// a pile of them. The point totals sum to the 42 above, and the possible counts to the passive
-// battery's real 44 (security 17, qa 15, performance 12), so the sample does not quietly disagree
-// with the number the rest of the site quotes.
-const SAMPLE_AXES = [
-  {
-    id: "security",
-    label: "security",
-    failed: 4,
-    applied: 9,
-    possible: 17,
-    slopFailed: 20,
-    slopApplied: 46,
-    slopPossible: 62,
-  },
-  {
-    id: "qa",
-    label: "quality",
-    failed: 3,
-    applied: 8,
-    possible: 15,
-    slopFailed: 14,
-    slopApplied: 38,
-    slopPossible: 55,
-  },
-  {
-    id: "performance",
-    label: "performance",
-    failed: 2,
-    applied: 6,
-    possible: 12,
-    slopFailed: 8,
-    slopApplied: 26,
-    slopPossible: 40,
-  },
+// Sample grade, passive mode, in the shape the real report hands its band.
+//
+// Each axis splits three ways: what failed, what applied, what the mode could have run. `slop` is
+// what the axis carried and `potential` the most it could have carried had every applicable check
+// fired, which is the ceiling the points view scales against. The point totals sum to SAMPLE_SCORE
+// and the possible counts to the passive battery's real 44 (security 17, qa 15, performance 12), so
+// the sample does not quietly disagree with the numbers the rest of the site quotes.
+const SAMPLE_SCORE = 42;
+
+const SAMPLE_ROWS: AxisRow[] = [
+  { id: "security", label: "security", failed: 4, applied: 9, possible: 17, slop: 20, potential: 46 },
+  { id: "qa", label: "quality", failed: 3, applied: 8, possible: 15, slop: 14, potential: 38 },
+  { id: "performance", label: "performance", failed: 2, applied: 6, possible: 12, slop: 8, potential: 26 },
 ];
 
 const SAMPLE_FINDINGS = [
@@ -85,7 +64,6 @@ export default function Home() {
   // null while unknown, so the form is never wrongly shown as closed on first paint
   const [open, setOpen] = useState<boolean | null>(null);
   const [openCh, setOpenCh] = useState<string>("security");
-  const [unit, setUnit] = useState<"count" | "slop">("count");
   // Deleting an account lands here with ?deleted=1 and, until now, nothing said so.
   const [deleted, setDeleted] = useState(false);
   const router = useRouter();
@@ -283,61 +261,25 @@ export default function Home() {
           <h2>What you get back</h2>
           <span className="sample-tag">sample</span>
         </div>
-        <div className="sample-card">
-          <div className="sample-meta">
-            <span className="sample-url">https://example-hackathon-app.vercel.app</span>
-            <span className="sample-mode">passive mode</span>
-          </div>
-          <div className="sample-score">
-            <span className="sample-num">42</span>
-            <span className="sample-unit">lower is better</span>
-          </div>
+        {/* The sample IS the report's band, not a picture of one. It drifted last time because it
+            was a copy: it still said "lower is better" where the report says "slop score", kept a
+            did-not-apply key in points mode where the report drops it, and used a toggle styled
+            differently. A promise about what you get back is worth nothing if the real thing looks
+            different when it arrives. Layout mirrors the report too: the target line, the band,
+            then findings below, rather than everything inside one box. */}
+        <div className="sample-meta">
+          <span className="sample-url">https://example-hackathon-app.vercel.app</span>
+          <span className="sample-mode">passive mode</span>
+        </div>
 
-          <div className="unit-toggle" role="group" aria-label="Show counts or slop points">
-            <button
-              type="button"
-              aria-pressed={unit === "count"}
-              onClick={() => setUnit("count")}
-            >
-              checks
-            </button>
-            <button type="button" aria-pressed={unit === "slop"} onClick={() => setUnit("slop")}>
-              slop points
-            </button>
-          </div>
-
-          <div className="sample-axes">
-            {SAMPLE_AXES.map((a) => {
-              const failed = unit === "count" ? a.failed : a.slopFailed;
-              const applied = unit === "count" ? a.applied : a.slopApplied;
-              const possible = unit === "count" ? a.possible : a.slopPossible;
-              return (
-                <div key={a.id} className="sample-axis" data-axis={a.id}>
-                  <span className="sample-axis-name">{a.label}</span>
-                  <span className="sample-axis-track">
-                    <span className="seg failed" style={{ flexGrow: failed }} />
-                    <span className="seg clean" style={{ flexGrow: applied - failed }} />
-                    <span className="seg na" style={{ flexGrow: possible - applied }} />
-                  </span>
-                  <span className="sample-axis-val">
-                    {failed}
-                    <span className="of">/{applied}</span>
-                    <span className="of dim">/{possible}</span>
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-          <p className="sample-legend">
-            <span className="key failed" aria-hidden /> failed
-            <span className="key clean" aria-hidden /> passed
-            <span className="key na" aria-hidden /> did not apply
-            <span className="legend-note">
-              {unit === "count"
-                ? "Checks that failed, out of those that applied, out of every check in this mode."
-                : "Slop scored, out of what those checks could have cost, out of the whole mode."}
-            </span>
-          </p>
+        <ScoreBand
+          score={SAMPLE_SCORE}
+          /* From the shipped passive curve, so the sample's placement is a real reading of a real
+             population rather than a number someone liked the look of. */
+          cleanerThanPct={provisionalCleanerThan(SAMPLE_SCORE, "passive")}
+          mode="passive"
+          rows={SAMPLE_ROWS}
+        />
 
           <div className="sample-findings">
             {SAMPLE_FINDINGS.map((f) => (
@@ -361,10 +303,7 @@ export default function Home() {
               </div>
             ))}
           </div>
-        </div>
       </section>
-
-
 
       <section className="section" id="name">
         <div className="definition">

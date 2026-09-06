@@ -67,6 +67,26 @@ jobs:
           fi
           echo "no em dashes"
 
+      # web/lib/checks.generated.ts is the grader's catalog, committed so the Vercel build does not
+      # need the sibling repo. Committing it means it can go stale, and staleness here is invisible:
+      # the homepage keeps naming checks that moved or counting probes that no longer exist, and
+      # every test still passes. So the file is regenerated and compared. The generator's own
+      # docstring already asked for this; nothing enforced it.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Check facts match the grader
+        run: |
+          git clone --depth 1 --branch v2-dev https://github.com/sloptic/sloptic-main.git /tmp/sloptic-main
+          python scripts/generate-checks.py --grader /tmp/sloptic-main
+          if ! git diff --quiet -- web/lib/checks.generated.ts; then
+            echo "::error::web/lib/checks.generated.ts is stale. Run scripts/generate-checks.py and commit."
+            git --no-pager diff -- web/lib/checks.generated.ts
+            exit 1
+          fi
+          echo "check facts match the catalog"
+
       # A migration number used twice means one of them silently never ran on a database that
       # already had the other. Numbers are assigned by hand, so this is worth checking.
       - name: Migration numbers are unique

@@ -8,6 +8,7 @@ import { AREA_LABELS, AREAS, PASSIVE_BY_AREA, TOTALS, categoryName, describeCate
 import { daysUntil } from "@/lib/retention";
 import { provisionalCleanerThan } from "@/lib/corpus";
 import { failureText, ordinal, recoveryMarks } from "@/lib/grades";
+import ScoreBand, { fmtScore } from "@/app/ScoreBand";
 import RecoverySup from "@/app/RecoverySup";
 import { forgetGrade } from "@/lib/history";
 
@@ -19,12 +20,6 @@ const AREA_ORDER: Area[] = ["security", "qa", "performance"];
 
 /** The score is a damped decimal, so 21.6 must read as 21.6 and 22 must not read as 22.0. Postgres
  *  numeric arrives over JSON as a string, so coerce before formatting. */
-function fmtScore(v: number | string | null | undefined): string {
-  const n = typeof v === "string" ? Number(v) : v;
-  if (n === null || n === undefined || Number.isNaN(n)) return "-";
-  return Number.isInteger(n) ? String(n) : n.toFixed(1);
-}
-
 /** The categories behind a set of blocked probe ids, most-blocked first: "sql injection (4), file
  *  upload (2)". Unknown ids (catalog drift) drop out rather than show a bare slug. */
 function blockedCategories(blocked: string[]): string {
@@ -373,7 +368,6 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
   const r = view.result!;
   // The band's readout: check counts, or the slop points each axis actually carried. The bars stay
   // check-based in both, since "applied" is a count and points have no applied/available split.
-  const [axisView, setAxisView] = useState<"checks" | "slop">("checks");
 
   // Did the probe loop actually run? The grader writes coverage.probes_total only once it reaches
   // the battery, and outcomes only for probes that ran. Neither, plus blocked probes, means a bot
@@ -456,8 +450,6 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
     return { rows, passed };
   }, [r]);
 
-  const totalApplied = rows.reduce((n, x) => n + x.applied, 0);
-  const totalPossible = rows.reduce((n, x) => n + x.possible, 0);
   // The same letters the lists show, computed from the record the same way, so the report and the
   // board cannot disagree about what the retries achieved.
   const bandMarks = recoveryMarks({
@@ -497,114 +489,19 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
 
       {/* One band for the whole verdict: score, placement, the bars, and what qualifies it. The
           findings and their evidence stay below, unchanged; nothing up here explains a fault. */}
-      <div className="score-band">
-        <div className="band-top">
-        <div className="score-big">
-          {fmtScore(r.slop_score)}
-          <small>slop score</small>
-        </div>
-        {r.ranking?.cleaner_than_pct !== null && r.ranking?.cleaner_than_pct !== undefined && (
-          <div className="score-cleaner">
-            {/* The grader's `percentile` counts apps BETTER than this one, so a low number is good and
-                showing it raw reads as its own opposite. `cleaner_than_pct` is the share strictly
-                worse. Said as "cleaner than", not as a percentile: a percentile makes the reader
-                supply the direction, and this exact ambiguity already shipped once, with the same row
-                reading 19 in one place and 81st in another. */}
-            cleaner than <b>{Math.round(r.ranking.cleaner_than_pct)}%</b>
-            {r.ranking?.reference ? "*" : null}
-            <span>of {r.mode === "active" ? "actively" : "passively"} graded apps</span>
-          </div>
-        )}
-        <span className="grow" />
-        <span className="mode-toggle" role="group" aria-label="axis readout">
-          <button
-            type="button"
-            className={axisView === "checks" ? "on" : ""}
-            aria-pressed={axisView === "checks"}
-            onClick={() => setAxisView("checks")}
-          >
-            checks
-          </button>
-          <button
-            type="button"
-            className={axisView === "slop" ? "on" : ""}
-            aria-pressed={axisView === "slop"}
-            onClick={() => setAxisView("slop")}
-          >
-            slop points
-          </button>
-        </span>
-        </div>
-        <div className="score-axes">
-          <div className="sample-axes">
-            {rows.map((row) => (
-              <div className="sample-axis" data-axis={row.id} key={row.id}>
-                <span className="sample-axis-name">{row.label}</span>
-                <span className="sample-axis-track">
-                  {/* points mode rescales the bar: slop carried against the axis's ceiling, and the
-                      survived remainder. The did-not-apply segment disappears, because points have
-                      no attribution to checks that never ran. Grades without stored potential keep
-                      the check-count bar. */}
-                  <span
-                    className="seg failed"
-                    style={{ flexGrow: axisView === "slop" && row.potential !== null ? row.slop : row.failed }}
-                  />
-                  <span
-                    className="seg clean"
-                    style={{
-                      flexGrow:
-                        axisView === "slop" && row.potential !== null
-                          ? Math.max(0, row.potential - row.slop)
-                          : Math.max(0, row.applied - row.failed),
-                    }}
-                  />
-                  {!(axisView === "slop" && row.potential !== null) && (
-                    <span className="seg na" style={{ flexGrow: Math.max(0, row.possible - row.applied) }} />
-                  )}
-                </span>
-                <span className="sample-axis-val">
-                  {axisView === "checks" ? (
-                    <>
-                      {row.failed}
-                      <span className="of">/{row.applied}</span>
-                      <span className="of dim">/{row.possible}</span>
-                    </>
-                  ) : (
-                    <>
-                      {fmtScore(row.slop)}
-                      {row.potential !== null && (
-                        <span className="of dim"> / {fmtScore(row.potential)} pts</span>
-                      )}
-                    </>
-                  )}
-                </span>
-              </div>
-            ))}
-          </div>
-          <p className="sample-legend">
-            {axisView === "checks" ? (
-              <>
-                <span className="key failed" aria-hidden /> failed
-                <span className="key clean" aria-hidden /> passed
-                <span className="key na" aria-hidden /> did not apply
-                <span className="legend-note">
-                  failed / applied / available. {totalApplied} of {totalPossible} applied.
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="key failed" aria-hidden /> carried
-                <span className="key clean" aria-hidden /> survived
-                <span className="legend-note">
-                  slop carried, against the most this axis could have carried had every applicable check fired.
-                </span>
-              </>
-            )}
-          </p>
-          <div className="band-bottom">
+      <ScoreBand
+        score={r.slop_score}
+        cleanerThanPct={r.ranking?.cleaner_than_pct ?? null}
+        mode={(r.mode ?? "passive") === "active" ? "active" : "passive"}
+        rows={rows}
+        referenceMark={!!r.ranking?.reference}
+        footer={
+          <>
             {r.ranking?.reference ? (
               <p className="band-footnote">* compared against {r.ranking.reference}.</p>
-            ) : <span />}
+            ) : (
+              <span />
+            )}
             <div className="score-chips">
               <span className="tag">{r.mode ?? "passive"}</span>
               {r.challenge_stage === "limited" && <span className="tag">limited</span>}
@@ -613,9 +510,9 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
                   It sat between the headline and the card before, attached to neither. */}
               {view.can_grade_actively && view.origin && <GradeActively origin={view.origin} />}
             </div>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <ChallengeNote
         blocked={r.blocked_probes ?? []}

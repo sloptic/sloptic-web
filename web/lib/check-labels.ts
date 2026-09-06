@@ -138,7 +138,6 @@ export const LABELS: Record<string, Label> = {
     href: "https://developer.chrome.com/docs/lighthouse/performance/total-byte-weight",
   },
   caching: { name: "caching", href: `${MDN}/Web/HTTP/Guides/Caching` },
-  compression: { name: "compression", href: `${MDN}/Web/HTTP/Guides/Compression` },
   "load-resilience": { name: "behavior under load", href: `${CWE}/400.html` },
   "load-time": { name: "load time", href: "https://web.dev/articles/optimize-lcp" },
   "request-count": {
