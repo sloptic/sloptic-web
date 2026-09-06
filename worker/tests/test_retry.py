@@ -788,3 +788,89 @@ def test_the_recovery_columns_start_empty_on_an_ordinary_grade(conn):
     assert row["bot_challenge"] is False
     assert row["challenge_stage"] is None
     assert row["challenge_onset_index"] is None
+
+
+class TestTheRetryLaneIsAuthorizedLikeTheGradeItContinues:
+    """A pass re-sends the blocked tail, which on an active grade is the injection and upload
+    families, 12 to 28 minutes after the grade finished. Authorization can be gone by then, and
+    booking the pass earlier is not consent to send it later. These pin the gate in __main__, not
+    claim_retry: the claim is bookkeeping, the gate is next to the decision to send."""
+
+    def _active(self, conn, account, origin="https://owned.example.com"):
+        g = _grade(conn, origin=origin, mode="active", account=account)
+        _result(conn, g, blocked=["sqli-001"], mode="active")
+        db.schedule_retry(conn, g, ["sqli-001"], 0, config.RETRY_BLOCKED_MAX_PASSES)
+        return g
+
+    def _grant(self, conn, account, origin):
+        conn.execute(
+            """INSERT INTO grants (account_id, kind, scope, expires_at)
+               VALUES (%s, 'app_origin', %s, now() + interval '90 days')""",
+            (account, origin),
+        )
+
+    def test_a_pass_is_refused_once_the_grant_is_revoked(self, conn, account, monkeypatch):
+        from sloptic_web_worker import __main__ as main
+        origin = "https://owned.example.com"
+        self._active(conn, account, origin)
+        conn.execute(
+            """INSERT INTO grants (account_id, kind, scope, expires_at, revoked_at)
+               VALUES (%s, 'app_origin', %s, now() + interval '90 days', now())""",
+            (account, origin),
+        )
+        monkeypatch.setattr(main.egress, "guard_target", lambda *a, **k: None)
+        sent: list = []
+        monkeypatch.setattr(main, "_retry_pass", lambda *a, **k: sent.append(a))
+
+        main.process_retries(conn)
+
+        assert sent == [], "a revoked grant must not send the blocked attack tail"
+
+    def test_a_refused_pass_is_not_handed_out_again(self, conn, account, monkeypatch):
+        """Otherwise the lane re-asks every lock interval and the denial is only a delay."""
+        from sloptic_web_worker import __main__ as main
+        g = self._active(conn, account)
+        monkeypatch.setattr(main.egress, "guard_target", lambda *a, **k: None)
+        monkeypatch.setattr(main, "_retry_pass", lambda *a, **k: pytest.fail("sent"))
+
+        main.process_retries(conn)
+
+        due = conn.execute("SELECT retry_due_at FROM grades WHERE id = %s", (g,)).fetchone()
+        assert due["retry_due_at"] is None
+
+    def test_a_pass_is_refused_when_no_grant_was_ever_written(self, conn, account, monkeypatch):
+        from sloptic_web_worker import __main__ as main
+        self._active(conn, account)
+        monkeypatch.setattr(main.egress, "guard_target", lambda *a, **k: None)
+        monkeypatch.setattr(main, "_retry_pass", lambda *a, **k: pytest.fail("sent"))
+
+        assert main.process_retries(conn) == 1
+
+    def test_a_pass_is_refused_when_the_egress_sandbox_is_not_ready(self, conn, account, monkeypatch):
+        """Fail closed on the same gate grade_child fails closed on."""
+        from sloptic_web_worker import __main__ as main
+        origin = "https://owned.example.com"
+        self._active(conn, account, origin)
+        self._grant(conn, account, origin)
+
+        def _refuse(*a, **k):
+            raise main.egress.EgressNotReady("sandbox off")
+        monkeypatch.setattr(main.egress, "guard_target", _refuse)
+        monkeypatch.setattr(main, "_retry_pass", lambda *a, **k: pytest.fail("sent"))
+
+        main.process_retries(conn)
+
+    def test_a_passive_pass_needs_no_grant(self, conn, monkeypatch):
+        """The passive battery is what every visitor may do, so the gate does not apply to it. This
+        is the test that keeps the fix from being "stop retrying"."""
+        from sloptic_web_worker import __main__ as main
+        g = _grade(conn, mode="passive")
+        _result(conn, g, blocked=["hdr-001"], mode="passive")
+        db.schedule_retry(conn, g, ["hdr-001"], 0, config.RETRY_BLOCKED_MAX_PASSES)
+        sent: list = []
+        monkeypatch.setattr(main, "_retry_pass",
+                            lambda origin, mode, only: sent.append(origin) or {"slop_score": 0})
+
+        main.process_retries(conn)
+
+        assert sent == ["https://a.example.com"]

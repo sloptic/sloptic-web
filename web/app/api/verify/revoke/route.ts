@@ -42,6 +42,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Could not revoke the grant." }, { status: 500 });
   }
 
+  // A booked retry pass is authorization already spent that has not been sent yet: the blocked tail
+  // of an active grade re-fires 12 to 28 minutes after it finished, and that tail is the injection
+  // and upload families. Revoking has to reach it, or "Access is revoked" is false for half an hour.
+  // The worker re-checks this lane too, so this is the belt to that suspenders.
+  await db
+    .from("grades")
+    .update({ retry_due_at: null })
+    .eq("account_id", user.id)
+    .eq("origin", claim.origin)
+    .not("retry_due_at", "is", null);
+
   // The claim follows. If this half fails the authorization is already gone, which is the half that
   // matters, so say what is true rather than implying nothing happened.
   const { error: claimErr } = await db

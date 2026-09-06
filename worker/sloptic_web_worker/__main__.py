@@ -29,6 +29,7 @@ import traceback
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 from . import config, db, egress, grader, resolve_event, verify_domain, verify_event
 from .egress import install as install_egress
@@ -317,6 +318,34 @@ def process_domain_checks(conn) -> int:
     return n
 
 
+def _retry_denied(conn, r) -> str | None:
+    """Why this active retry pass must not be sent, or None if it may be.
+
+    Mirrors grade_child's gate: egress sandbox, then the account-bound grant, then the two control
+    proofs re-read from the origin itself. Refusing costs the recovery of a blocked tail, which is
+    lost recall in a report; sending it without authorization is unauthorized testing of someone
+    else's app. The trade is not close.
+    """
+    try:
+        egress.guard_target(r.origin, (urlparse(r.origin).hostname or "").lower())
+    except Exception as e:  # noqa: BLE001 - not ready, or refuses this target: either way, no.
+        return f"{type(e).__name__}: {e}"
+
+    ok, why = db.may_grade_actively(conn, r.grade_id)
+    if not ok:
+        return why
+
+    proof = db.origin_proof_for_grade(conn, r.grade_id)
+    if proof is not None:
+        host, token = proof
+        out = verify_domain.check(r.origin, host, token)
+        if not out.verified:
+            gone = "not_found" in (out.file.status, out.dns.status)
+            return ("the ownership proofs are no longer published" if gone
+                    else "the ownership proofs could not be re-checked")
+    return None
+
+
 def process_retries(conn) -> int:
     """Re-run one grade's WAF-blocked probe tail and fold the result back in.
 
@@ -327,6 +356,24 @@ def process_retries(conn) -> int:
     r = db.claim_retry(conn, config.RETRY_CLAIM_LOCK_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
     if r is None:
         return 0
+
+    # The SAME authorization gate the first pass runs, because this is the same traffic. A retry
+    # re-sends the blocked tail, which on an active grade is normally the injection and upload
+    # families, and it does it 12 to 28 minutes after the grade finished. Everything that can
+    # withdraw authorization can happen inside that window: a revoke, an event deleted, a grant
+    # expiring, a proof taken down. Booking the pass at grade time is not consent to send it later.
+    #
+    # claim_retry cannot carry this in its predicate: the pause/cancel interlock it does have is
+    # keyed on event_run_id, and deleting an event NULLs that column, so the strongest stop gesture
+    # in the product was removing the only guard this lane had. The check belongs here, next to the
+    # decision to send, and it is the one grade_child already uses so the two cannot drift.
+    if r.mode == "active":
+        deny = _retry_denied(conn, r)
+        if deny is not None:
+            db.clear_retry(conn, r.grade_id)
+            print(f"[deny]  {r.grade_id}: retry pass not authorized: {deny}", flush=True)
+            return 1
+
     pad = grader.benign_pad(set(r.blocked)) if (r.mode == "active" and config.RETRY_PAD_BENIGN) else []
     print(f"[retry] {r.grade_id}: pass {r.passes} over {len(r.blocked)} blocked probe(s)"
           f"{f' +{len(pad)} benign pad' if pad else ''}, serial injection", flush=True)

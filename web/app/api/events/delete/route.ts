@@ -38,6 +38,13 @@ export async function POST(req: NextRequest) {
   let detached = 0;
   let purged = 0;
   if (runIds.length) {
+    // Booked retry passes die with the run, and they must die BEFORE the runs are deleted below.
+    // ON DELETE SET NULL nulls grades.event_run_id, and claim_retry's only interlock is keyed on
+    // that column, so once the run is gone there is nothing left in the predicate to stop the pass:
+    // deleting an event would otherwise keep firing its attack tails at participants' apps for up
+    // to half an hour, on rows that by then belong to nobody.
+    await db.from("grades").update({ retry_due_at: null }).in("event_run_id", runIds);
+
     const { data: gradeRows } = await db
       .from("grades")
       .update({ account_id: null })
