@@ -6,56 +6,8 @@ import { rememberGrade } from "@/lib/history";
 import { useRouter } from "next/navigation";
 import { AREAS, AREA_BLURBS, categoriesFor } from "@/lib/checks";
 import { provisionalCleanerThan } from "@/lib/corpus";
-import ScoreBand, { type AxisRow } from "./ScoreBand";
-
-// Sample grade, passive mode, in the shape the real report hands its band.
-//
-// Each axis splits three ways: what failed, what applied, what the mode could have run. `slop` is
-// what the axis carried and `potential` the most it could have carried had every applicable check
-// fired, which is the ceiling the points view scales against. The point totals sum to SAMPLE_SCORE
-// and the possible counts to the passive battery's real 44 (security 17, qa 15, performance 12), so
-// the sample does not quietly disagree with the numbers the rest of the site quotes.
-const SAMPLE_SCORE = 42;
-
-const SAMPLE_ROWS: AxisRow[] = [
-  { id: "security", label: "security", failed: 4, applied: 9, possible: 17, slop: 20, potential: 46 },
-  { id: "qa", label: "quality", failed: 3, applied: 8, possible: 15, slop: 14, potential: 38 },
-  { id: "performance", label: "performance", failed: 2, applied: 6, possible: 12, slop: 8, potential: 26 },
-];
-
-const SAMPLE_FINDINGS = [
-  {
-    axis: "security",
-    name: "no content security policy",
-    desc: "Nothing tells the browser which scripts may run, so an injected one would.",
-    penalty: 5,
-  },
-  {
-    axis: "qa",
-    name: "development build shipped",
-    desc: "The live site serves a dev build, which exposes internals and runs slower.",
-    penalty: 8,
-  },
-  {
-    axis: "performance",
-    name: "slow first response",
-    desc: "The server took over a second to send the first byte.",
-    penalty: 3,
-  },
-];
-
-const SAMPLE_PASSED = [
-  {
-    axis: "security",
-    name: "clickjacking defense",
-    desc: "The app refuses to be framed by another site.",
-  },
-  {
-    axis: "qa",
-    name: "images have alt text",
-    desc: "A screen reader can describe every image on the page.",
-  },
-];
+import ScoreBand from "./ScoreBand";
+import { SAMPLE_SCORE, SAMPLE_ROWS, SAMPLE_FINDINGS, SAMPLE_PASSED } from "@/lib/sample-grade";
 
 export default function Home() {
   const [url, setUrl] = useState("");
