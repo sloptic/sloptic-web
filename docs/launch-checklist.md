@@ -20,18 +20,12 @@ Both shipped, generated from code rather than committed as binaries: `app/icon.s
 stays sharp on a hidpi tab strip), `app/apple-icon.png`, and `app/opengraph-image.tsx`. The mark
 also appears in the masthead, the colophon and the about page's head.
 
-## 3. The provisional percentile says which way it moves — Ian's wording, Claude to apply
+## 3. The in-progress placement says "currently" — DONE
 
-The in-progress page shows "provisionally cleaner than N%". Measured against both frozen curves,
-that number overstates the final placement by a median of 19 points at the halfway mark and 29
-points at the quarter mark, because scoring is deduction-only and the accessibility and performance
-probes sit late in catalog order.
-
-The direction is guaranteed rather than statistical: the preview only climbs, so the percentile can
-only fall. Saying so costs a few words and no math.
-
-Third because every user sees it on every grade, and the current version reads as the site having
-lied once the real number lands.
+"provisionally cleaner than N%" read as an estimate of where the grade lands. It is a reading of
+now, and it only falls: deduction-only scoring means the score only climbs, and measured against
+both frozen curves the number overstates the final placement by a median of 19 points at the
+halfway mark. "Currently" makes it a snapshot rather than a forecast.
 
 ## 4. "Your grade is ready" and "Your event is ready" — Claude, ~a session
 
@@ -73,4 +67,5 @@ claim-expiry predicate. Health no longer leaking database errors. The grader's o
 mail-tester score. Custom SMTP through Resend, with both auth templates and `/auth/confirm` so the
 link in the mail is on our own domain. sloptic pinned to 2.2.0 from PyPI, both CI clones deleted,
 and a CI guard that regenerates the check facts and fails on drift. The landing sample rebuilt on
-real catalog penalties, and the sample and the report now render one shared band.
+real catalog penalties, and the sample and the report now render one shared band. The mark placed
+in the masthead, the colophon and the about page's head.

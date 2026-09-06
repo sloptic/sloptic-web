@@ -861,6 +861,12 @@ function LiveScore({ slop, mode }: { slop: number; mode: "passive" | "active" })
     setDelta({ amount: slop - before, key: Date.now() });
   }, [slop]);
 
+  // "currently", not "provisionally". The score is deduction-only, so it only climbs and this
+  // placement only falls: measured against both frozen curves it overstates the final number by a
+  // median of 19 points at the halfway mark and 29 at the quarter mark, because the accessibility
+  // and performance probes sit late in catalog order. "Provisionally" reads as an estimate of where
+  // this lands, which is the wrong promise. "Currently" reads as a reading of now, which is what it
+  // is, and now is not the end.
   const cleaner = provisionalCleanerThan(slop, mode);
 
   return (
@@ -880,7 +886,7 @@ function LiveScore({ slop, mode }: { slop: number; mode: "passive" | "active" })
         {cleaner !== null && (
           <>
             {" "}
-            &middot; provisionally cleaner than <b>{cleaner}%</b>
+            &middot; currently cleaner than <b>{cleaner}%</b>
           </>
         )}
       </p>
