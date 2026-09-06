@@ -576,11 +576,18 @@ def process_event_checks(conn) -> int:
                       f"terms, so no grant was written", flush=True)
             continue
 
+        # 404 means there is no such event. Nothing about that changes by asking again, so say so and
+        # stop, rather than polling for a page nobody will ever create.
+        if out.check_status == "not_found":
+            db.fail_claim(conn, claim.id, f"No event at {claim.slug}.devpost.com. Check the address.")
+            print(f"[event] {claim.slug}: no such event, giving up", flush=True)
+            continue
+
         # Not verified. How soon to look again depends on WHY, which is the whole reason the check
         # reports three states instead of a boolean. A block is OUR problem and backs off hard; a
         # page read cleanly with no link is the organizer's turn to act, so we idle rather than
         # hammer Devpost while they edit their rules.
-        delay = {"blocked": 15 * 60, "not_found": 30 * 60, "ok": 5 * 60}.get(out.check_status, 900)
+        delay = {"blocked": 15 * 60, "ok": 5 * 60}.get(out.check_status, 900)
         if out.check_status == "blocked":
             delay = min(4 * 3600, delay * max(1, claim.attempts))
         db.record_check(conn, claim.id, out.check_status, out.detail, delay)
@@ -691,7 +698,7 @@ def main() -> None:
                 if n:
                     print(f"[run]   {n} event run(s) finished", flush=True)
 
-                n = db.expire_stale_claims(conn, config.CLAIM_EXPIRY_DAYS, config.CLAIM_MISSING_DAYS)
+                n = db.expire_stale_claims(conn, config.CLAIM_EXPIRY_DAYS)
                 if n:
                     print(f"[event] failed {n} claim(s) whose link never appeared", flush=True)
 
