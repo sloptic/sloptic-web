@@ -76,9 +76,18 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Check facts match the grader
+      # Installed, not a hand-picked subset of its imports. The generator loads the catalog through
+      # sloptic.catalog, which reaches sloptic.schema and pulls yaml and pydantic today. Listing
+      # those two here is the same mistake the worker job already documents: a hand-written list
+      # goes stale silently the moment the grader imports something new, and surfaces as a missing
+      # module rather than as a missing declaration.
+      - name: Install the grader
         run: |
           git clone --depth 1 --branch v2-dev https://github.com/sloptic/sloptic-main.git /tmp/sloptic-main
+          pip install --quiet -e /tmp/sloptic-main
+
+      - name: Check facts match the grader
+        run: |
           python scripts/generate-checks.py --grader /tmp/sloptic-main
           if ! git diff --quiet -- web/lib/checks.generated.ts; then
             echo "::error::web/lib/checks.generated.ts is stale. Run scripts/generate-checks.py and commit."
