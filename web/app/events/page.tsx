@@ -32,8 +32,7 @@ export default async function EventsPage({
         </div>
         <section className="section attached">
           <p className="section-intro">
-            Verifying ties an event to an account, so sign in first. That account is the one that can
-            grade the event and publish its board.
+            Please sign in first to verify an event. 
           </p>
           <div className="cta-row">
             <a className="button" href={`/signin?next=${encodeURIComponent(`/events?event=${prefill}`)}`}>
