@@ -3561,3 +3561,54 @@ h1.report-url {
 }
 .surface-assets > summary::-webkit-details-marker { display: none; }
 .surface-assets > summary:hover { color: var(--ink); }
+
+/* The score while it is still being found. Big, because it is the thing people are waiting for, and
+   the progress bar above it only says how far along the clock is. */
+.live-score {
+  margin: 1.1rem 0 0.2rem;
+}
+.live-score-main {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+}
+.live-score-n {
+  font-family: var(--font-mono);
+  font-size: 3.2rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.live-score-label {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* A finding landing. Orange because it is a deduction, and it leaves rather than accumulating: the
+   running total is the number below it, this is only the moment. */
+.live-delta {
+  position: absolute;
+  left: calc(100% + 0.4rem);
+  bottom: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+  animation: live-delta-rise 1.6s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes live-delta-rise {
+  0%   { opacity: 0; transform: translateY(0.35rem); }
+  18%  { opacity: 1; transform: translateY(0); }
+  70%  { opacity: 1; transform: translateY(-0.5rem); }
+  100% { opacity: 0; transform: translateY(-1.1rem); }
+}
+/* Someone who asked for less motion still gets the number; they just do not get it moving. */
+@media (prefers-reduced-motion: reduce) {
+  .live-delta { animation: live-delta-hold 1.6s steps(1) forwards; transform: none; }
+  @keyframes live-delta-hold { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+}

@@ -131,7 +131,10 @@ def _run_grade(origin: str, catalog, mode: str, progress_cb=None, only_probes=No
                 _emit()
                 return
             seen.extend(outcomes)
-            state["preview"] = round(compute_slop_score(seen), 1)
+            # slop_preview, matching GradeProgress and both readers. It was written as "preview"
+            # and read as "slop_preview", so the live score reached nobody: the field table and
+            # the in-progress page each rendered nothing and looked like the feature was off.
+            state["slop_preview"] = round(compute_slop_score(seen), 1)
             _emit()
 
         def _on_phase(name, label, important=False):

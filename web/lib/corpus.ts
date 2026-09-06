@@ -44,3 +44,32 @@ export function comparableEvents(min = MIN_EVENT_N): EventRow[] {
 export function fmt(n: number, digits = 1): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(digits);
 }
+
+
+/** Where a score in progress would place, from the histogram this module already ships.
+ *
+ *  PROVISIONAL, and precisely so. A real placement goes through the grader's benchmark.rank() with
+ *  the whole record, which tiebreaks on catastrophe, worst finding, exposure and categories applied;
+ *  a bare number reaches none of that. This is the shape of the distribution, not a ranking, and the
+ *  UI that shows it says as much.
+ *
+ *  Interpolates WITHIN the bin rather than snapping to its edge: otherwise every score in a ten
+ *  point band reports the same percentile, and the number sits still while the grade moves.
+ */
+export function provisionalCleanerThan(slop: number, mode: "passive" | "active"): number | null {
+  const dist = (mode === "active" ? ACTIVE : PASSIVE).distribution;
+  const bins = dist?.bins as Bin[] | undefined;
+  if (!bins?.length || !dist.n) return null;
+
+  let worse = 0; // apps carrying MORE slop, which is what "cleaner than" counts
+  for (const [lo, hi, count] of bins) {
+    if (slop >= hi) continue;
+    if (slop < lo) {
+      worse += count;
+      continue;
+    }
+    const span = hi - lo;
+    worse += span > 0 ? count * ((hi - slop) / span) : count;
+  }
+  return Math.max(0, Math.min(100, Math.round((worse / dist.n) * 100)));
+}

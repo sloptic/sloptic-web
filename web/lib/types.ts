@@ -159,6 +159,9 @@ export interface GradeProgress {
   /** The score priced over the probes that have finished so far. A floor in motion: pending checks
    *  can only add, so it never reads as a verdict while the grade runs. */
   slop_preview?: number;
+  /** What the worker called it before slop_preview. Read as a fallback so a grade already running
+   *  during a deploy keeps showing its score. Remove once no such grade can still be in flight. */
+  preview?: number;
 }
 
 export interface GradeView {
@@ -168,6 +171,9 @@ export interface GradeView {
   url: string;
   /** Scheme, host and port: the scope the grade actually covered. */
   origin?: string;
+  /** Which battery was asked for. Known from the moment it is queued, unlike result.mode, so a grade
+   *  in progress can place itself against the right curve. */
+  mode?: "passive" | "active";
   submitted_at: string;
   /** When the worker claimed the grade. Differs from submitted_at by the queue wait, which for
    *  event grades can include long pauses; the running timer starts here, not at submission. */

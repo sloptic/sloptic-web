@@ -6,6 +6,7 @@ import { track } from "@vercel/analytics";
 import type { GradeView, GradeResult, Finding, Coverage, GradeProgress, CardEntry, Outcome } from "@/lib/types";
 import { AREA_LABELS, AREAS, PASSIVE_BY_AREA, TOTALS, categoryName, describeCategory, describeProbe, type Area } from "@/lib/checks";
 import { daysUntil } from "@/lib/retention";
+import { provisionalCleanerThan } from "@/lib/corpus";
 import { failureText, ordinal, recoveryMarks } from "@/lib/grades";
 import RecoverySup from "@/app/RecoverySup";
 import { forgetGrade } from "@/lib/history";
@@ -254,10 +255,13 @@ export default function GradePage({ params }: { params: { id: string } }) {
             now,
           )}
         </p>
-        {typeof view.progress?.slop_preview === "number" && (
-          <p className="note">
-            Slop so far: <b className="mono">{view.progress.slop_preview.toFixed(1)}</b>
-          </p>
+        {/* `preview` was the name the worker wrote before this shipped, so a grade already running
+            during the deploy still shows its score instead of going blank. */}
+        {typeof (view.progress?.slop_preview ?? view.progress?.preview) === "number" && (
+          <LiveScore
+            slop={(view.progress?.slop_preview ?? view.progress?.preview) as number}
+            mode={view.result?.mode === "active" || view.mode === "active" ? "active" : "passive"}
+          />
         )}
         {view.status === "running" && pct !== null && (
           <span className="progress-track" aria-hidden>
@@ -931,6 +935,53 @@ function RankDetail({ r }: { r: GradeResult }) {
         </p>
       )}
     </>
+  );
+}
+
+/** The score as it is being found: how much slop so far, where that would place, and a mark when a
+ *  new finding lands.
+ *
+ *  A grade is minutes of a progress bar, and the number underneath it is the thing people actually
+ *  want. It only ever climbs, because a probe can add slop and nothing takes it away, so the "+X"
+ *  is honest about what just happened rather than decorative.
+ */
+function LiveScore({ slop, mode }: { slop: number; mode: "passive" | "active" }) {
+  const [delta, setDelta] = useState<{ amount: number; key: number } | null>(null);
+  const previous = useRef<number | null>(null);
+
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = slop;
+    // Nothing on the first reading: arriving at 3.0 is not the same event as climbing to it, and
+    // flashing "+3.0" for a number that was already there would be a lie about the moment.
+    if (before === null || slop <= before) return;
+    setDelta({ amount: slop - before, key: Date.now() });
+  }, [slop]);
+
+  const cleaner = provisionalCleanerThan(slop, mode);
+
+  return (
+    <div className="live-score">
+      <div className="live-score-main">
+        <span className="live-score-n">{fmtScore(slop)}</span>
+        {delta && (
+          // Keyed on the moment so a second finding restarts the animation instead of being
+          // swallowed by the first one still running.
+          <span className="live-delta" key={delta.key} onAnimationEnd={() => setDelta(null)}>
+            +{fmtScore(delta.amount)}
+          </span>
+        )}
+      </div>
+      <p className="live-score-label">
+        slop so far
+        {cleaner !== null && (
+          <>
+            {" "}
+            &middot; provisionally cleaner than <b>{cleaner}%</b>
+          </>
+        )}
+      </p>
+    </div>
   );
 }
 
