@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ACCOUNT, PRIMARY, REFERENCE } from "@/lib/nav";
+import SignOutButton from "./SignOutButton";
 
 /** The phone navigation.
  *
@@ -69,9 +70,7 @@ export default function MobileNav({ email }: { email: string | null }) {
                   {l.label}
                 </a>
               ))}
-              <form action="/auth/signout" method="post" className="nav-menu-signout">
-                <button type="submit">Sign out</button>
-              </form>
+              <SignOutButton className="nav-menu-signout" />
             </>
           ) : (
             <a href="/signin" onClick={() => setOpen(false)}>

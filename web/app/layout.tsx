@@ -9,6 +9,7 @@ import { ACCOUNT, REFERENCE } from "@/lib/nav";
 import { headers } from "next/headers";
 import { currentUser } from "@/lib/auth";
 import "./globals.css";
+import SignOutButton from "./SignOutButton";
 
 // Instrument type: IBM Plex Sans for text, Plex Mono for the readouts. Technical, distinctive, and not
 // the generic Inter/Roboto stack that reads machine-made.
@@ -106,9 +107,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 align="right"
                 items={ACCOUNT}
               >
-                <form action="/auth/signout" method="post" className="nav-menu-signout">
-                  <button type="submit">Sign out</button>
-                </form>
+                <SignOutButton className="nav-menu-signout" />
               </NavMenu>
             </div>
           ) : (

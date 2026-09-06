@@ -67,3 +67,18 @@ export function forgetGrades(ids: string[]) {
   const drop = new Set(ids);
   write(readHistory().filter((e) => !drop.has(e.id)));
 }
+
+/** Drop the whole list. Called when the browser stops being one person's: on sign-out.
+ *
+ *  The list is browser-scoped, which is the point of it for an anonymous submitter, but a browser
+ *  outlives a session. Sign out and hand the laptop over, and the next person's account page showed
+ *  the previous person's unsaved reports, with working links: a report URL is a bearer token, so
+ *  seeing the id IS access to the report.
+ *
+ *  Signing out is the one explicit "I am done here" gesture the browser gets, so it is where this
+ *  belongs. An anonymous submitter never signs out and keeps their list; someone who signs in, saves
+ *  what they want, and signs out has said they are finished with this browser.
+ */
+export function forgetEverything() {
+  safe(() => window.localStorage.removeItem(KEY), undefined);
+}
