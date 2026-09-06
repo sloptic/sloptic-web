@@ -270,6 +270,7 @@ export default function Home() {
             </div>
           ))}
         </div>
+        <br />
         <p className="channels-note">
           Note that in anonymous mode, we only run the <em>passive</em> checks, i.e. checks that do not
           alter the site or send attacks. To run the <em>active</em>{" "}
