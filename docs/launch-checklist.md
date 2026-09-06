@@ -1,7 +1,9 @@
 # Launch checklist
 
-Everything still outstanding before sloptic.org ships, in priority order. Frozen list: work is
-struck off it, not added to it. Anything discovered later goes to a v1.1 list, not here. Items keep
+EVERY ITEM ON THIS LIST IS DONE.
+
+Everything that was outstanding before sloptic.org ships, in priority order. Frozen list: work was
+struck off it, never added to it. Anything discovered later goes to a v1.1 list, not here. Items keep
 their numbers as they are struck off, so the numbers stay quotable.
 
 Not on this list, and deliberately: the three grader issues deferred to v3.0.0 (see
@@ -49,11 +51,11 @@ only the blocked tail and is capped at two, so the overrun is bounded. Counting 
 recovery on the busiest days, and an unrecovered tail reports as N/A, which is lost recall dressed
 as a clean result. Recorded in `worker/sloptic_web_worker/config.py` beside the budget itself.
 
-## 7. Mailbox hygiene — Ian, nearly done
+## 7. Mailbox hygiene — DONE
 
-- MX priorities: DONE, 10 / 20 / 50, confirmed authoritative.
-- Still open: confirm DKIM is enabled as default in Zoho's console, not merely published in DNS. The
-  record existing does not mean anything is signing with it.
+MX at 10 / 20 / 50, confirmed authoritative. DKIM enabled as default, confirmed from the receiving
+end rather than from the dashboard: Gmail reports `dkim=pass header.s=zmail`, `spf=pass` and
+`dmarc=pass` on mail from `hello@sloptic.org`.
 
 ---
 
