@@ -215,14 +215,9 @@ export default function Home() {
           </a>
         </div>
         <p className="channels-intro">
-          Sloptic checks the things every web app should get right, no matter what it does. Open an
-          area to see what gets checked.
+          Open an area to see what kinds of slop Sloptic checks for.
         </p>
-        <p className="channels-note">
-          Note that in anonymous mode, we only run the <em>passive</em> checks, i.e. checks that do not
-          alter the site, send attack payloads, or go fishing for secrets. To run the <em>active</em>{" "}
-          ones, log in and <a href="/verify">prove the site is yours</a>.
-        </p>
+        
         <div className="channel-list">
           {AREAS.map((area) => (
             <div
@@ -275,6 +270,11 @@ export default function Home() {
             </div>
           ))}
         </div>
+        <p className="channels-note">
+          Note that in anonymous mode, we only run the <em>passive</em> checks, i.e. checks that do not
+          alter the site or send attacks. To run the <em>active</em>{" "}
+          ones, log in and <a href="/verify">prove the site is yours</a>.
+        </p>
       </section>
 
       <section className="sample" id="sample">

@@ -48,10 +48,10 @@ export const AREAS: { id: Area; label: string; probes: number; passive: number; 
 /** What the landing says about each area. Editorial, so it lives here rather than in the catalog. */
 export const AREA_BLURBS: Record<Area, string> = {
   security:
-    "Getting this wrong costs the people who trusted your app, not you. Sloptic looks for missing defenses and secrets left in the code you ship, following OWASP.",
-  qa: "An app a screen reader cannot operate is closed to the people who rely on one. Sloptic checks whether controls work and whether pages fail honestly, using axe-core against WCAG.",
+    "Getting this wrong costs the people who trusted your app. Sloptic looks for missing defenses and secrets left in the code you ship, following the OWASP Top 10.",
+  qa: "Apps that are unusable or crash unexpectedly frusturate users. Sloptic checks for inaccessibility (WCAG), broken links, error handling, and other quality issues that degrade the user experience.",
   performance:
-    "Most people will not wait for a slow app, so Sloptic measures real load speed and page weight as Google's Core Web Vitals.",
+    "Most people will not wait for a slow app, so Sloptic uses Lighthouse to measure real load speed and page weight.",
 };
 
 /** A few named checks per area, for the landing, where the full list would be too much. */
