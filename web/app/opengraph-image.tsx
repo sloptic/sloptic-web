@@ -56,7 +56,7 @@ export default async function Image() {
             sloptic
           </div>
           <div style={{ marginTop: 28, fontSize: 40, color: MUTED, letterSpacing: "-0.01em" }}>
-            grades any web app
+            checks any web app for slop
           </div>
         </div>
 
@@ -67,7 +67,11 @@ export default async function Image() {
             alignItems: "flex-end",
             paddingTop: 28,
             borderTop: `2px solid ${LINE}`,
-            fontSize: 26,
+            // 22, not 26: at 26 the footer line plus the domain exceed the 1040px between the
+            // margins, and space-between then pushes sloptic.org out into the right margin, where
+            // it no longer lines up with anything above it.
+            fontSize: 22,
+            gap: 24,
             color: MUTED,
           }}
         >
