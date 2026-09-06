@@ -3505,9 +3505,18 @@ h1.report-url {
 .card[data-state="blocked"],
 .card[data-state="pending"]   { border-top-color: var(--line-strong); }
 
-/* The offer to run the full battery, under the headline of a passive report that could have one. */
+/* The offer to run the full battery, in the chip row beside the tag naming the battery that ran.
+   Sized to sit with tags rather than to lead a section: the verdict is the loud thing on this card,
+   and this is the next step available from it. */
 .upgrade-row {
-  margin: 0.9rem 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.upgrade-button {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
 }
 
 /* routes / forms / endpoints, one list at a time. Same two-way control language as the battery and

@@ -319,9 +319,9 @@ function GradeActively({ origin }: { origin: string }) {
   const router = useRouter();
 
   return (
-    <div className="run-controls upgrade-row">
+    <span className="upgrade-row">
       <button
-        className="button"
+        className="button secondary upgrade-button"
         type="button"
         disabled={busy}
         onClick={async () => {
@@ -345,7 +345,7 @@ function GradeActively({ origin }: { origin: string }) {
         {busy ? "starting..." : "Grade actively"}
       </button>
       {error && <span className="report-keep-err">{error}</span>}
-    </div>
+    </span>
   );
 }
 
@@ -484,7 +484,6 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
       {view.origin && view.origin !== view.url.replace(/\/+$/, "") && (
         <p className="section-intro fineprint">Submitted as {view.url}. A grade covers the whole origin.</p>
       )}
-      {view.can_grade_actively && view.origin && <GradeActively origin={view.origin} />}
 
       {/* One band for the whole verdict: score, placement, the bars, and what qualifies it. The
           findings and their evidence stay below, unchanged; nothing up here explains a fault. */}
@@ -600,6 +599,9 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
               <span className="tag">{r.mode ?? "passive"}</span>
               {r.challenge_stage === "limited" && <span className="tag">limited</span>}
               <RecoverySup marks={bandMarks} />
+              {/* Next to the tag naming the battery, because that tag is what it offers to change.
+                  It sat between the headline and the card before, attached to neither. */}
+              {view.can_grade_actively && view.origin && <GradeActively origin={view.origin} />}
             </div>
           </div>
         </div>
