@@ -79,7 +79,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <a className="wordmark" href="/">
             sloptic
           </a>
-          <span className="masthead-note">grades any live web app</span>
+          <span className="masthead-note">grades any web app</span>
           <span className="masthead-spacer" />
           <nav className="mast-nav">
             {/* The reference pages fold into one menu so the masthead stays scannable. /about is the
