@@ -10,11 +10,17 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <>
-      <div className="page-head">
-        <h1>About Sloptic</h1>
-        <p className="page-lead">
-          Sloptic grades any running web app from outside. It does not need source code.
-        </p>
+      {/* The one page where identity IS the content, so the mark leads. Not on the landing hero,
+          where the masthead already carries it eighty pixels up and everything above the URL input
+          is delay. */}
+      <div className="page-head page-head-mark">
+        <div>
+          <h1>About Sloptic</h1>
+          <p className="page-lead">
+            Sloptic grades any running web app from outside. It does not need source code.
+          </p>
+        </div>
+        <BrandMark size={112} className="page-head-brand" />
       </div>
 
       <section className="section">
@@ -69,11 +75,7 @@ export default function AboutPage() {
 
       <section className="section">
         <h2 className="section-head">The name</h2>
-        {/* The mark belongs beside this paragraph and nowhere else on the page: this is the section
-            that explains sloptic as slop plus optic, and the drawing is a lens. Its decagon ring is
-            also visible at this size, which is the point of it. */}
-        <div className="definition definition-with-mark">
-          <div className="definition-text">
+        <div className="definition">
           <p className="definition-word">
             sloptic <span className="definition-pron">/ˈslɒp.tɪk/</span>{" "}
             <span className="definition-pos">noun</span>
@@ -85,8 +87,6 @@ export default function AboutPage() {
             unhardened, into one comparable number, serenely indifferent to whatever it was meant to
             be.
           </p>
-          </div>
-          <BrandMark size={132} className="definition-mark" />
         </div>
       </section>
 

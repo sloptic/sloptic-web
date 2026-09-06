@@ -1558,31 +1558,6 @@ code {
   padding: 1.1rem 0;
   max-width: 62ch;
 }
-/* The name section only: text left, mark right. The mark is the one place on the site it appears
-   large enough for the decagon to read, which is the whole joke, so it is not decoration here. */
-.definition-with-mark {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-  max-width: 78ch;
-}
-.definition-text {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.definition-mark {
-  flex: 0 0 auto;
-}
-/* Below the breakpoint it stacks, mark first, because a 132px square wedged beside a paragraph on a
-   phone squeezes the text into a column too narrow to read. */
-@media (max-width: 34rem) {
-  .definition-with-mark {
-    flex-direction: column-reverse;
-    align-items: flex-start;
-    gap: 1.1rem;
-  }
-}
-
 .definition-word {
   font-family: var(--font-display);
   font-size: 1.35rem;
@@ -1614,6 +1589,28 @@ code {
 .page-head {
   padding: 2rem 0 1.5rem;
 }
+/* About only, via a modifier: .page-head itself is shared by ten pages and most of them have no
+   business carrying a logo. Text left, mark right. This is also the one place on the site the mark
+   is large enough for the decagon to read, which is the whole joke of drawing it that way. */
+.page-head-mark {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2.5rem;
+}
+.page-head-brand {
+  flex: 0 0 auto;
+}
+/* Stacks below the breakpoint: a 112px square beside a heading on a phone leaves the text a column
+   too narrow to read. */
+@media (max-width: 38rem) {
+  .page-head-mark {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 1.25rem;
+  }
+}
+
 .page-head h1 {
   font-family: var(--font-display);
   font-size: clamp(2rem, 5vw, 2.8rem);
