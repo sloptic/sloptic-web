@@ -691,7 +691,7 @@ def main() -> None:
                 if n:
                     print(f"[run]   {n} event run(s) finished", flush=True)
 
-                n = db.expire_stale_claims(conn, config.CLAIM_EXPIRY_DAYS)
+                n = db.expire_stale_claims(conn, config.CLAIM_EXPIRY_DAYS, config.CLAIM_MISSING_DAYS)
                 if n:
                     print(f"[event] failed {n} claim(s) whose link never appeared", flush=True)
 

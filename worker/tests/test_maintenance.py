@@ -670,3 +670,76 @@ class TestTheChallengeBreakerCountsApps:
         rep.observe("https://c.example.com", "")
         rep.observe("https://d.example.com", "entry")
         assert rep.backing_off() is False
+
+
+def _event_claim(conn, account, *, slug="hack", status="pending", check_status="ok", days_old=0):
+    row = conn.execute(
+        """INSERT INTO event_claims (account_id, slug, token, status, check_status, issued_at)
+           VALUES (%s, %s, %s, %s, %s, now() - make_interval(days => %s)) RETURNING id""",
+        (account, slug, f"tok-{slug}", status, check_status, days_old),
+    ).fetchone()
+    return str(row["id"])
+
+
+def _claim_row(conn, cid):
+    return conn.execute("SELECT * FROM event_claims WHERE id = %s", (cid,)).fetchone()
+
+
+class TestExpiringEventClaims:
+    """Two conclusive answers that mean different things, and one that means nothing at all.
+
+    'ok' is an organizer part way through a task, so it gets a long window. 'not_found' is Devpost
+    saying the whole event does not exist, and no amount of waiting makes a slug appear: before this
+    such a claim was re-checked every thirty minutes for ever, so one typo bought a permanent job
+    fetching Devpost for a page nobody will create. 'blocked' expires under neither, which is the
+    entire reason the type is tri-state.
+    """
+
+    def test_a_read_event_still_missing_its_link_expires_on_the_long_window(self, conn, account):
+        cid = _event_claim(conn, account, check_status="ok", days_old=30)
+
+        assert db.expire_stale_claims(conn, 14, 1) == 1
+        assert _claim_row(conn, cid)["status"] == "failed"
+
+    def test_it_is_spared_inside_that_window(self, conn, account):
+        cid = _event_claim(conn, account, check_status="ok", days_old=3)
+
+        assert db.expire_stale_claims(conn, 14, 1) == 0
+        assert _claim_row(conn, cid)["status"] == "pending"
+
+    def test_an_address_that_does_not_exist_gives_up_far_sooner(self, conn, account):
+        cid = _event_claim(conn, account, check_status="not_found", days_old=3)
+
+        assert db.expire_stale_claims(conn, 14, 1) == 1
+
+        row = _claim_row(conn, cid)
+        assert row["status"] == "failed"
+        # The reason has to name the actual problem. "The link was never found on the event pages"
+        # would send someone to edit a page that does not exist.
+        assert "no event was ever found at that address" in row["check_detail"]
+
+    def test_but_not_immediately_since_an_event_can_be_claimed_before_it_is_published(self, conn, account):
+        cid = _event_claim(conn, account, check_status="not_found", days_old=0)
+
+        assert db.expire_stale_claims(conn, 14, 1) == 0
+        assert _claim_row(conn, cid)["status"] == "pending"
+
+    def test_a_claim_we_could_never_read_expires_under_neither_window(self, conn, account):
+        # Being unable to reach Devpost is not evidence about the organizer. Failing on it would
+        # blame them for our own blindness, which is the mistake the tri-state exists to prevent.
+        cid = _event_claim(conn, account, check_status="blocked", days_old=90)
+
+        assert db.expire_stale_claims(conn, 14, 1) == 0
+        assert _claim_row(conn, cid)["status"] == "pending"
+
+    def test_a_claim_never_checked_at_all_is_left_alone(self, conn, account):
+        cid = _event_claim(conn, account, check_status=None, days_old=90)
+
+        assert db.expire_stale_claims(conn, 14, 1) == 0
+        assert _claim_row(conn, cid)["status"] == "pending"
+
+    def test_a_verified_claim_is_never_swept(self, conn, account):
+        cid = _event_claim(conn, account, status="verified", check_status="ok", days_old=365)
+
+        assert db.expire_stale_claims(conn, 14, 1) == 0
+        assert _claim_row(conn, cid)["status"] == "verified"

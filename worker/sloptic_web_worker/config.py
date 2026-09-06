@@ -181,6 +181,12 @@ GRANT_DAYS = int(os.environ.get("GRANT_DAYS", "90"))
 # may verify days before they finish writing their rules page.
 CLAIM_EXPIRY_DAYS = int(os.environ.get("CLAIM_EXPIRY_DAYS", "14"))
 
+# The same sweep, for a claim whose event address does not exist at all. Much shorter than 14 days,
+# because Devpost answering 404 for the whole event is conclusive in a way that "the link is not on
+# the page yet" is not: no amount of waiting makes a slug appear. Not zero, because an organizer can
+# reasonably claim a slug before publishing the event, and a Devpost draft is not public.
+CLAIM_MISSING_DAYS = int(os.environ.get("CLAIM_MISSING_DAYS", "1"))
+
 
 # Platforms whose apps are hosted INSIDE a framework's own shell, where a grade measures the shell as
 # much as the team's work. Skipped in an event run for the same reason the corpus study excludes them

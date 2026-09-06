@@ -683,22 +683,40 @@ def verify_claim(conn: psycopg.Connection, claim: "Claim", detail: str, grant_da
     return "granted"
 
 
-def expire_stale_claims(conn: psycopg.Connection, days: int) -> int:
-    """Fail claims whose token never appeared. Only ones we could actually READ: a claim that has only
-    ever been blocked is not evidence of anything, and failing it would blame an organizer for our
-    inability to reach Devpost."""
+def expire_stale_claims(conn: psycopg.Connection, days: int, missing_days: int) -> int:
+    """Fail claims that are not going to verify. Only ones we could actually READ.
+
+    Two windows, because the two conclusive answers mean different things.
+
+    'ok' means we read the event's pages and the link was not on them. That is an organizer part way
+    through a task, so it gets the long window: they may be waiting on someone else to edit the page.
+
+    'not_found' means Devpost answered 404 or 410 for the whole event. The address does not exist,
+    and no amount of waiting makes a slug appear. Without this it polled every thirty minutes for
+    ever: one typo bought a permanent job fetching Devpost for a page nobody will ever create. The
+    window is short rather than zero because an organizer can reasonably claim a slug before
+    publishing the event, and a draft is not public.
+
+    'blocked' expires under NEITHER window, which is the whole reason the type is tri-state. Being
+    unable to reach Devpost is not evidence about the organizer, and failing a claim on it would
+    blame them for our own inability to look.
+    """
     rows = conn.execute(
         """
         UPDATE event_claims
            SET status = 'failed',
-               check_detail = left(coalesce(check_detail, '') ||
-                   ' | expired: the grading policy link was never found on the event pages', 2000)
+               check_detail = left(coalesce(check_detail, '') || CASE check_status
+                   WHEN 'not_found' THEN ' | expired: no event was ever found at that address'
+                   ELSE ' | expired: the grading policy link was never found on the event pages'
+                 END, 2000)
          WHERE status = 'pending'
-           AND check_status = 'ok'
-           AND issued_at < now() - make_interval(days => %(days)s)
+           AND (
+                 (check_status = 'ok'        AND issued_at < now() - make_interval(days => %(days)s))
+              OR (check_status = 'not_found' AND issued_at < now() - make_interval(days => %(missing)s))
+           )
      RETURNING 1;
         """,
-        {"days": days},
+        {"days": days, "missing": missing_days},
     ).fetchall()
     return len(rows or [])
 
