@@ -516,7 +516,16 @@ def expire_stale_domain_claims(conn: psycopg.Connection, days: int) -> int:
     """Fail claims whose proofs never appeared, and only ones we could actually LOOK at.
 
     A claim that has only ever been blocked is evidence of nothing, and failing it would blame an
-    owner for our own inability to reach them.
+    owner for our own inability to reach them. That has to hold PER FACTOR, not across the pair:
+    this read OR instead of AND, so one conclusive factor was enough to fail a claim whose other
+    factor we had never once managed to read. An owner whose file serves correctly but whose zone
+    SERVFAILs to both resolvers -- or whose DNS we cannot check at all because dnspython is missing
+    from THIS worker -- was told at 14 days that their proofs were never found.
+
+    The columns hold only the LAST look, so "only ever blocked" is not expressible here. Requiring
+    both to be conclusive NOW is the conservative reading of the same intent: it can delay failing a
+    genuinely abandoned claim, which costs a row, where the other direction costs an owner their
+    verification for a reason that was ours.
     """
     rows = conn.execute(
         """
@@ -526,7 +535,8 @@ def expire_stale_domain_claims(conn: psycopg.Connection, days: int) -> int:
                    ' | expired: the proofs were never both found', 2000)
          WHERE status = 'pending'
            AND issued_at < now() - make_interval(days => %s)
-           AND (file_status IN ('ok', 'not_found') OR dns_status IN ('ok', 'not_found'))
+           AND file_status IN ('ok', 'not_found')
+           AND dns_status  IN ('ok', 'not_found')
      RETURNING 1;
         """,
         (days,),

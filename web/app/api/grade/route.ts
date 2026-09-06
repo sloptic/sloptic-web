@@ -121,12 +121,19 @@ export async function POST(req: NextRequest) {
   // Scoped to the account, so one person resubmitting cannot be told about another's grade. The
   // rate limit is per address and does not help here: five submissions an hour of the same URL is
   // five batteries.
-  const inFlight = await db
+  // "Belonging to this caller" is two different SQL questions, and writing it as one was the bug.
+  // .eq("account_id", null) renders as account_id=eq.null, which never matches SQL NULL (on a uuid
+  // column PostgREST rejects it outright), so for an anonymous submitter -- the default tier, i.e.
+  // almost everyone -- both guards below silently matched nothing and never once fired. IS NULL is
+  // the only operator that finds an unowned row.
+  const inFlightQ = db
     .from("grades")
     .select("id, status, origin, mode, retry_due_at")
     .eq("origin", target.origin)
-    .is("event_run_id", null)
-    .eq("account_id", user?.id ?? null)
+    .is("event_run_id", null);
+  const inFlight = await (user
+    ? inFlightQ.eq("account_id", user.id)
+    : inFlightQ.is("account_id", null))
     .in("status", ["queued", "running"])
     .order("submitted_at", { ascending: false })
     .limit(1);
@@ -141,12 +148,14 @@ export async function POST(req: NextRequest) {
   // A finished grade whose blocked tail is still booked is the same situation one step later: the
   // measurement is not over, and the pass that finishes it is already scheduled. Send them to the
   // report that is tracking it rather than starting a rival.
-  const pendingRetry = await db
+  const retryQ = db
     .from("grades")
     .select("id, status, origin, mode, retry_due_at")
     .eq("origin", target.origin)
-    .is("event_run_id", null)
-    .eq("account_id", user?.id ?? null)
+    .is("event_run_id", null);
+  const pendingRetry = await (user
+    ? retryQ.eq("account_id", user.id)
+    : retryQ.is("account_id", null))
     .not("retry_due_at", "is", null)
     .order("submitted_at", { ascending: false })
     .limit(1);

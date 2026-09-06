@@ -49,6 +49,17 @@ function compares(row: Row, f: Filter): boolean {
   const v = row[f.column];
   switch (f.op) {
     case "eq":
+      // PostgREST renders .eq(col, null) as col=eq.null, which never matches SQL NULL (on a uuid
+      // column it is rejected outright). Matching it here the way JS compares null to null made
+      // this fake MORE forgiving than the database, and a real dedup bug in /api/grade passed its
+      // tests green for exactly that reason. Throw rather than return false: the mistake is the
+      // query, and a silent miss is what hid it the first time.
+      if (f.value === null) {
+        throw new Error(
+          `eq("${f.column}", null) is not a NULL test. PostgREST reads it as the string "null". ` +
+            `Use .is("${f.column}", null).`
+        );
+      }
       return v === f.value;
     case "neq":
       return v !== f.value;

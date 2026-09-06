@@ -196,6 +196,40 @@ class TestExpiry:
 
         assert _row(conn, cid)["status"] == "pending"
 
+    def test_one_factor_we_could_read_does_not_condemn_the_one_we_could_not(self, conn, account):
+        # The case the seeded blocked/blocked test above cannot reach, and the one that was broken:
+        # the predicate asked for EITHER factor to be conclusive, so a perfectly served file plus a
+        # zone we never managed to query was enough to fail the claim. The owner did everything
+        # right and was told at 14 days that their proofs were never found.
+        cid = _claim(conn, account)
+        db.record_domain_check(conn, cid, "ok", "blocked", "their nameserver SERVFAILed", 900)
+        conn.execute("UPDATE domain_claims SET issued_at = now() - interval '30 days'")
+
+        assert db.expire_stale_domain_claims(conn, 14) == 0
+
+        assert _row(conn, cid)["status"] == "pending"
+
+    def test_a_missing_dnspython_never_fails_an_owners_claim(self, conn, account):
+        # Same shape, and the reason it is worth its own test: this one is OUR fault entirely. A
+        # worker without dnspython reports every DNS factor as blocked for ever (see check_dns), so
+        # under the old predicate a missing dependency on one box quietly failed every honest claim
+        # whose file was serving correctly.
+        cid = _claim(conn, account)
+        db.record_domain_check(conn, cid, "ok", "blocked",
+                               "DNS checking is unavailable on this worker", 900)
+        conn.execute("UPDATE domain_claims SET issued_at = now() - interval '60 days'")
+
+        assert db.expire_stale_domain_claims(conn, 14) == 0
+
+    def test_the_other_way_round_is_also_spared(self, conn, account):
+        cid = _claim(conn, account)
+        db.record_domain_check(conn, cid, "blocked", "not_found", "their WAF refused the file", 900)
+        conn.execute("UPDATE domain_claims SET issued_at = now() - interval '30 days'")
+
+        assert db.expire_stale_domain_claims(conn, 14) == 0
+
+        assert _row(conn, cid)["status"] == "pending"
+
 
 class TestDegradingRatherThanCrashing:
     def test_a_missing_dns_library_blocks_the_factor_instead_of_taking_the_worker_down(self, monkeypatch):
