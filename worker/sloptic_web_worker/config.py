@@ -252,3 +252,22 @@ RETRY_CLAIM_LOCK_SECONDS = float(
 # it once at import, and the main grade keeps the parallel default its diluted battery survives.
 RETRY_PAD_BENIGN = os.environ.get("RETRY_PAD_BENIGN", "1") != "0"
 RETRY_INJECT_POOL = os.environ.get("RETRY_INJECT_POOL", "1")
+
+# --- notification mail -----------------------------------------------------------------------------
+#
+# Separate from the auth mail entirely. Sign-in links go through Supabase's own SMTP settings; these
+# are our own messages, sent by the worker because the worker is what knows the work finished. They
+# share a sending domain and nothing else, so a fault here cannot stop anyone signing in.
+#
+# Unset means OFF, and that is a no-op rather than an error: a development worker should not mail
+# strangers, and an operator running one locally has not misconfigured anything.
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+NOTIFY_FROM = os.environ.get("NOTIFY_FROM", "Sloptic <hello@sloptic.org>")
+# Where the links in those messages point. Wrong here means mail that arrives and goes nowhere.
+SITE_URL = os.environ.get("NEXT_PUBLIC_SITE_URL", "https://sloptic.org").rstrip("/")
+# Templates live with the rest of the email design in web/emails. Overridable for a worker that is
+# not sitting in the repo checkout.
+EMAIL_TEMPLATE_DIR = os.environ.get("EMAIL_TEMPLATE_DIR", "")
+# A pass sends at most this many, so a backlog cannot become a burst that trips a daily cap in one
+# go. Resend's free tier is 100 a day and the auth mail shares it.
+NOTIFY_BATCH = int(os.environ.get("NOTIFY_BATCH", "10"))

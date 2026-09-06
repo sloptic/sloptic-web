@@ -3547,3 +3547,18 @@ h1.report-url {
   .live-delta { animation: live-delta-hold 1.6s steps(1) forwards; transform: none; }
   @keyframes live-delta-hold { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 }
+
+/* The one preference on the account page. Baseline-aligned rather than centred, since the label
+   wraps to two lines on a phone and a centred box then floats beside the middle of the sentence. */
+.notify-toggle {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+.notify-toggle input {
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+}

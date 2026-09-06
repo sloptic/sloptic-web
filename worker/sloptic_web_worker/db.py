@@ -959,6 +959,83 @@ def settle_finished_runs(conn: psycopg.Connection) -> int:
     return len(rows or [])
 
 
+# --- notification mail ------------------------------------------------------------------------
+
+
+@dataclass
+class Notice:
+    kind: str          # "grade" or "run"
+    id: str
+    email: str
+    subject_bit: str   # the origin, or the event slug
+    slop: float | None
+    entries: int | None
+
+
+def pending_notices(conn: psycopg.Connection, limit: int) -> list[Notice]:
+    """Finished work whose owner has not been told, oldest first.
+
+    Two shapes in one list, because they are the same job: a finished grade, and a finished event
+    run. A run sends ONE mail for the whole field rather than one per app, so a 200-entry event is
+    one message and not two hundred; that is why grades carrying an event_run_id are excluded here
+    and never marked.
+
+    Excluded, all for the same reason (there is nobody to tell): anonymous grades, accounts with no
+    address, and accounts that opted out. A suspended account is excluded too, since a suspension
+    stops us spending outbound traffic on it and mail is outbound traffic.
+    """
+    rows = conn.execute(
+        """
+        SELECT 'grade' AS kind, g.id::text AS id, p.email AS email,
+               g.origin AS subject_bit, r.slop_score AS slop, NULL::int AS entries,
+               g.finished_at AS at
+          FROM grades g
+          JOIN profiles p ON p.id = g.account_id
+          LEFT JOIN results r ON r.grade_id = g.id
+         WHERE g.status = 'done' AND g.notified_at IS NULL AND g.event_run_id IS NULL
+           AND p.email IS NOT NULL AND p.notify_email AND p.suspended_at IS NULL
+
+         UNION ALL
+
+        SELECT 'run', er.id::text, p.email, er.slug, NULL::numeric,
+               (SELECT count(*)::int FROM event_entries e
+                 WHERE e.run_id = er.id AND e.grade_id IS NOT NULL),
+               er.finished_at
+          FROM event_runs er
+          JOIN profiles p ON p.id = er.account_id
+         WHERE er.status = 'done' AND er.notified_at IS NULL
+           AND p.email IS NOT NULL AND p.notify_email AND p.suspended_at IS NULL
+
+         ORDER BY at
+         LIMIT %s;
+        """,
+        (limit,),
+    ).fetchall()
+    return [
+        Notice(kind=r["kind"], id=r["id"], email=r["email"], subject_bit=r["subject_bit"],
+               slop=float(r["slop"]) if r["slop"] is not None else None,
+               entries=r["entries"])
+        for r in (rows or [])
+    ]
+
+
+def mark_notified(conn: psycopg.Connection, notice: Notice) -> None:
+    """Marked AFTER a successful send, so a crash in between costs a duplicate rather than a
+    silence. Someone told twice is annoyed; someone never told waits for a mail that is not coming."""
+    table = "grades" if notice.kind == "grade" else "event_runs"
+    conn.execute(
+        f"UPDATE {table} SET notified_at = now() WHERE id = %s AND notified_at IS NULL;",
+        (notice.id,),
+    )
+
+
+def give_up_notifying(conn: psycopg.Connection, notice: Notice) -> None:
+    """Stop trying. Marks it sent when it was not, which is deliberate: a permanently undeliverable
+    address would otherwise be retried on every pass for ever, and that backlog would crowd out the
+    mail that can be delivered."""
+    mark_notified(conn, notice)
+
+
 def may_grade_actively(conn: psycopg.Connection, job_id: str) -> tuple[bool, str]:
     """May this job send attack traffic, checked NOW rather than when it was queued?
 

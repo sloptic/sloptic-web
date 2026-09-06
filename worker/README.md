@@ -109,3 +109,25 @@ to a generic line. Lift it with `set suspended_at = null`.
 The account can still sign in and read its own reports. What stops is anything that spends our
 outbound traffic: grades, event runs, and domain verification. The worker checks again immediately
 before it sends anything, so work queued before the suspension does not run.
+
+## Notification mail
+
+Off unless `RESEND_API_KEY` is set, so a development worker never mails strangers.
+
+    RESEND_API_KEY=re_...                       # the same Resend account the auth mail uses
+    NOTIFY_FROM="Sloptic <hello@sloptic.org>"   # must be on a domain verified in Resend
+    NEXT_PUBLIC_SITE_URL=https://sloptic.org    # where the links in the mail point
+
+One message when a grade reaches `done`, whether or not a recovery pass is still booked: the report
+itself says a pass is pending and when. One message per event RUN when the whole field is graded,
+never one per app, so a 200-entry event is one message.
+
+Nobody is mailed who has no address (anonymous grades), turned it off (`profiles.notify_email`), or
+is suspended. Rows are marked only after a successful send, so a crash between the two costs a
+duplicate rather than a silence.
+
+Templates are in `web/emails/`, beside the auth ones, and are read from the checkout. Set
+`EMAIL_TEMPLATE_DIR` for a worker running outside it.
+
+Note the shared ceiling: Resend's free tier is 100 messages a day and sign-in mail comes out of the
+same allowance. `NOTIFY_BATCH` (default 10) bounds one pass so a backlog cannot spend it all at once.

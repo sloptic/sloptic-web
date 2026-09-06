@@ -31,7 +31,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
-from . import config, db, egress, grader, resolve_event, verify_domain, verify_event
+from . import config, db, egress, grader, notify, resolve_event, verify_domain, verify_event
 from .egress import install as install_egress
 from .grade_child import EXIT_ENTRY_CHALLENGE
 
@@ -438,6 +438,56 @@ def process_retries(conn) -> int:
     return 1
 
 
+def process_notifications(conn) -> int:
+    """Tell people their work finished. Returns how many were sent.
+
+    Cheap and outbound-only: no browser, no grader, one HTTPS POST each. Runs every pass rather than
+    behind the grade queue, because a mail that arrives twenty minutes after the report is a mail
+    that arrives after the person gave up and refreshed.
+
+    A row is marked only after a successful send, so a crash between the two costs a duplicate
+    rather than a silence. That is the right way round: someone told twice is annoyed, someone never
+    told is waiting for a mail that is not coming.
+    """
+    if not notify.enabled():
+        return 0
+
+    sent = 0
+    for n in db.pending_notices(conn, config.NOTIFY_BATCH):
+        try:
+            if n.kind == "grade":
+                html = notify.render(
+                    "grade-ready.html",
+                    origin=n.subject_bit,
+                    score=("%g" % n.slop) if n.slop is not None else "-",
+                    url=f"{config.SITE_URL}/grade/{n.id}",
+                )
+                subject = f"{n.subject_bit} scored {('%g' % n.slop) if n.slop is not None else '-'}"
+            else:
+                html = notify.render(
+                    "event-ready.html",
+                    slug=n.subject_bit,
+                    entries=str(n.entries or 0),
+                    url=f"{config.SITE_URL}/events/{n.subject_bit}",
+                )
+                subject = f"{n.subject_bit} is graded"
+            notify.send(n.email, subject, html)
+        except notify.NotSent as e:
+            # A template fault is ours and permanent: retrying it every pass for ever would crowd
+            # out the mail that can be delivered, so stop asking. A transport fault is probably
+            # theirs and probably temporary, so leave the row unmarked and try again next pass.
+            permanent = "unfilled placeholders" in str(e) or "HTTP 4" in str(e)
+            print(f"[mail]  {n.kind} {n.id}: not sent: {e}"
+                  f"{' (giving up)' if permanent else ''}", flush=True)
+            if permanent:
+                db.give_up_notifying(conn, n)
+            continue
+        db.mark_notified(conn, n)
+        sent += 1
+        print(f"[mail]  {n.kind} {n.id} -> {n.email}", flush=True)
+    return sent
+
+
 def process_event_runs(conn) -> int:
     """Resolve the field for one run that is waiting on it. Grades nothing.
 
@@ -683,6 +733,8 @@ def main() -> None:
             worked = process_event_checks(conn) > 0 or worked
             worked = process_domain_checks(conn) > 0 or worked
             worked = process_event_runs(conn) > 0 or worked
+            # After event runs, so a run that settles this pass is told in the same one.
+            worked = process_notifications(conn) > 0 or worked
             # Say WHY we are idle, but only when the reason changes: this loop runs every 5s.
             blocked = rep.blocked(conn)
             lanes = {l for l in ("public", "event") if l not in blocked}

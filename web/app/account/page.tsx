@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import AccountActions from "./AccountActions";
+import NotifyToggle from "./NotifyToggle";
 import GradeList from "../grades/GradeList";
 import VerifyFlow from "../verify/VerifyFlow";
 import { claimsForAccount } from "@/lib/domain-claims";
@@ -28,7 +29,7 @@ export default async function AccountPage() {
 
   const db = supabaseAdmin();
   const [{ data: profile }, { data: grants }, claims] = await Promise.all([
-    db.from("profiles").select("terms_accepted_at, created_at").eq("id", user.id).maybeSingle(),
+    db.from("profiles").select("terms_accepted_at, created_at, notify_email").eq("id", user.id).maybeSingle(),
     db
       .from("grants")
       .select("kind, scope, granted_at, expires_at")
@@ -98,6 +99,17 @@ export default async function AccountPage() {
             </span>
           </li>
         </ul>
+      </section>
+
+      <section className="section">
+        <h2 className="section-head">Email</h2>
+        {/* Default on, and stated as such: a grade takes minutes and a field of 200 takes hours, so
+            someone who submitted one asked for its result. An event sends ONE mail when the whole
+            field is done, not one per app. */}
+        <p className="section-intro">
+          One message when a grade finishes, and one when a whole event has been graded.
+        </p>
+        <NotifyToggle initial={profile?.notify_email !== false} />
       </section>
 
       <AccountActions email={user.email ?? ""} />

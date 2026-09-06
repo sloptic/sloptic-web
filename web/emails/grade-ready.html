@@ -1,0 +1,55 @@
+<!-- Sent by the WORKER (worker/sloptic_web_worker/notify.py), not by Supabase, and filled with
+     double-brace placeholders rather than Go template tags: these are our own messages and never pass
+     through Supabase Auth. Same frame as magic-link.html on purpose, so both read as one sender.
+
+     Fields: origin, score, url.
+
+     Sent when the grade reaches done, whether or not a recovery pass is still booked. A challenged
+     grade can re-run its blocked tail and move the score, so this says a result is ready rather than
+     quoting a final number as final; the report itself says a pass is pending and when. -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+       style="background:#f3f0e6;margin:0;padding:32px 12px;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+             style="max-width:460px;background:#faf8f0;border:1px solid #d8d3c1;border-radius:10px;">
+        <tr>
+          <td style="padding:28px 28px 0;">
+            <p style="margin:0;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:#6b6f61;">
+              Sloptic
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 28px 0;">
+            <h1 style="margin:0;font-size:20px;line-height:1.3;font-weight:600;color:#1e211b;">
+              Your grade is ready</h1>
+            <p style="margin:12px 0 0;font-size:15px;line-height:1.55;color:#474b40;">
+              <b>{{ origin }}</b> scored <b>{{ score }}</b>. Lower is better.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:22px 28px 0;">
+            <a href="{{ url }}"
+               style="display:inline-block;background:#9e530d;color:#fdfaf2;text-decoration:none;
+                      font-size:15px;font-weight:600;padding:11px 20px;border-radius:7px;">
+              Read the report
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:22px 28px 28px;">
+            <p style="margin:0;padding-top:16px;border-top:1px solid #d8d3c1;
+                      font-size:12px;line-height:1.5;color:#6b6f61;">
+              You are getting this because you asked Sloptic to grade this app. Turn these off in your account.
+            </p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:14px 0 0;font-size:12px;color:#6b6f61;">
+        sloptic.org
+      </p>
+    </td>
+  </tr>
+</table>
