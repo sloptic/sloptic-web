@@ -118,7 +118,7 @@ export default function Home() {
       <section className="hero">
         <h1 className="lede">How much slop is in your app?</h1>
         <p className="deck">
-          Paste a URL. Sloptic looks at it the way a visitor would and scores what it finds. Lower is better.
+          Paste a URL. Sloptic looks at your app the way a visitor would and scores on the slop it finds. Lower is better.
         </p>
 
         <form onSubmit={submit} className="grade-form">
