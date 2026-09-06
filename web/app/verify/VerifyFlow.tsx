@@ -372,9 +372,7 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
                         You should see the token and nothing else.
                       </p>
                       <p>
-                        If you see your 404 page instead, the file is not where you think it is. That
-                        still counts as a failure here even though the page loads, because we read
-                        the body, not the status.
+                        If you see your 404 page instead, we are unable to reach the file.
                       </p>
                       <p>
                         Some build tools skip folders starting with a dot. If the file is in your
@@ -392,7 +390,7 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
                       <p>
                         Go to whoever runs your DNS, which is usually your registrar, and add a TXT
                         record. Most panels want just <code>_sloptic</code> in the host or name
-                        field, because they add your domain for you. If yours wants the full name,
+                        field because they add your domain for you. If yours wants the full name,
                         use <code>_sloptic.{c.host}</code>.
                       </p>
                       <p>
@@ -400,7 +398,7 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
                         own quotes, and if you add them too they end up inside the record.
                       </p>
                       <p>
-                        Then wait. DNS is not instant and a few minutes is normal, so this can sit
+                        Then wait. As DNS takes some time to propagate, this can sit
                         orange for a while before it goes green.
                       </p>
                     </details>
