@@ -282,13 +282,24 @@ def process_domain_checks(conn) -> int:
         watching = claim.status == "verified"
 
         if out.verified:
-            if watching:
+            if watching and not claim.renew_requested:
                 # Already verified: record that both proofs still stand, and NOTHING else. Calling
                 # verify_domain_claim here would upsert the grant with a fresh expires_at on every
                 # daily look, so a grant would never expire and the time box would mean nothing.
                 db.record_domain_check(conn, claim.id, "ok", "ok", out.detail,
                                        config.DOMAIN_WATCH_SECONDS)
                 continue
+            if watching:
+                # The owner re-attested and asked for another term, and both proofs answer ok right
+                # now, so this is the moment to re-grant. The renewal reads the proofs again rather
+                # than trusting the row: a claim can sit verified for months while the file quietly
+                # stops being served, and the whole point of a term ending is to ask the origin
+                # again instead of believing our own record of it.
+                #
+                # Same call as a first verification, which is deliberate. It upserts rather than
+                # stacks, re-reads the terms acceptance, and clears the renewal flag in the same
+                # transaction, so a renewal cannot half-happen.
+                print(f"[owner] renewing {claim.origin} for {claim.account_id}", flush=True)
             result = db.verify_domain_claim(conn, claim, out.detail, config.GRANT_DAYS)
             if result == "granted":
                 print(f"[owner] verified {claim.origin} for {claim.account_id}", flush=True)

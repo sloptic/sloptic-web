@@ -231,6 +231,81 @@ class TestExpiry:
         assert _row(conn, cid)["status"] == "pending"
 
 
+class TestRenewal:
+    """A term ending has to be recoverable. Before this there was no path at all: nothing moved a
+    claim out of verified, the daily watch deliberately records without re-granting, and so day 91
+    left an owner with a page saying Verified, a button answering 403, and a Check again that did
+    nothing for ever."""
+
+    def _verified(self, conn, account, *, origin="https://example.com"):
+        cid = _claim(conn, account, origin=origin, status="verified")
+        conn.execute("UPDATE domain_claims SET check_due_at = now() WHERE id = %s", (cid,))
+        return cid
+
+    def _renewal_asked(self, conn, cid):
+        conn.execute("UPDATE domain_claims SET renew_requested_at = now() WHERE id = %s", (cid,))
+
+    def test_a_healthy_look_alone_still_does_not_extend_the_grant(self, conn, account):
+        """The property the renewal must not break. If a passing check re-granted, the 90 days would
+        be decorative and nobody would ever re-attest."""
+        self._verified(conn, account)
+        _accept_terms(conn, account)
+        claim = db.claim_domain_check(conn)
+
+        assert claim.renew_requested is False
+        assert _grants(conn, account) == []
+
+    def test_a_renewal_is_carried_to_the_worker_on_the_row_it_already_holds(self, conn, account):
+        cid = self._verified(conn, account)
+        self._renewal_asked(conn, cid)
+
+        claim = db.claim_domain_check(conn)
+
+        assert claim.renew_requested is True
+
+    def test_renewing_writes_a_fresh_term_rather_than_a_second_grant(self, conn, account):
+        cid = self._verified(conn, account)
+        _accept_terms(conn, account)
+        self._renewal_asked(conn, cid)
+        claim = db.claim_domain_check(conn)
+
+        assert db.verify_domain_claim(conn, claim, "both proofs found", 90) == "granted"
+        again = db.claim_domain_check(conn)  # nothing else is due
+
+        grants = _grants(conn, account)
+        assert len(grants) == 1, "a renewal must upsert the term, never stack a second grant"
+        assert again is None or again.id != cid
+
+    def test_renewing_clears_the_request_so_it_is_not_spent_twice(self, conn, account):
+        cid = self._verified(conn, account)
+        _accept_terms(conn, account)
+        self._renewal_asked(conn, cid)
+        claim = db.claim_domain_check(conn)
+        db.verify_domain_claim(conn, claim, "both proofs found", 90)
+
+        assert _row(conn, cid)["renew_requested_at"] is None
+
+    def test_a_renewal_without_accepted_terms_writes_no_grant(self, conn, account):
+        """The attestation is a layer the active tier rests on, so a renewal cannot route around it
+        any more than a first verification can."""
+        cid = self._verified(conn, account)
+        self._renewal_asked(conn, cid)
+        claim = db.claim_domain_check(conn)
+
+        assert db.verify_domain_claim(conn, claim, "both proofs found", 90) == "blocked_on_terms"
+        assert _grants(conn, account) == []
+
+    def test_the_request_survives_a_renewal_that_could_not_be_granted(self, conn, account):
+        """Cleared in the same transaction as the grant, so a refusal leaves it outstanding rather
+        than silently spent."""
+        cid = self._verified(conn, account)
+        self._renewal_asked(conn, cid)
+        claim = db.claim_domain_check(conn)
+        db.verify_domain_claim(conn, claim, "both proofs found", 90)
+
+        assert _row(conn, cid)["renew_requested_at"] is not None
+
+
 class TestDegradingRatherThanCrashing:
     def test_a_missing_dns_library_blocks_the_factor_instead_of_taking_the_worker_down(self, monkeypatch):
         """A feature's optional dependency must not stop grading.

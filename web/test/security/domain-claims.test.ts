@@ -24,6 +24,7 @@ vi.mock("@/lib/egress", () => ({ egressPrecheck: async () => null }));
 import { POST as claim } from "@/app/api/verify/claim/route";
 import { POST as recheck } from "@/app/api/verify/recheck/route";
 import { POST as revoke } from "@/app/api/verify/revoke/route";
+import { POST as renew } from "@/app/api/verify/renew/route";
 import { MAX_LIVE_CLAIMS } from "@/lib/ratelimit";
 
 const ALICE = { id: "u-alice", email: "alice@example.com" };
@@ -169,3 +170,79 @@ describe("revoking reaches the traffic that is already booked", () => {
 function getDbRow(): Record<string, unknown> {
   return getDb().store.domain_claims[0] as Record<string, unknown>;
 }
+
+describe("a term that has ended can be renewed", () => {
+  const renewReq = (id = "claim-alice", attest: unknown = true) =>
+    jsonRequest("http://localhost/api/verify/renew", { id, attest });
+
+  beforeEach(() => setDb(fakeDb({
+    store: { domain_claims: [claimRow({ status: "verified" })], grants: [], grades: [] },
+  })));
+
+  it("records the request and brings the next check forward", async () => {
+    const res = await renew(renewReq());
+
+    expect(res.status).toBe(200);
+    const row = getDb().store.domain_claims[0] as Record<string, unknown>;
+    expect(row.renew_requested_at).toBeTruthy();
+    expect(row.check_due_at).not.toBe("2026-01-01T00:00:00.000Z");
+  });
+
+  it("does not itself verify, grant, or touch the token", async () => {
+    // The route decides nothing: the worker is the side inside the egress sandbox, and a route that
+    // could renew on its own would hand out active-testing rights with nobody looking at the origin.
+    const before = { ...(getDb().store.domain_claims[0] as Record<string, unknown>) };
+
+    await renew(renewReq());
+
+    const row = getDb().store.domain_claims[0] as Record<string, unknown>;
+    expect(row.token).toBe(before.token);
+    expect(row.verified_at).toBe(before.verified_at);
+    expect(getDb().store.grants).toHaveLength(0);
+  });
+
+  it("refuses when the attestation is declined", async () => {
+    const res = await renew(renewReq("claim-alice", false));
+
+    expect(res.status).toBe(400);
+    expect(getDb().store.domain_claims[0].renew_requested_at).toBeFalsy();
+  });
+
+  it("refuses when the attestation is absent entirely", async () => {
+    // Separate from the case above on purpose: a missing key and a false one arrive differently,
+    // and "attest" being merely truthy would pass one of them.
+    const res = await renew(jsonRequest("http://localhost/api/verify/renew", { id: "claim-alice" }));
+
+    expect(res.status).toBe(400);
+    expect(getDb().store.domain_claims[0].renew_requested_at).toBeFalsy();
+  });
+
+  it("refuses an attestation that is truthy but not the word yes", async () => {
+    const res = await renew(renewReq("claim-alice", "sure"));
+
+    expect(res.status).toBe(400);
+  });
+
+  it("refuses an anonymous caller", async () => {
+    setUser(null);
+    expect((await renew(renewReq())).status).toBe(401);
+  });
+
+  it("will not renew another account's claim, and does not confirm it exists", async () => {
+    setUser(MALLORY);
+    const res = await renew(renewReq());
+    expect(res.status).toBe(404);
+    expect(getDb().store.domain_claims[0].renew_requested_at).toBeFalsy();
+  });
+
+  it("will not renew a claim that was given up", async () => {
+    setDb(fakeDb({
+      store: { domain_claims: [claimRow({ status: "revoked" })], grants: [], grades: [] },
+    }));
+
+    const res = await renew(renewReq());
+
+    expect(res.status).toBe(409);
+    expect(getDb().store.domain_claims[0].renew_requested_at).toBeFalsy();
+  });
+});

@@ -66,8 +66,15 @@ function proofsHold(c: Claim): boolean {
   return c.file_status === "ok" && c.dns_status === "ok";
 }
 
+/** The 90 day term is over. The claim still says verified and both proofs may still be published:
+ *  what has lapsed is the grant, and with it the answer to "may this account grade this actively". */
+function termExpired(c: Claim): boolean {
+  return !!c.expires_at && new Date(c.expires_at).getTime() <= Date.now();
+}
+
 /** The row's one-line verdict, which is about the CLAIM rather than either proof. */
 function claimLine(c: Claim): string {
+  if (c.status === "verified" && termExpired(c)) return "term expired";
   if (c.status === "verified") return proofsHold(c) ? "verified" : "a proof is missing";
   if (c.status === "failed") return "gave up looking";
   if (c.status === "revoked") return "given up";
@@ -220,11 +227,12 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
     }
   }
 
-  async function act(id: string, path: string, then: string | null) {
+  async function act(id: string, path: string, then: string | null,
+                     extra: Record<string, unknown> = {}) {
     setBusy(true);
     setNote(null);
     try {
-      await post(path, { id });
+      await post(path, { id, ...extra });
       if (then) setNote(then);
       await load();
     } catch (err) {
@@ -307,6 +315,16 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
                   </>
                 )}
               </p>
+            ) : c.status === "verified" && termExpired(c) ? (
+              // The proofs can be perfect and this still be the blocking state, so it leads. The old
+              // copy said "Prove it again by <a date in the past>" beside an enabled button that
+              // answered 403, which read as the product being broken rather than as a term ending.
+              <p className="section-intro">
+                This verification&apos;s term ended
+                {c.expires_at ? ` on ${new Date(c.expires_at).toLocaleDateString()}` : ""}. Renew it
+                to grade actively again. Your token has not changed, so the file and the DNS record
+                you already published still count.
+              </p>
             ) : c.status === "verified" ? (
               <p className="section-intro">
                 Verified{c.verified_at ? ` on ${new Date(c.verified_at).toLocaleDateString()}` : ""}.
@@ -372,10 +390,34 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
                 // failed grade wastes a slot and teaches the wrong thing: the reason is right above
                 // it, in the half that went orange.
                 <button className="button" type="button"
-                        disabled={busy || !proofsHold(c)}
-                        title={proofsHold(c) ? undefined : "Both proofs have to be published: an active grade re-checks them."}
+                        disabled={busy || !proofsHold(c) || termExpired(c)}
+                        title={
+                          termExpired(c)
+                            ? "This verification's term has ended. Renew it first."
+                            : proofsHold(c)
+                              ? undefined
+                              : "Both proofs have to be published: an active grade re-checks them."
+                        }
                         onClick={() => void gradeActively(c.origin)}>
                   Grade it actively
+                </button>
+              )}
+              {c.status === "verified" && termExpired(c) && (
+                // The way out of the dead end. It does not renew anything by itself: it records that
+                // the owner attested again and brings the next check forward, and the worker grants
+                // only if both proofs still answer. Asking again is the point of the term ending,
+                // since a file keeps answering long after a domain changes hands.
+                <button className="button" type="button" disabled={busy}
+                        onClick={() => {
+                          if (!window.confirm(
+                            `Renew verification for ${c.origin}? Confirm that you still own this ` +
+                            `site and authorize active testing of it.`
+                          )) return;
+                          void act(c.id, "/api/verify/renew",
+                                   "Renewal requested. We are re-reading both proofs now.",
+                                   { attest: true });
+                        }}>
+                  Renew verification
                 </button>
               )}
               {c.status !== "revoked" && (

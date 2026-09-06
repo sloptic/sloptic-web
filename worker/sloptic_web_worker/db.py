@@ -371,6 +371,9 @@ class DomainClaim:
     token: str
     status: str
     attempts: int
+    # Set when the owner re-attested and asked for another term. Only a check where BOTH proofs
+    # answer ok may act on it, and acting on it clears it.
+    renew_requested: bool = False
 
 
 def claim_domain_check(conn: psycopg.Connection) -> DomainClaim | None:
@@ -397,13 +400,15 @@ def claim_domain_check(conn: psycopg.Connection) -> DomainClaim | None:
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
          )
-     RETURNING id, account_id, origin, host, token, status, attempts;
+     RETURNING id, account_id, origin, host, token, status, attempts,
+               (renew_requested_at IS NOT NULL) AS renew_requested;
         """
     ).fetchone()
     if row is None:
         return None
     return DomainClaim(id=str(row["id"]), account_id=str(row["account_id"]), origin=row["origin"],
                        host=row["host"], token=row["token"], status=row["status"],
+                       renew_requested=bool(row["renew_requested"]),
                        attempts=row["attempts"])
 
 
@@ -485,6 +490,9 @@ def verify_domain_claim(conn: psycopg.Connection, claim: DomainClaim, detail: st
             UPDATE domain_claims
                SET status = 'verified', file_status = 'ok', dns_status = 'ok',
                    checked_at = now(), verified_at = now(), detail = left(%(d)s, 2000),
+                   -- Cleared HERE, in the transaction that writes the grant, so a renewal that
+                   -- fails halfway is a renewal still outstanding rather than one silently spent.
+                   renew_requested_at = NULL,
                    -- Watched from here on, on the healthy cadence. Chasing a domain whose proofs
                    -- both hold teaches nothing and it is somebody else's server we are fetching.
                    check_due_at = now() + make_interval(secs => %(watch)s)
