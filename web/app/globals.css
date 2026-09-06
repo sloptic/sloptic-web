@@ -107,9 +107,10 @@ a {
   border-bottom: 1px solid var(--line);
 }
 .wordmark {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
+  /* NOT a flex container, deliberately. .masthead aligns on the baseline, and a flex container
+     exposes the baseline of its FIRST ITEM, which here is the mark: a span with no text and no
+     baseline worth having. Making this inline-flex silently dropped "grades any web app" off the
+     wordmark's baseline. Left inline, the anchor keeps its own text baseline and the note lines up. */
   font-family: var(--font-mono);
   font-weight: 600;
   font-size: 1.2rem;
@@ -123,6 +124,12 @@ a {
   display: inline-block;
   flex: 0 0 auto;
   line-height: 0;
+  /* Spacing and vertical position rather than a flex gap, since the parent is inline. The negative
+     shift optically centres the mark against the cap height: the mark is taller than the text, so
+     sitting it ON the baseline would leave it floating above the letters. Tune this, not the size,
+     if it reads high or low. */
+  margin-right: 0.45rem;
+  vertical-align: -0.22em;
 }
 .brand-mark svg {
   width: 100%;
