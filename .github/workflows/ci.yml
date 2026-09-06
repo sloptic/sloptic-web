@@ -76,19 +76,16 @@ jobs:
         with:
           python-version: "3.11"
 
-      # Installed, not a hand-picked subset of its imports. The generator loads the catalog through
-      # sloptic.catalog, which reaches sloptic.schema and pulls yaml and pydantic today. Listing
-      # those two here is the same mistake the worker job already documents: a hand-written list
-      # goes stale silently the moment the grader imports something new, and surfaces as a missing
-      # module rather than as a missing declaration.
+      # The pinned grader from PyPI, not a branch clone. Since 2.2.0 the catalog ships inside the
+      # wheel, so the generator reads it from the dependency the worker actually runs. The version
+      # comes from worker/pyproject.toml, and the generator refuses to run against a different one:
+      # a stale sloptic in site-packages once produced 91 checks instead of 102 and reported success.
       - name: Install the grader
-        run: |
-          git clone --depth 1 --branch v2-dev https://github.com/sloptic/sloptic-main.git /tmp/sloptic-main
-          pip install --quiet -e /tmp/sloptic-main
+        run: pip install --quiet "sloptic==$(python -c "import tomllib;print([d for d in tomllib.load(open('worker/pyproject.toml','rb'))['project']['dependencies'] if d.startswith('sloptic==')][0].split('==')[1])")"
 
       - name: Check facts match the grader
         run: |
-          python scripts/generate-checks.py --grader /tmp/sloptic-main
+          python scripts/generate-checks.py
           if ! git diff --quiet -- web/lib/checks.generated.ts; then
             echo "::error::web/lib/checks.generated.ts is stale. Run scripts/generate-checks.py and commit."
             git --no-pager diff -- web/lib/checks.generated.ts
@@ -134,15 +131,8 @@ jobs:
 
       # The GRADER first. It is a dependency, not a copy (CLAUDE.md), the worker imports it, and
       # several suites reach it transitively through __main__ and grader.py. No PUBLISHED version
-      # satisfies those imports: sloptic.devpost arrives in 2.2.0 and the tags stop at v2.1.0, so
-      # PyPI's newest is missing a module the worker imports at start up. CI therefore installs the
-      # same branch the worker box runs, which is the honest description of where this project is.
-      # When 2.2.0 ships, this becomes a pinned version and the clone goes away.
-      - name: Install the grader
-        run: |
-          git clone --depth 1 --branch v2-dev https://github.com/sloptic/sloptic-main.git /tmp/sloptic-main
-          pip install --quiet -e /tmp/sloptic-main
-
+      # The grader arrives with the worker now: 2.2.0 is on PyPI and worker/pyproject.toml pins it
+      # exactly, so there is no clone to keep in step with anything.
       # From pyproject, not a hand-written list. The list was the bug: it predated dnspython and
       # httpx, so CI kept installing a subset that no longer matched what the code imports, and the
       # failure surfaced as a missing module rather than as a missing declaration.

@@ -13,10 +13,16 @@ dependencies = [
     # through the grader, which is not the same as being ours to rely on: the day the grader drops
     # it or pins it differently, an undeclared import becomes a crash at boot.
     "httpx>=0.27",
-    # sloptic is the pinned GRADER, consumed not forked. It is not on PyPI, so install the sibling clone
-    # in editable mode alongside this package (see README): pip install -e ../../sloptic-main
-    # plus its browser deps for the passive a11y/CWV probes:
-    #   pip install playwright && playwright install chromium
+    # The GRADER, consumed not forked, and pinned EXACTLY rather than with a floor. A grader that
+    # moves changes what a score means, and both frozen curves (2026.3 and passive-2026.1) were
+    # built from a 1,625-app corpus with a specific battery. A minor version bump that added one
+    # probe would silently make every new grade incomparable to the curve it is ranked against.
+    #
+    # This is also the single source of truth for the pin: scripts/generate-checks.py reads it and
+    # refuses to generate against a different installed version.
+    "sloptic==2.2.0",
+    # Its browser deps for the a11y and CWV probes are not declared here, because they are a system
+    # install rather than a wheel: pip install playwright && playwright install chromium
 ]
 
 [build-system]

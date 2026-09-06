@@ -23,22 +23,85 @@ HERE = pathlib.Path(__file__).resolve().parent
 OUT = HERE.parent / "web" / "lib" / "checks.generated.ts"
 
 
+def pinned_version() -> str | None:
+    """The grader version worker/pyproject.toml pins, which is the one the product runs."""
+    import tomllib
+    try:
+        data = tomllib.loads((HERE.parent / "worker" / "pyproject.toml").read_text())
+    except (OSError, ValueError):
+        return None
+    for dep in data.get("project", {}).get("dependencies", []):
+        if dep.replace(" ", "").startswith("sloptic=="):
+            return dep.split("==", 1)[1].strip().strip('"')
+    return None
+
+
+def installed_version(checkout: str | None) -> str | None:
+    """What we are about to generate FROM. A checkout states its version in its own pyproject; an
+    installed wheel states it in its metadata."""
+    if checkout:
+        import tomllib
+        try:
+            data = tomllib.loads((pathlib.Path(checkout) / "pyproject.toml").read_text())
+            return str(data.get("project", {}).get("version") or "") or None
+        except (OSError, ValueError):
+            return None
+    import importlib.metadata as md
+    try:
+        return md.version("sloptic")
+    except md.PackageNotFoundError:
+        return None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--grader", default=str(HERE.parent.parent / "sloptic-main"),
-                    help="path to the sloptic-main checkout")
+    ap.add_argument("--grader", default=None,
+                    help="path to a sloptic-main checkout; omit to use the installed sloptic")
     args = ap.parse_args()
 
-    grader = pathlib.Path(args.grader).resolve()
-    if not (grader / "sloptic").is_dir():
-        print(f"no grader at {grader}. Pass --grader.", file=sys.stderr)
+    # Default to the INSTALLED grader, which since 2.2.0 carries the catalog inside the wheel at
+    # sloptic/catalog. That is what the worker actually runs, so generating from it means this file
+    # describes the battery that grades people rather than whatever happens to be checked out beside
+    # the repo. It also lets CI pin a version instead of cloning a branch in two jobs.
+    #
+    # --grader still takes a checkout, for working on the grader and the site together.
+    if args.grader:
+        grader = pathlib.Path(args.grader).resolve()
+        if not (grader / "sloptic").is_dir():
+            print(f"no grader at {grader}. Pass a checkout path or omit --grader.", file=sys.stderr)
+            return 1
+        sys.path.insert(0, str(grader))
+
+    try:
+        from sloptic import safety                                        # noqa: E402
+        from sloptic.catalog import default_catalog_dir, load_catalog     # noqa: E402
+    except ModuleNotFoundError:
+        print(f"sloptic is not importable. `pip install sloptic=={pinned_version()}`, "
+              "or pass --grader <checkout>.", file=sys.stderr)
         return 1
-    sys.path.insert(0, str(grader))
 
-    from sloptic import safety                     # noqa: E402
-    from sloptic.catalog import load_catalog       # noqa: E402
+    # Generating against whatever happens to be installed is a footgun, and it fired on the first
+    # run: a machine with sloptic 1.1.1 sitting in site-packages produced 91 checks instead of 102
+    # and reported success. The site would then have published a battery nobody runs. So the version
+    # is checked against the worker's pin, which is the grader the product actually uses.
+    want = pinned_version()
+    got = installed_version(args.grader)
+    if want and got and got != want:
+        print(f"grader is {got}, but worker/pyproject.toml pins {want}.", file=sys.stderr)
+        print(f"  `pip install sloptic=={want}`, or pass --grader <checkout of {want}>.",
+              file=sys.stderr)
+        return 1
+    print(f"  grader:  {got or 'unknown'}")
 
-    probes = load_catalog(grader / "catalog")
+    # default_catalog_dir prefers the packaged copy and falls back to the checkout's sibling
+    # `catalog/`, so this is right in both modes without branching on which one we are in.
+    catalog_dir = default_catalog_dir()
+    if not catalog_dir.is_dir():
+        print(f"no catalog at {catalog_dir}.", file=sys.stderr)
+        return 1
+    print(f"  catalog: {catalog_dir}")
+
+    probes = load_catalog(catalog_dir)
 
     # Fail loudly rather than emit numbers that do not add up: safety.py is a hand-kept allow-list,
     # and if it ever stops partitioning the live catalog the site's counts become fiction.

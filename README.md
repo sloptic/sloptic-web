@@ -20,7 +20,10 @@ product and must not be weakened.
 
 ## The grader is a dependency
 
-`sloptic` (in `../sloptic-main`) is pinned and consumed, never forked. The worker runs it
+`sloptic` is pinned and consumed, never forked: `sloptic==2.2.0` from PyPI, declared in
+`worker/pyproject.toml`, which is the single place the version is stated. Pinned exactly rather
+than with a floor, because a grader that moves changes what a score means, and both frozen curves
+came from a 1,625-app corpus run with one specific battery. The worker runs it
 `--passive-only` (`sloptic.safety.passive_catalog()`) for unverified targets. Probe logic changes
 land in the grader repo, never here.
 
