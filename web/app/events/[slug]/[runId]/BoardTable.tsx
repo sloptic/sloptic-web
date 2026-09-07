@@ -136,6 +136,29 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
         </table>
       </div>
       )}
+      {/* Directly under the table, because that is the only thing it pages. Below the didn't-finish
+          list it read as paging THAT, which is worse than it sounds on a board like treehacks:
+          "1 to 25 of 104" sitting under a list of entries that did not finish invites the reader to
+          think 104 of them failed. The list is whole and unpaginated either way. */}
+      {sorted.length > PAGE && (
+        <div className="pager">
+          <button className="link-button" type="button" disabled={page === 0} onClick={() => setPage(0)}>
+            first
+          </button>
+          <button className="link-button" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>
+            previous
+          </button>
+          <span>
+            {from + 1} to {Math.min(from + PAGE, sorted.length)} of {sorted.length}
+          </span>
+          <button className="link-button" type="button" disabled={page >= last} onClick={() => setPage(page + 1)}>
+            next
+          </button>
+          <button className="link-button" type="button" disabled={page >= last} onClick={() => setPage(last)}>
+            last
+          </button>
+        </div>
+      )}
       {(rows.some((r) => r.provisional || r.marks.retry || r.marks.none || r.marks.partial || r.marks.full || r.marks.limited) ||
         dnf.some((d) => !!d.marks && (d.marks.retry || d.marks.none || d.marks.partial || d.marks.full || d.marks.limited))) && (
         <p className="marks-key">
@@ -157,25 +180,6 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
             ))}
           </ul>
         </>
-      )}
-      {sorted.length > PAGE && (
-        <div className="pager">
-          <button className="link-button" type="button" disabled={page === 0} onClick={() => setPage(0)}>
-            first
-          </button>
-          <button className="link-button" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>
-            previous
-          </button>
-          <span>
-            {from + 1} to {Math.min(from + PAGE, sorted.length)} of {sorted.length}
-          </span>
-          <button className="link-button" type="button" disabled={page >= last} onClick={() => setPage(page + 1)}>
-            next
-          </button>
-          <button className="link-button" type="button" disabled={page >= last} onClick={() => setPage(last)}>
-            last
-          </button>
-        </div>
       )}
     </>
   );
