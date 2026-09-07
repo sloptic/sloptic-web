@@ -475,13 +475,11 @@ def process_notifications(conn) -> int:
                 subject = f"{n.subject_bit} is graded"
             notify.send(n.email, subject, html)
         except notify.NotSent as e:
-            # A template fault is ours and permanent: retrying it every pass for ever would crowd
-            # out the mail that can be delivered, so stop asking. A transport fault is probably
-            # theirs and probably temporary, so leave the row unmarked and try again next pass.
-            permanent = "unfilled placeholders" in str(e) or "HTTP 4" in str(e)
+            # The raiser decides, because it is the only thing that knows why. Matching on the
+            # message text here read 429 and 401 as permanent and destroyed the notification.
             print(f"[mail]  {n.kind} {n.id}: not sent: {e}"
-                  f"{' (giving up)' if permanent else ''}", flush=True)
-            if permanent:
+                  f"{' (giving up)' if e.permanent else ''}", flush=True)
+            if e.permanent:
                 db.give_up_notifying(conn, n)
             continue
         db.mark_notified(conn, n)
@@ -742,8 +740,13 @@ def main() -> None:
             worked = process_event_checks(conn) > 0 or worked
             worked = process_domain_checks(conn) > 0 or worked
             worked = process_event_runs(conn) > 0 or worked
-            # After event runs, so a run that settles this pass is told in the same one.
-            worked = process_notifications(conn) > 0 or worked
+            # After event runs, so a run that settles this pass is told in the same one. A pass that
+            # actually sent something pauses before the next: NOTIFY_BATCH bounds a pass, not a rate,
+            # and passes are otherwise unbounded, so a backlog drained as fast as the network allowed
+            # and walked straight into Resend's per-second limit.
+            if process_notifications(conn) > 0:
+                worked = True
+                time.sleep(config.NOTIFY_PAUSE_SECONDS)
             # Say WHY we are idle, but only when the reason changes: this loop runs every 5s.
             blocked = rep.blocked(conn)
             lanes = {l for l in ("public", "event") if l not in blocked}

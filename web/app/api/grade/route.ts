@@ -124,14 +124,19 @@ export async function POST(req: NextRequest) {
   // ("respect bot challenges; never build anything that defeats them"), and the retry that was
   // designed for exactly this case is still pending underneath it.
   //
-  // Scoped to the account, so one person resubmitting cannot be told about another's grade. The
-  // rate limit is per address and does not help here: five submissions an hour of the same URL is
-  // five batteries.
-  // "Belonging to this caller" is two different SQL questions, and writing it as one was the bug.
-  // .eq("account_id", null) renders as account_id=eq.null, which never matches SQL NULL (on a uuid
-  // column PostgREST rejects it outright), so for an anonymous submitter -- the default tier, i.e.
-  // almost everyone -- both guards below silently matched nothing and never once fired. IS NULL is
-  // the only operator that finds an unowned row.
+  // Scoped to the SUBMITTER, so one person resubmitting cannot be told about another's grade.
+  //
+  // Two different SQL questions, and writing them as one has now been the bug twice. First,
+  // .eq("account_id", null) renders as account_id=eq.null, which never matches SQL NULL, so for
+  // anonymous submitters (the default tier, almost everyone) the guard silently never fired. Fixing
+  // that to IS NULL turned on a path that had never run, and IS NULL alone means "any anonymous
+  // grade of this origin", which is not the same person: a stranger submitting the same URL was
+  // handed back an id that reads AND deletes someone else's report.
+  //
+  // So anonymous is matched on the submitting address as well. That is what "the same submitter"
+  // can mean without an account, it is the identity the rate limit already uses, and the hash is
+  // always present here because this only ever looks at grades minutes old, well inside the two-day
+  // window before forget_submitter_ips clears it.
   const inFlightQ = db
     .from("grades")
     .select("id, status, origin, mode, retry_due_at")
@@ -139,7 +144,7 @@ export async function POST(req: NextRequest) {
     .is("event_run_id", null);
   const inFlight = await (user
     ? inFlightQ.eq("account_id", user.id)
-    : inFlightQ.is("account_id", null))
+    : inFlightQ.is("account_id", null).eq("submitter_ip_hash", ipHash))
     .in("status", ["queued", "running"])
     .order("submitted_at", { ascending: false })
     .limit(1);
@@ -161,7 +166,7 @@ export async function POST(req: NextRequest) {
     .is("event_run_id", null);
   const pendingRetry = await (user
     ? retryQ.eq("account_id", user.id)
-    : retryQ.is("account_id", null))
+    : retryQ.is("account_id", null).eq("submitter_ip_hash", ipHash))
     .not("retry_due_at", "is", null)
     .order("submitted_at", { ascending: false })
     .limit(1);

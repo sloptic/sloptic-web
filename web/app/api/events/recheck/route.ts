@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { currentUser } from "@/lib/auth";
+import { suspensionFor } from "@/lib/suspension";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +13,11 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+
+  // Suspended accounts spend no outbound traffic. This route makes the worker fetch Devpost or a
+  // claimed origin, so it needs the same gate the grade path has.
+  const suspended = await suspensionFor(user.id);
+  if (suspended) return NextResponse.json({ error: suspended.reason }, { status: 403 });
 
   let body: { id?: string };
   try {

@@ -129,3 +129,30 @@ describe("GET /api/health", () => {
     expect((await health()).headers.get("cache-control")).toBe("no-store");
   });
 });
+
+describe("health does not hand out the grade it is working on", () => {
+  it("reports whether the worker is busy, never which grade", async () => {
+    // worker_status.in_flight holds a grade uuid, and a grade id is the whole capability: it reads
+    // the report and, while the grade is unclaimed, deletes it. This route is unauthenticated and
+    // unrated, so publishing that id let anyone poll it and harvest ids for most grades on the
+    // service. A monitor needs to know the worker is busy, not what it is busy with.
+    const db = fakeDb({
+      store: {
+        worker_status: [{
+          id: "worker",
+          last_seen: new Date().toISOString(),
+          state: "grading",
+          reason: "",
+          in_flight: "11111111-2222-3333-4444-555555555555",
+        }],
+        grades: [],
+      },
+    });
+    setDb(db);
+
+    const { body } = await read(await health());
+
+    expect(JSON.stringify(body)).not.toContain("11111111-2222-3333-4444-555555555555");
+    expect((body.worker as { busy: boolean }).busy).toBe(true);
+  });
+});

@@ -67,7 +67,12 @@ export async function GET() {
         alive: workerAlive,
         heartbeat_age_seconds: ageSeconds,
         state: worker?.state ?? null,
-        in_flight: worker?.in_flight ?? null,
+        // A BOOLEAN, never the id. worker_status.in_flight holds the uuid of the grade being
+        // worked on, and a grade id is the whole capability: it reads the report and, while the
+        // grade is unclaimed, deletes it. This route is unauthenticated and unrated, so publishing
+        // that id let anyone poll every ten seconds and harvest most ids on the service. A monitor
+        // needs to know whether the worker is busy, not which grade it is busy with.
+        busy: Boolean(worker?.in_flight),
       },
       queued: queued ?? null,
     },

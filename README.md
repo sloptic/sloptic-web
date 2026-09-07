@@ -29,9 +29,13 @@ land in the grader repo, never here.
 
 ## Status
 
-Phase 1 scaffold. **Not safe to point at real untrusted URLs yet:** the egress sandbox +
-redirect-scoping (P0) is not implemented. The worker's fetch path has a single chokepoint
-(`worker/sloptic_web_worker/egress.py`) marked for it. See the handoff and CLAUDE.md.
+Shipping. The egress sandbox is BUILT, all four tiers, verified 2026-08-30 with `worker/deploy/selftest.py`
+passing 8 of 8: the grader's resolver guard and browser route filter, a uid-scoped nftables deny on the
+worker host, and the worker's own fail-closed gate at `worker/sloptic_web_worker/egress.py`. See
+`docs/egress-plan.md` for what each tier covers and CLAUDE.md for the security model it serves.
+
+This paragraph said the opposite until 2026-09-07, long after the work landed. If you are reading a
+claim here that the code contradicts, believe the code and fix the sentence.
 
 ## Local dev
 

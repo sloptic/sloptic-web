@@ -396,6 +396,11 @@ def claim_domain_check(conn: psycopg.Connection) -> DomainClaim | None:
          WHERE id = (
                SELECT id FROM domain_claims
                 WHERE status IN ('pending', 'verified') AND check_due_at <= now()
+                  -- Standing outbound traffic on a timer, so a suspension has to reach it: the web
+                  -- routes only stop new claims being made.
+                  AND NOT EXISTS (SELECT 1 FROM profiles p
+                                   WHERE p.id = domain_claims.account_id
+                                     AND p.suspended_at IS NOT NULL)
                 ORDER BY check_due_at
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
@@ -599,6 +604,11 @@ def claim_event_check(conn: psycopg.Connection) -> Claim | None:
          WHERE id = (
                SELECT id FROM event_claims
                 WHERE status = 'pending' AND check_due_at <= now()
+                  -- Devpost fetches on a timer, so a suspension has to reach them: gating the web
+                  -- routes alone stops new rechecks while leaving the standing ones running.
+                  AND NOT EXISTS (SELECT 1 FROM profiles p
+                                   WHERE p.id = event_claims.account_id
+                                     AND p.suspended_at IS NOT NULL)
                 ORDER BY check_due_at
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
@@ -735,6 +745,11 @@ def claim_event_run(conn: psycopg.Connection) -> Run | None:
          WHERE id = (
                SELECT id FROM event_runs
                 WHERE status = 'resolving' AND started_at IS NULL
+                  -- Resolving a field walks a whole gallery, which is the largest single piece of
+                  -- outbound traffic here, so a suspension has to reach it too.
+                  AND NOT EXISTS (SELECT 1 FROM profiles p
+                                   WHERE p.id = event_runs.account_id
+                                     AND p.suspended_at IS NOT NULL)
                 ORDER BY created_at
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1

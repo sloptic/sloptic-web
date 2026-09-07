@@ -114,7 +114,7 @@ before it sends anything, so work queued before the suspension does not run.
 
 Off unless `RESEND_API_KEY` is set, so a development worker never mails strangers.
 
-    RESEND_API_KEY=re_...                       # the same Resend account the auth mail uses
+    RESEND_API_KEY=re_...                       # the same Resend account the sign-in mail uses
     NOTIFY_FROM="Sloptic <hello@sloptic.org>"   # must be on a domain verified in Resend
     NEXT_PUBLIC_SITE_URL=https://sloptic.org    # where the links in the mail point
 
@@ -132,4 +132,14 @@ Templates are in `web/emails/`, beside the auth ones, and are read from the chec
 `EMAIL_TEMPLATE_DIR` for a worker running outside it.
 
 Note the shared ceiling: Resend's free tier is 100 messages a day and sign-in mail comes out of the
-same allowance. `NOTIFY_BATCH` (default 10) bounds one pass so a backlog cannot spend it all at once.
+same allowance, so a notification burst can stop people signing in. `NOTIFY_BATCH` (default 10)
+bounds how many go out in one pass and `NOTIFY_PAUSE_SECONDS` (default 5) bounds how often a pass
+that sent something runs again. Both are needed: the batch alone bounded the size of a burst and not
+its rate.
+
+Suspending an account does not clear its notification backlog, it only filters it, so lifting a
+suspension releases everything that finished meanwhile. If the suspension was a mistake and you do
+not want that, clear the backlog when you lift it:
+
+    update grades set notified_at = now()
+     where account_id = '<id>' and status = 'done' and notified_at is null;

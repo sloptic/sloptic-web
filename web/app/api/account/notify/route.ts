@@ -29,11 +29,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Send { on: true } or { on: false }." }, { status: 400 });
   }
 
-  const { error } = await supabaseAdmin()
-    .from("profiles")
-    .update({ notify_email: body.on })
-    .eq("id", user.id);
+  const db = supabaseAdmin();
+  const { error } = await db.from("profiles").update({ notify_email: body.on }).eq("id", user.id);
   if (error) return NextResponse.json({ error: "Could not save that." }, { status: 500 });
+
+  // Turning it off clears the backlog rather than parking it. The worker's queue is "finished and
+  // not yet told", and being opted out only FILTERS that set, it does not empty it: a month of
+  // grades finishing while the switch was off would all arrive the moment it went back on. Nobody
+  // wants thirty messages about work they did in July as the price of turning notifications on.
+  if (body.on === false) {
+    await db
+      .from("grades")
+      .update({ notified_at: new Date().toISOString() })
+      .eq("account_id", user.id)
+      .eq("status", "done")
+      .is("notified_at", null);
+  }
 
   return NextResponse.json({ notify_email: body.on });
 }

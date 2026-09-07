@@ -27,6 +27,8 @@ vi.mock("@/lib/flags", async (orig) => ({
 import { POST as submit } from "@/app/api/grade/route";
 import { POST as claimDomain } from "@/app/api/verify/claim/route";
 import { POST as recheck } from "@/app/api/verify/recheck/route";
+import { POST as eventRecheck } from "@/app/api/events/recheck/route";
+import { POST as runRefresh } from "@/app/api/events/run/refresh/route";
 import { SUSPENDED_FALLBACK } from "@/lib/suspension";
 
 const ALICE = { id: "u-alice", email: "alice@example.com" };
@@ -80,6 +82,18 @@ describe("a suspended account cannot spend our outbound traffic", () => {
 
   it("cannot force a re-check", async () => {
     expect((await recheck(jsonRequest("http://localhost/api/verify/recheck", { id: "x" }))).status)
+      .toBe(403);
+  });
+
+  it("cannot force an event recheck, which makes the worker refetch Devpost", async () => {
+    // This one was the gap. The route had no suspension check AND no rate limit, so a suspended
+    // account could loop it and drive the residential IP at Devpost's WAF indefinitely.
+    expect((await eventRecheck(jsonRequest("http://localhost/api/events/recheck", { id: "x" }))).status)
+      .toBe(403);
+  });
+
+  it("cannot refresh an event run, which re-walks a whole gallery", async () => {
+    expect((await runRefresh(jsonRequest("http://localhost/api/events/run/refresh", { id: "x" }))).status)
       .toBe(403);
   });
 

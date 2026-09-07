@@ -30,7 +30,22 @@ _TIMEOUT = 10.0
 
 
 class NotSent(Exception):
-    """Sending failed. The caller leaves the row unmarked so the next pass tries again."""
+    """Sending failed.
+
+    `permanent` is decided HERE, by whoever knows why it failed, rather than by the caller matching
+    on the message text. That is not tidiness: the caller used to test `"HTTP 4" in str(e)`, which
+    also matches 401, 403, 408, 425 and 429. A rate limit, a spent daily quota or a mistyped key was
+    therefore filed as permanent and the notification was marked sent and destroyed. The whole design
+    says a failure costs a duplicate rather than a silence, and that one line was the silence.
+
+    Permanent means "asking again cannot help": a template fault, or a message this recipient will
+    never accept. Everything else, including a bad key, waits. A wrong key blocking the queue until
+    someone fixes it is the correct behaviour; deleting the mail is not.
+    """
+
+    def __init__(self, message: str, *, permanent: bool = False):
+        super().__init__(message)
+        self.permanent = permanent
 
 
 def enabled() -> bool:
@@ -51,7 +66,7 @@ def render(template: str, **fields: str) -> str:
         html = html.replace("{{ " + key + " }}", safe)
     left = re.findall(r"\{\{\s*([a-z_]+)\s*\}\}", html)
     if left:
-        raise NotSent(f"{template} has unfilled placeholders: {sorted(set(left))}")
+        raise NotSent(f"{template} has unfilled placeholders: {sorted(set(left))}", permanent=True)
     return html
 
 
@@ -86,6 +101,10 @@ def send(to: str, subject: str, html: str) -> None:
     except Exception as e:  # noqa: BLE001 - transport of any kind means "not sent"
         raise NotSent(f"{type(e).__name__}: {e}") from e
     if r.status_code >= 300:
+        # Only a message this recipient will never accept is permanent. A 429 is the rate limiter or
+        # the daily quota, a 401 or 403 is a key someone can fix, and a 5xx is theirs: all of those
+        # are worth asking again, and none of them are grounds for throwing the message away.
+        never_acceptable = r.status_code in (400, 404, 422)
         # The body carries Resend's reason (a daily cap, an unverified domain, a bad address), and
         # that reason is the whole value of the log line when mail silently stops arriving.
-        raise NotSent(f"HTTP {r.status_code}: {r.text[:300]}")
+        raise NotSent(f"HTTP {r.status_code}: {r.text[:300]}", permanent=never_acceptable)

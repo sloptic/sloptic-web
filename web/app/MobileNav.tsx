@@ -73,9 +73,19 @@ export default function MobileNav({ email }: { email: string | null }) {
               <SignOutButton className="nav-menu-signout" />
             </>
           ) : (
-            <a href="/signin" onClick={() => setOpen(false)}>
-              Sign in / up
-            </a>
+            <>
+              {/* The same link the desktop masthead gives a signed-out visitor, and it was missing
+                  here. Without an account the browser's own list is the ONLY way back to a report,
+                  and /grades is deliberately absent from lib/nav so it never arrived through the
+                  shared list. Someone who graded an app on their phone and closed the tab had no
+                  route back at all. */}
+              <a href="/grades" onClick={() => setOpen(false)}>
+                your grades
+              </a>
+              <a href="/signin" onClick={() => setOpen(false)}>
+                Sign in / up
+              </a>
+            </>
           )}
         </div>
       ) : null}

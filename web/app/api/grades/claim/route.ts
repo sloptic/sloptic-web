@@ -25,13 +25,35 @@ export async function POST(req: NextRequest) {
   const ids = cleanIds(body.ids);
   if (ids.length === 0) return NextResponse.json({ claimed: [] });
 
+  // notified_at is stamped in the same statement, and only where the grade has already finished.
+  //
+  // "Finished and not yet told" is what the worker's notification queue means, and an anonymous
+  // grade sits in that state for ever because there was nobody to tell. Attaching an account to it
+  // makes it mailable retroactively: saving a fortnight of anonymous grades in one click would
+  // otherwise send one "your grade is ready" per grade, about reports the person has already read,
+  // one of which they are looking at. At the 100-id cap that is a whole day's sending allowance on
+  // one button.
+  //
+  // Same reasoning as migration 0033, which cleaned up the one-time version of this at launch.
+  const now = new Date().toISOString();
   const { data, error } = await supabaseAdmin()
     .from("grades")
     .update({ account_id: user.id })
     .in("id", ids)
     .is("account_id", null)
     .is("event_run_id", null)
-    .select("id");
+    .select("id, status");
+
+  if (!error) {
+    const alreadyDone = (data ?? []).filter((r) => r.status === "done").map((r) => r.id as string);
+    if (alreadyDone.length) {
+      await supabaseAdmin()
+        .from("grades")
+        .update({ notified_at: now })
+        .in("id", alreadyDone)
+        .is("notified_at", null);
+    }
+  }
 
   if (error) return NextResponse.json({ error: "Could not claim." }, { status: 500 });
   return NextResponse.json({ claimed: (data ?? []).map((r) => r.id as string) });

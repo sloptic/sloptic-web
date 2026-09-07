@@ -447,6 +447,28 @@ describe("POST /api/grade, submitting the same origin again", () => {
     expect(db.rows("grades")).toHaveLength(1);
   });
 
+  it("does not hand one anonymous submitter another's report", async () => {
+    // A report id is a bearer token: it reads AND deletes. Scoping the anonymous branch to
+    // "account_id IS NULL" alone meant anyone submitting the same URL while a grade was in flight
+    // was handed a stranger's report. Knowing the target URL must not be a second way in.
+    const first = await read(await submit("https://example.com", "203.0.113.7"));
+    const other = await read(await submit("https://example.com", "198.51.100.4"));
+
+    expect(other.body.id).not.toBe(first.body.id);
+    expect(other.body.existing).toBeUndefined();
+    expect(db.rows("grades")).toHaveLength(2);
+  });
+
+  it("still hands the SAME anonymous submitter back their own grade", async () => {
+    // The dedup has to keep working, or a resubmit fires a second battery at an origin that just
+    // refused us, which is the behaviour it exists to prevent.
+    const first = await read(await submit("https://example.com"));
+    const again = await read(await submit("https://example.com"));
+
+    expect(again.body.id).toBe(first.body.id);
+    expect(db.rows("grades")).toHaveLength(1);
+  });
+
   it("starts a fresh grade once the first is finished and nothing is pending", async () => {
     // Not a lock on the origin: a settled grade is a measurement of a moment, and asking again after
     // fixing something is the ordinary reason to come back.

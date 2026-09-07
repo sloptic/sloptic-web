@@ -1,7 +1,7 @@
 // Egress pre-check for a submitted host, run at submit time so we reject an obviously-internal target
 // before it ever reaches the queue.
 //
-// P0 / DEFERRED (see CLAUDE.md and the handoff): the AUTHORITATIVE egress sandbox lives in the worker's
+// The AUTHORITATIVE egress sandbox lives in the worker's
 // fetch path (worker/sloptic_web_worker/egress.py), because that is where every outbound fetch and every
 // redirect actually happens. This function is only a cheap first gate: DNS can rebind between this check
 // and the grade, and a redirect can walk off-origin, so this must NOT be treated as the security control.

@@ -54,10 +54,18 @@ Two things this depends on:
 
 ## Sending
 
-These go out through custom SMTP (ZeptoMail), not Supabase's built-in sender, which is capped at
+These go out through custom SMTP (Resend), not Supabase's built-in sender, which is capped at
 2 messages an hour and carries no delivery guarantee. With magic-link sign-in that cap is the front
 door: the third person to sign in during any hour gets nothing at all.
 
-Both senders on this domain (Zoho Mail for the `hello@` mailbox, ZeptoMail for these) have to appear
-in ONE SPF record. A second TXT record beginning `v=spf1` does not add a sender, it makes SPF fail
-for both.
+Three senders share this domain and none of them is the same thing: Zoho Mail for the `hello@`
+mailbox that humans read, Resend for these sign-in messages, and Resend again for the worker's
+notification mail (`worker/sloptic_web_worker/notify.py`).
+
+Resend authenticates on its own subdomain (`resend._domainkey`, plus the `send`/`rsend` CNAMEs for
+the return path), so it needs no entry in the apex SPF record and the apex stays Zoho's alone. That
+is worth knowing before anyone "fixes" it: a second TXT record beginning `v=spf1` does not add a
+sender, it makes SPF fail for every sender on the domain.
+
+The shared ceiling is real though. Resend's free tier is 100 messages a day and BOTH the sign-in
+mail and the notification mail come out of it, so a notification burst can stop people signing in.

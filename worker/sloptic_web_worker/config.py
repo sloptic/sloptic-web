@@ -289,3 +289,8 @@ NOTIFY_BATCH = int(os.environ.get("NOTIFY_BATCH", "10"))
 # more machinery than this volume justifies. Turning the toggle off in the account is still the real
 # control; this is the exit for someone who will not go looking for it.
 UNSUBSCRIBE_MAILBOX = os.environ.get("UNSUBSCRIBE_MAILBOX", "hello@sloptic.org")
+
+# Pause after a pass that sent mail. NOTIFY_BATCH bounds how many go out at once; this bounds how
+# often, which is the half that matters against a per-second limit. Without it a backlog spun the
+# supervisor with no sleep and drained straight into a 429.
+NOTIFY_PAUSE_SECONDS = float(os.environ.get("NOTIFY_PAUSE_SECONDS", "5"))

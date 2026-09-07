@@ -157,6 +157,28 @@ class TestRendering:
             html = notify.render(template, account_url="https://sloptic.org/account", **fields)
             assert "https://sloptic.org/account" in html
 
+    def test_a_rate_limit_is_never_treated_as_permanent(self):
+        """The bug this replaces: `"HTTP 4" in str(e)` also matched 401, 403, 408, 425 and 429, so a
+        rate limit, a spent daily quota or a mistyped key marked the notice sent and destroyed it.
+        The design promises a duplicate rather than a silence, and that line was the silence."""
+        for code in (401, 403, 408, 425, 429, 500, 503):
+            e = notify.NotSent(f"HTTP {code}: nope", permanent=(code in (400, 404, 422)))
+            assert e.permanent is False, f"{code} must be retried, not discarded"
+
+    def test_a_message_the_recipient_will_never_accept_is_permanent(self):
+        # These would otherwise sit at the head of an oldest-first queue for ever, starving everyone
+        # behind them.
+        for code in (400, 404, 422):
+            assert notify.NotSent(f"HTTP {code}", permanent=True).permanent is True
+
+    def test_a_template_fault_is_permanent(self):
+        try:
+            notify.render("grade-ready.html", origin="a")
+        except notify.NotSent as e:
+            assert e.permanent is True
+        else:
+            raise AssertionError("expected NotSent")
+
     def test_sending_is_off_without_a_key(self):
         # A development worker must not mail strangers, and that is a no-op rather than an error.
         assert notify.enabled() is False

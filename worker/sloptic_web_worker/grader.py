@@ -30,11 +30,43 @@ def _catalog_version() -> str:
         return "sloptic-unknown"
 
 
+class CatalogMissing(Exception):
+    """The probe catalog did not load. Refuse to grade rather than grade with nothing."""
+
+
+def _catalog():
+    """Every probe, or an exception. Never an empty list.
+
+    load_catalog is `root.rglob("*.yaml")`, so a CATALOG_DIR that does not exist returns EMPTY
+    rather than raising, and an empty catalog grades every target with zero probes and reports
+    slop 0. That is the worst failure this worker can have: not a crash, not a blank, but a
+    confident perfect score, stored and shown to someone as a clean bill of health. The default
+    path is relative (`../../sloptic-main/catalog`), so it goes wrong on exactly the day someone
+    deploys the worker somewhere the sibling clone is not.
+
+    The grader names this hazard itself, in sloptic/catalog.py, as the reason ProbeSelectionError
+    exists. Nothing here was checking.
+    """
+    probes = load_catalog(config.CATALOG_DIR)
+    if not probes:
+        raise CatalogMissing(
+            f"no probes loaded from {config.CATALOG_DIR!r}. Refusing to grade: an empty catalog "
+            "scores every app 0, which reads as perfect rather than as broken. Set CATALOG_DIR."
+        )
+    return probes
+
+
 def passive_catalog():
     """Load and cache the passive-only catalog once. Fail-closed classification lives in sloptic.safety."""
     global _passive_catalog
     if _passive_catalog is None:
-        _passive_catalog = safety.passive_catalog(load_catalog(config.CATALOG_DIR))
+        selected = safety.passive_catalog(_catalog())
+        if not selected:
+            raise CatalogMissing(
+                "the catalog loaded but no probe classified as passive. Refusing to grade: this "
+                "would send an app through an empty battery and score it 0."
+            )
+        _passive_catalog = selected
     return _passive_catalog
 
 
@@ -60,7 +92,7 @@ def _axis_potential(report) -> dict:
     the grader's aggregator so the dampers (a variant group fires once, repeats within a category
     decay) match the real score exactly. Always >= axis_slop.
     """
-    catalog = {p.id: p for p in load_catalog(config.CATALOG_DIR)}
+    catalog = {p.id: p for p in _catalog()}
     applied = (report.coverage or {}).get("applied") or []
 
     by_bundle: dict[str, list] = {}

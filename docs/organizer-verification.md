@@ -1,6 +1,7 @@
 # Organizer verification: proving someone runs a Devpost event
 
-Scope, not yet built. Companion to the owner tier in `/verify` (custom domain + file token + DNS TXT);
+BUILT and shipped: /events, /organizers, /e/[token], event_claims, verify_event.py, runs and
+boards are all live. This document is now the design record rather than a plan. Companion to the owner tier in `/verify` (custom domain + file token + DNS TXT);
 this is the OTHER route to a full grade, for a hackathon organizer ranking a whole field.
 
 ## What actually needs proving, and it is two different things

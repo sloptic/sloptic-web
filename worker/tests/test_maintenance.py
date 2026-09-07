@@ -747,3 +747,73 @@ class TestAnEventThatDoesNotExist:
         db.fail_claim(conn, cid, "No event there.")
 
         assert _claim_row(conn, cid)["status"] == "verified"
+
+
+class TestSuspensionReachesStandingWork:
+    """The web routes stop new REQUESTS. These pickers are standing work on a timer, and a
+    suspension that leaves them running is a delay rather than a stop. The gap was real: only the
+    grade path was gated, so a suspended account's event rechecks, gallery resolves and domain
+    proof-reads carried on spending outbound traffic from the residential connection."""
+
+    def _suspend(self, conn, account):
+        conn.execute(
+            "INSERT INTO profiles (id, suspended_at) VALUES (%s, now()) "
+            "ON CONFLICT (id) DO UPDATE SET suspended_at = now()", (account,))
+
+    def test_a_suspended_accounts_event_claim_is_not_picked_up(self, conn, account):
+        conn.execute(
+            """INSERT INTO event_claims (account_id, slug, token, status, check_due_at)
+               VALUES (%s, 'hack', 'tok', 'pending', now())""", (account,))
+        assert db.claim_event_check(conn) is not None
+
+        conn.execute("UPDATE event_claims SET check_due_at = now()")
+        self._suspend(conn, account)
+
+        assert db.claim_event_check(conn) is None
+
+    def test_a_suspended_accounts_domain_claim_is_not_picked_up(self, conn, account):
+        conn.execute(
+            """INSERT INTO domain_claims (account_id, origin, host, token, status, check_due_at)
+               VALUES (%s, 'https://a.example', 'a.example', 'tok', 'pending', now())""",
+            (account,))
+        assert db.claim_domain_check(conn) is not None
+
+        conn.execute("UPDATE domain_claims SET check_due_at = now()")
+        self._suspend(conn, account)
+
+        assert db.claim_domain_check(conn) is None
+
+    def test_a_suspended_accounts_field_is_not_resolved(self, conn, account):
+        conn.execute(
+            """INSERT INTO event_runs (account_id, slug, mode, status)
+               VALUES (%s, 'hack', 'passive', 'resolving')""", (account,))
+        self._suspend(conn, account)
+
+        assert db.claim_event_run(conn) is None
+
+
+class TestAnEmptyCatalogRefusesToGrade:
+    """The worst failure this worker can have is not a crash, it is a confident perfect score.
+
+    load_catalog is rglob("*.yaml"), so a CATALOG_DIR that does not exist returns EMPTY rather than
+    raising, and an empty catalog grades every target with zero probes and reports slop 0. Stored
+    and shown, that reads as a clean bill of health. The default path is relative, so it goes wrong
+    on the day someone deploys the worker somewhere the sibling clone is not.
+    """
+
+    def test_a_missing_catalog_directory_raises_instead_of_grading(self, monkeypatch):
+        from sloptic_web_worker import grader
+        monkeypatch.setattr(grader.config, "CATALOG_DIR", "/nonexistent-catalog-path")
+        monkeypatch.setattr(grader, "_passive_catalog", None)
+
+        with pytest.raises(grader.CatalogMissing):
+            grader.passive_catalog()
+
+    def test_the_real_catalog_still_loads(self, monkeypatch):
+        from sloptic_web_worker import grader
+        monkeypatch.setattr(grader, "_passive_catalog", None)
+        try:
+            probes = grader.passive_catalog()
+        except grader.CatalogMissing:
+            pytest.skip("no catalog on this machine; the guard is covered by the test above")
+        assert len(probes) > 0
