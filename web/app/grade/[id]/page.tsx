@@ -532,6 +532,7 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
       {r.platform && Object.keys(r.platform).length > 0 && <Platform platform={r.platform} />}
       <NotApplicable coverage={r.coverage} />
       <ReportKeep view={view} />
+      <DisputeLink />
     </section>
   );
 }
@@ -577,6 +578,7 @@ function Withheld({ view, blocked, now, onResume }: { view: GradeView; blocked: 
         </p>
       </div>
       <ReportKeep view={view} />
+      <DisputeLink />
     </section>
   );
 }
@@ -659,6 +661,21 @@ function ChallengeNote({
         retry && <p className="fineprint">{retry}</p>
       )}
     </div>
+  );
+}
+
+/** The way back, on the page that provokes it.
+ *
+ *  The colophon carries the same link on every page, but nobody goes looking in a footer at the
+ *  moment they think a number is wrong. It is on the withheld report too: "a bot challenge blocked
+ *  every check" is itself a claim about someone's app, and being told that wrongly is worth
+ *  disputing as much as a score is.
+ */
+function DisputeLink() {
+  return (
+    <p className="section-intro fineprint">
+      Think this grade is wrong? <a href="/report-issue">Tell us which check and why</a>.
+    </p>
   );
 }
 
