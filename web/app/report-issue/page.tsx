@@ -58,41 +58,35 @@ export default function ReportIssuePage() {
         <p className="section-intro">
           Sloptic grades what people submit to it, so someone will have pointed it at your app. If
           you want that to stop, email <a href="mailto:abuse@sloptic.org">abuse@sloptic.org</a> with
-          the origin and we will block it from being graded again, by anyone. No reason is needed,
-          and you do not have to prove the site is yours to ask us to leave it alone.
+          the origin and we will block it from being graded again by anyone. No reason needed.
         </p>
       </section>
 
       <section className="section">
-        <h2 className="section-head">A vulnerability in Sloptic?</h2>
+        <h2 className="section-head">Bugs or other problems?</h2>
         <p className="section-intro">
-          Sloptic grades other people's apps for this, so it should be able to hear about its own.
+          Funny enough, Sloptic grades other people's apps for exactly this.
           Email <a href="mailto:security@sloptic.org">security@sloptic.org</a> with what you found
-          and how to reproduce it. Report it to us before anywhere else and we
-          will not come after you for it. There is no bounty, only credit if you want it.
+          and how to reproduce it. Please note what is in and out of scope down below:
         </p>
-        <p className="section-intro">In scope: sloptic.org and its API.</p>
+        <p className="section-intro">In scope: sloptic.org and its API ONLY.</p>
         {/* The scope limit that actually matters. A reader who wants to stress test something will
             reach for the queue, and the queue is one desktop in a house, on a home connection,
             deliberately (a datacenter IP gets challenged, which would make the population
             ungradeable). Saying so is more effective than a rate limit at stopping a well meant
             load test, because the person doing it does not know what is on the other end. */}
         <p className="section-intro">
-          Not in scope, and please do not: load testing, bulk grade submissions, or anything aimed at
-          the grading queue. The worker is a single desktop in a house, on a home connection, and it
-          is that way on purpose. A few thousand submitted grades is not research, it is a denial of
-          service against one machine.
-        </p>
-        <p className="section-intro">
-          Also not in scope: the apps Sloptic has graded. Those are not ours, and a finding in a
-          report belongs to whoever runs that app, not to us.
+          Not in scope: load testing, denial of service, or anything aimed at
+          grading, including app(s) Sloptic graded that are not yours. If you want to report grading 
+          problems, submit a grade yourself and then dispute it. The grader runs on a residential IP
+          on a desktop, so please do not stress test it.
         </p>
       </section>
 
       <section className="section">
-        <h2 className="section-head">Anything else</h2>
+        <h2 className="section-head">Anything else?</h2>
         <p className="section-intro">
-          <a href="mailto:hello@sloptic.org">hello@sloptic.org</a>. One person runs this, so a
+          <a href="mailto:hello@sloptic.org">hello@sloptic.org</a>. One person runs this for now so a
           reply may take a few days.
         </p>
         <div className="cta-row">
