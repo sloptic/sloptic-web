@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import RecoverySup from "@/app/RecoverySup";
+import AsideTable from "./AsideTable";
 import type { RecoveryMarks } from "@/lib/grades";
 
 export type BoardRow = {
@@ -168,17 +169,17 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
       {dnf.length > 0 && (
         <>
           <h2 className="dnf-head">didn&apos;t finish ({dnf.length})</h2>
-          <ul className="dnf-list">
-            {dnf.map((d) => (
-              <li key={d.project_url}>
-                <a href={d.project_url} target="_blank" rel="noopener noreferrer">{d.name}</a>
-                <span>
-                  {d.note}
-                  <RecoverySup marks={d.marks} />
-                </span>
-              </li>
-            ))}
-          </ul>
+          {/* Its own pager, separate from the board's above. The two lists are different lengths and
+              a reader paging one has no reason to lose their place in the other. */}
+          <AsideTable
+            reasonLabel="what happened"
+            rows={dnf.map((d) => ({
+              name: d.name,
+              project_url: d.project_url,
+              reason: d.note,
+              marks: d.marks,
+            }))}
+          />
         </>
       )}
     </>

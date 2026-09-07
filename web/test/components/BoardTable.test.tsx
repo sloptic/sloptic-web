@@ -255,13 +255,15 @@ describe("BoardTable didn't finish", () => {
     ];
     render(<BoardTable rows={[row()]} dnf={dnf} />);
     expect(screen.getByRole("heading", { name: /didn't finish \(2\)/i })).toBeInTheDocument();
-    expect(document.querySelectorAll("ul.dnf-list li")).toHaveLength(2);
+    expect(document.querySelectorAll("table.aside-table tbody tr")).toHaveLength(2);
   });
 
   // An organizer needs to see WHICH entries produced nothing even when nothing produced a score.
   it("survives an empty ranking", () => {
     render(<BoardTable rows={[]} dnf={[{ name: "one", project_url: "https://1.example", note: "no score" }]} />);
-    expect(document.querySelector("table")).toBeNull();
+    // The BOARD is what has nothing to show. The didn't-finish list is a table of its own now, so
+    // the assertion has to name which one is absent or it passes for the wrong reason.
+    expect(document.querySelector("table.board-table")).toBeNull();
     expect(screen.getByRole("heading", { name: /didn't finish \(1\)/i })).toBeInTheDocument();
     expect(screen.getByText("no score")).toBeInTheDocument();
   });
@@ -273,7 +275,7 @@ describe("BoardTable didn't finish", () => {
 
   it("stays away entirely when every entry scored", () => {
     render(<BoardTable rows={[row()]} dnf={[]} />);
-    expect(document.querySelector("ul.dnf-list")).toBeNull();
+    expect(document.querySelector("table.aside-table")).toBeNull();
     expect(screen.queryByRole("heading", { name: /didn't finish/i })).toBeNull();
   });
 

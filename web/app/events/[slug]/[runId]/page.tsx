@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import BoardTable, { type BoardRow, type DnfRow } from "./BoardTable";
+import AsideTable from "./AsideTable";
 import AutoRefresh from "@/app/AutoRefresh";
 import BoardStats from "./BoardStats";
 import { TOTALS } from "@/lib/checks";
@@ -10,6 +11,10 @@ import { recoveryMarks, isLimitedEngagement, type RecoveryMarks } from "@/lib/gr
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Event board", robots: { index: false, follow: false } };
+
+function projectName(url: string): string {
+  return url.replace(/\/+$/, "").split("/").pop() || url;
+}
 
 type Row = {
   name: string;
@@ -42,14 +47,6 @@ type Row = {
   // limited-engagement note.
   marks: RecoveryMarks;
 };
-
-function fmt(v: number | null): string {
-  if (v === null || Number.isNaN(v)) return "-";
-  return Number.isInteger(v) ? String(v) : v.toFixed(1);
-}
-function projectName(url: string): string {
-  return url.replace(/\/+$/, "").split("/").pop() || url;
-}
 
 export default async function BoardPage({ params }: { params: { slug: string; runId: string } }) {
   const user = await currentUser();
@@ -277,18 +274,16 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         <section className="section">
           <h2 className="section-head">Nothing to grade ({skipped.length})</h2>
           <p className="section-intro">
-            These entries have no deployed app behind them, so there was nothing to point a check at.
+            These entries have no deployed app behind them so there was nothing to point a check at.
           </p>
-          <ul className="dnf-list">
-            {skipped.map((e) => (
-              <li key={e.project_url as string}>
-                <a href={e.project_url as string} target="_blank" rel="noopener noreferrer">
-                  {projectName(e.project_url as string)}
-                </a>
-                <span>{e.skip_reason as string}</span>
-              </li>
-            ))}
-          </ul>
+          <AsideTable
+            reasonLabel="why"
+            rows={skipped.map((e) => ({
+              name: projectName(e.project_url as string),
+              project_url: e.project_url as string,
+              reason: e.skip_reason as string,
+            }))}
+          />
         </section>
       )}
 
@@ -297,24 +292,16 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
           <h2 className="section-head">Not ranked</h2>
           <p className="section-intro">
             These carry a finding an attacker could use today, such as a served secret or an open
-            backend. A low score does not make up for one, so they sit outside the ranking.
+            backend. A low score does not make up for one, therefore they are not ranked.
           </p>
-          <div className="table-scroll">
-            <table className="count-table">
-              <thead><tr><th>submission</th><th>slop</th><th /></tr></thead>
-              <tbody>
-                {gated.map((r) => (
-                  <tr key={r.project_url}>
-                    <th scope="row">
-                      <a href={r.project_url} target="_blank" rel="noopener noreferrer">{r.name}</a>
-                    </th>
-                    <td>{fmt(r.slop)}</td>
-                    <td>{r.grade_id ? <a href={`/grade/${r.grade_id}`}>report</a> : null}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <AsideTable
+            rows={gated.map((r) => ({
+              name: r.name,
+              project_url: r.project_url,
+              slop: r.slop,
+              grade_id: r.grade_id,
+            }))}
+          />
         </section>
       )}
 

@@ -2650,8 +2650,16 @@ a.mast-user:hover {
   font-size: 0.7em;
   color: var(--accent);
 }
-.board-table th[aria-sort]:not([aria-sort="none"]) .col-sort {
+.board-table th[aria-sort]:not([aria-sort="none"]) .col-sort,
+.aside-table th[aria-sort]:not([aria-sort="none"]) .col-sort {
   color: var(--ink);
+}
+
+/* The sections beside the board (didn't finish, nothing to grade, not ranked) became sortable
+   tables, so the reason column carries what a quiet list used to say in muted text. Keeping it
+   muted holds the old weight: these rows are context for the board, not a second board. */
+.aside-table .aside-reason {
+  color: var(--muted);
 }
 
 .board-stats {
@@ -3127,21 +3135,6 @@ a.mast-user:hover {
 .history-table td:last-child { text-align: right; }
 
 /* The board's didn't-finish list: same visibility, its own shape. */
-.dnf-list {
-  margin: 0.4rem 0 0;
-  padding: 0;
-  list-style: none;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-.dnf-list li {
-  padding: 0.4rem 0.6rem;
-  border-bottom: 1px dotted var(--line);
-  display: flex;
-  gap: 1rem;
-  justify-content: space-between;
-}
 .dnf-head {
   color: var(--muted);
   font-size: 0.9rem;
@@ -3280,9 +3273,6 @@ h1.report-url {
   .run-card .mode-toggle { display: flex; }
   .run-card .mode-toggle span,
   .run-card .mode-toggle button { flex: 1; text-align: center; }
-
-  /* the didn't-finish list drops its two-column spread */
-  .dnf-list li { flex-direction: column; gap: 0.15rem; align-items: flex-start; }
 }
 
 /* The field's search box: quiet, monospace, the full width it sits in. */
