@@ -1,3 +1,11 @@
+> SUPERSEDED, kept as the historical record. Written 2026-08-01 to bootstrap this repo, and its own
+> instruction ("copy the appendix into the new repo as its claude.md") has been carried out: CLAUDE.md
+> at the root is the live document and this one is not maintained. Nothing references this file.
+>
+> Do not read it for current state. It describes the egress sandbox and the P0 safety gate as open
+> decisions; both shipped, all four tiers, verified 2026-08-30. It also names a percentile curve
+> version and an LLM key requirement that no longer exist.
+
 # Sloptic web (sloptic.org) — build handoff + spec
 
 Brief for the session that builds the public web product. Written 2026-08-01, league repo (internal). The

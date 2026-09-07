@@ -3598,3 +3598,11 @@ h1.report-url {
 .how-to p:last-child {
   margin-bottom: 0;
 }
+
+/* A live slop figure beside a progress bar, so the digits must not reflow as they change. The class
+   was applied in FieldTable with no rule behind it, so it rendered in the ambient sans and the
+   number jittered on every update. */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
