@@ -34,7 +34,7 @@ export default function AboutPage() {
           </a>, where AI would happily produce the happy path, and... little else.
         </p>
         <p className="section-intro">
-          Yet this is not so much a slop problem so much as it is the state of the web.{" "}
+          Yet this is not so much a slop problem as it is the state of the web.{" "}
           <a href="https://webaim.org/projects/million/" target="_blank" rel="noopener noreferrer">
             96% of the top million home pages
           </a>{" "}
@@ -60,7 +60,7 @@ export default function AboutPage() {
           >
             In fact, more than half of mobile visitors
           </a>{" "}
-          leave if a page takes more than 3 seconds to load — that is how high user expecations are.
+          leave if a page takes more than 3 seconds to load. That is how high user expectations are.
         </p>
         <p className="section-intro">
           <em>Oh, and concerning the break-ins, {" "}

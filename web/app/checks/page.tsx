@@ -19,7 +19,7 @@ export default function ChecksPage() {
       <div className="page-head">
         <h1>Sloptic's checks</h1>
         <p className="page-lead">
-          The catalog comprises of {TOTALS.total} checks across {AREAS.reduce((n, a) => n + a.categories, 0)}{" "}
+          The catalog comprises {TOTALS.total} checks across {AREAS.reduce((n, a) => n + a.categories, 0)}{" "}
           different kinds of slop. Each check is a single file in the{" "}
           <a href={CATALOG_URL} target="_blank" rel="noopener noreferrer">
             open grader
