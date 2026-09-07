@@ -2,68 +2,73 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Report an issue",
-  description: "How to tell us a grade is wrong, and how to report a vulnerability in Sloptic.",
+  description: "How to tell us a grade is wrong and how to report a vulnerability in Sloptic.",
 };
 
 // The page exists because "email us" already did not work. hello@sloptic.org sits in the colophon of
 // every page, in /terms, in /privacy and in the participant notice, and a bare address gets back
 // "your tool is broken" with no link and no check id, which cannot be acted on. So this page is not
-// a contact page. It is two forms with no form: what to include so a dispute is triageable, and what
-// is in scope so a curious reader does not treat the grading worker as a target.
+// a contact page. It is forms with no form: what to include so a dispute is triageable, and what is
+// in scope so a curious reader does not treat the grading worker as a target.
+//
+// Which address each section names is deliberate. security@ and abuse@ are the two a person or their
+// tooling will try without being told, and splitting them off is what lets either be answered on its
+// own schedule. hello@ keeps the disputes because /terms and /privacy already promise that address
+// for the takedown route, and those two are the operative documents: a page that quietly sent people
+// somewhere else would be contradicting them. postmaster@ is mail plumbing and belongs on no page.
 export default function ReportIssuePage() {
   return (
     <>
       <div className="page-head">
         <h1>Report an issue</h1>
         <p className="page-lead">
-          Something wrong with a grade, or something wrong with Sloptic itself. Both go to the same
-          address, and both are easier to fix with a few details.
+          Grade disputes and issues with Sloptic itself are handled here.
         </p>
       </div>
 
       <section className="section attached">
-        <h2 className="section-head">A grade looks wrong</h2>
+        <h2 className="section-head">Does a grade look wrong?</h2>
         <p className="section-intro">
-          Sloptic reads an app from the outside with no source and no spec, so it gets things wrong.
-          It can miss a control it cannot see, or deduct for something you handle elsewhere. Tell us
-          and we will look.
+          Because Sloptic reads an app from the outside like a visitor would, with no source code or spec, 
+          it can get things wrong. Every DAST tool does. It can miss a control or deduct points for something you handle elsewhere 
+          or might actually be the correct behavior. Tell us and we will look.
         </p>
         <p className="section-intro">
           Email{" "}
           <a href="mailto:hello@sloptic.org?subject=Grade%20dispute">hello@sloptic.org</a> with:
         </p>
         <ul className="how-to">
-          <li>The link to the report. Every grade has a permanent one.</li>
+          <li>The link to the report (with a UUID).</li>
           <li>
-            Which check you are disputing. Each finding carries its id, like{" "}
-            <span className="mono">sec-headers-001</span>. <a href="/checks">All of them are listed here</a>.
+            Which check(s) you are disputing. Each finding carries an id, like{" "}
+            <span className="mono">sec-headers-002</span> for content security policy. You can find them
+            in your report.
           </li>
-          <li>What you think the right answer is, and how you would check it.</li>
+          <li>What you think the right answer is and how you would check it.</li>
         </ul>
-        {/* Says why the check id is the part that matters, since it is the part people leave out. */}
+      </section>
+
+      {/* The one path here that does not begin with the reader having asked us for anything. Sloptic
+          sends requests at apps other people submit, so a site operator's first sight of it is their
+          own logs, and without a route they reach for a blocklist instead of an address. A scanner
+          that gets blocked instead of emailed stops being able to measure the population it exists
+          to measure. */}
+      <section className="section">
+        <h2 className="section-head">Is Sloptic making requests to your site?</h2>
         <p className="section-intro">
-          The check id is the useful part. A check that is wrong is wrong for every app it has ever
-          run against, so fixing one is worth more than fixing your report.
+          Sloptic grades what people submit to it, so someone will have pointed it at your app. If
+          you want that to stop, email <a href="mailto:abuse@sloptic.org">abuse@sloptic.org</a> with
+          the origin and we will block it from being graded again, by anyone. No reason is needed,
+          and you do not have to prove the site is yours to ask us to leave it alone.
         </p>
       </section>
 
       <section className="section">
-        <h2 className="section-head">You want a grade taken down</h2>
-        <p className="section-intro">
-          Anyone can grade an app they do not own, so a report can be about you without you asking
-          for it. Every report has a delete button on it, and you do not need an account to use it.
-          If you would rather we did it, email{" "}
-          <a href="mailto:hello@sloptic.org?subject=Remove%20a%20grade">hello@sloptic.org</a>. No
-          reason is needed. The same goes for an event entry: see <a href="/terms">the terms</a>.
-        </p>
-      </section>
-
-      <section className="section">
-        <h2 className="section-head">A vulnerability in Sloptic</h2>
+        <h2 className="section-head">A vulnerability in Sloptic?</h2>
         <p className="section-intro">
           Sloptic grades other people's apps for this, so it should be able to hear about its own.
-          Email <a href="mailto:hello@sloptic.org?subject=Security%20report">hello@sloptic.org</a>{" "}
-          with what you found and how to reproduce it. Report it to us before anywhere else and we
+          Email <a href="mailto:security@sloptic.org">security@sloptic.org</a> with what you found
+          and how to reproduce it. Report it to us before anywhere else and we
           will not come after you for it. There is no bounty, only credit if you want it.
         </p>
         <p className="section-intro">In scope: sloptic.org and its API.</p>
@@ -87,8 +92,8 @@ export default function ReportIssuePage() {
       <section className="section">
         <h2 className="section-head">Anything else</h2>
         <p className="section-intro">
-          Same address: <a href="mailto:hello@sloptic.org">hello@sloptic.org</a>. One person runs
-          this, so a reply may take a few days.
+          <a href="mailto:hello@sloptic.org">hello@sloptic.org</a>. One person runs this, so a
+          reply may take a few days.
         </p>
         <div className="cta-row">
           <a className="button secondary" href="/methodology">
