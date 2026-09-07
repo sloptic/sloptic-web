@@ -4,7 +4,7 @@ import BrandMark from "@/app/BrandMark";
 export const metadata: Metadata = {
   title: "About Sloptic",
   description:
-    "Why Sloptic exists, what the name means, what makes it different from a scanner, and how it is kept honest.",
+    "Why Sloptic exists, what it can judge, and who made it.",
 };
 
 export default function AboutPage() {
@@ -24,21 +24,21 @@ export default function AboutPage() {
       </div>
 
       <section className="section">
-        <h2 className="section-head">Why it exists</h2>
+        <h2 className="section-head">Why does Sloptic exist?</h2>
         <p className="section-intro">
-          Building a web app got almost free, and it shows. Apps ship looking finished but never
-          hardened against the real world. No security headers, controls a screen reader cannot touch, 
+          Building a web app got almost free, thanks to AI. And it shows. Apps ship looking finished yet never
+          hardened against the real world. No security headers, inaccessible controls, dead buttons,
           uncaught errors, and more routinely show up. Such is the case of {" "}
           <a href="https://en.wikipedia.org/wiki/AI_slop" target="_blank" rel="noopener noreferrer">
           AI slop
-          </a>.
+          </a>, where AI would happily produce the happy path, and... little else.
         </p>
         <p className="section-intro">
-          This is not a hackathon problem so much as it's the state of the web.{" "}
+          Yet this is not so much a slop problem so much as it is the state of the web.{" "}
           <a href="https://webaim.org/projects/million/" target="_blank" rel="noopener noreferrer">
             96% of the top million home pages
           </a>{" "}
-          have detectable accessibility failures, and that number got worse last year. Only about{" "}
+          have noticeable accessibility failures, and that number got worse last year. Only about{" "}
           <a
             href="https://almanac.httparchive.org/en/2025/security"
             target="_blank"
@@ -49,8 +49,8 @@ export default function AboutPage() {
           has a Content Security Policy at all. 
         </p>
         <p className="section-intro">
-          It is tempting to call these minor, since none of them are break-ins. Yet that's backwards. 
-          Many apps fail in ways that are obvious to a user, such as dead buttons, controls a screen reader cannot see,
+          It's tempting to call these minor, since none of them are break-ins. Yet you don't need a break-in
+          to frustrate a user. Many apps fail in such frustrating ways, such as dead buttons, crashes, 
           and pages that take "forever" to load.
           {" "}
           <a
@@ -58,19 +58,21 @@ export default function AboutPage() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            More than half of mobile visitors
+            In fact, more than half of mobile visitors
           </a>{" "}
-          leave if a page takes more than 3 seconds to load. That is how low the bar for "takes forever" is.
+          leave if a page takes more than 3 seconds to load — that is how high user expecations are.
         </p>
         <p className="section-intro">
-          Oh, and concerning the break-ins, {" "}
+          <em>Oh, and concerning the break-ins, {" "}
           <a href="https://www.veracode.com/blog/genai-code-security-report/" target="_blank" rel="noopener noreferrer">according to Veracode</a>
-          , AI produces vulnerable code 45% of the time, an alarmingly high rate especially considering the rise of vibecoding and agentic AI.
+          , AI produces vulnerable code 45% of the time, which is alarmingly high!</em>
         </p>
         <p className="section-intro">
-          These failures persist year after year. And yet nobody bothers to check, because nobody is rewarded for it. 
-          Especially in hackathon teams. Hence the need for Sloptic.
+          These problems persist year after year. And yet nobody bothers to check because nobody is rewarded for it. 
+          Only when a user complains, or a bug is filed, or a breach occurs, does anyone care. Especially in hackathons,
+          where the demo is what's judged, not where most of the slop lives. 
         </p>
+        <p>Hence the need for Sloptic.</p>
       </section>
 
       <section className="section">
@@ -84,7 +86,7 @@ export default function AboutPage() {
             From <b>slop</b>, Merriam-Webster&apos;s word of the year for 2025, the shoddy digital
             content AI now produces in bulk, and <b>optic</b>, an instrument for bringing something
             into focus. The instrument that grades software slop, the app that ships working but
-            unhardened, into one comparable number, serenely indifferent to whatever it was meant to
+            unhardened, into one comparable score, serenely indifferent to whatever it was meant to
             be.
           </p>
         </div>
@@ -94,8 +96,8 @@ export default function AboutPage() {
         <h2 className="section-head">Why not a scanner?</h2>
         <p className="section-intro">
           A scanner, like Burp Suite, Nuclei, Nikto, or even PageSpeed Insights, exists to hand you a list of
-          findings to fix on one app. Sloptic exists to grade, so apps with nothing in common
-          can go on the same scale. 
+          findings to fix on one app. Sloptic exists to grade and rank, so apps with nothing in common
+          can be compared.
         </p>
         <div className="table-scroll">
           <table className="compare-table">
@@ -136,7 +138,7 @@ export default function AboutPage() {
         <h2 className="section-head">What it can and cannot judge</h2>
         <p className="section-intro">
           Sloptic only judges what is wrong no matter what an app is for. 
-          It does not judge the rest: humans judge those better anyway.
+          It does not judge the rest, because humans judge those better anyway.
         </p>
         <div className="judge-grid">
           <div className="judge" data-kind="can">

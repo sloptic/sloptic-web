@@ -3,9 +3,9 @@ import { ACTIVE, comparableEvents, MIN_EVENT_N, fmt } from "@/lib/corpus";
 import EventSpread from "./EventSpread";
 
 export const metadata: Metadata = {
-  title: "What hackathon apps looked like",
+  title: "What do hackathon apps look like?",
   description:
-    "The corpus study behind Sloptic, why human judging misses it, and how much events differ.",
+    "The state of hackathon apps across 80 hackathons as Sloptic grades them.",
 };
 
 const D = ACTIVE.distribution;
@@ -157,17 +157,18 @@ export default function FindingsPage() {
   return (
     <>
       <div className="page-head">
-        <h1>What hackathon apps look like</h1>
+        <h1>What do hackathon apps look like?</h1>
         <p className="page-lead">
-          The results of 1,625 apps in {ACTIVE.provenance.n_events} hackathons graded objectively
+          When Sloptic graded {A.graded.toLocaleString()} apps in {ACTIVE.provenance.n_events} hackathons, it found that...
         </p>
       </div>
 
       <section className="section attached">
         <h2 className="section-head">Almost nothing is clean</h2>
         <p className="section-intro">
-          Only one app scored 0. The median is {fmt(D.median)}, and a
-          quarter scored above {fmt(D.q3)}. In other words, there is something wrong with almost every app.
+          The median is {fmt(D.median)}, and a
+          quarter scored above {fmt(D.q3)}. Only one scored 0. 
+          In other words, there is at least some slop in almost every app.
         </p>
         <Histogram />
         <h2 className="section-head">
@@ -176,30 +177,30 @@ export default function FindingsPage() {
         <ul className="stat-list numeric">
           <li>
             <span className="k"><b>{fmt(D.mean)}</b></span>
-            <span className="v">average slop.</span>
+            <span className="v">average slop</span>
           </li>
           <li> 
             <span className="k"><b>{fmt(D.stdev)}</b></span>
-            <span className="v">standard deviation.</span>
+            <span className="v">standard deviation</span>
           </li>
           <li>
             <span className="k"><b>{fmt(D.max)}</b></span>
-            <span className="v">the worst app.</span>
+            <span className="v">worst app</span>
           </li>
         </ul>
       </section>
 
       <section className="section">
-        <h2 className="section-head">What kinds of problems do apps have?</h2>
+        <h2 className="section-head">What kinds of slop did apps have?</h2>
         <p className="section-intro">
-          Findings have various different severities. While most are chronic, a nontrivial number
+          Different kinds of slop have different severities. While most are chronic, a nontrivial number
           of apps have serious, severe, or even critical problems. The table below shows the 
-          number of findings of each kind as well as how many apps have at least one of them.
+          number of instances of slop of each kind as well as how many apps have at least one of them.
         </p>
         <Bands />
         <br />
         <p className="section-intro">
-          Grading an app by its single worst finding gives the stats below. Each one contains the
+          Grading an app by its single worst slop instance gives the stats below. Each one contains the
           ones under it, so almost 3 in 5 projects carry a significant problem and virtually every app
           overlooks some hygiene. 
         </p>
@@ -211,9 +212,9 @@ export default function FindingsPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">Winners ship more slop</h2>
+        <h2 className="section-head">Winners ship more slop?!</h2>
         <p className="section-intro">
-          Counterintuitively, winning apps have {fmt(W.delta_pct)}% <em>higher</em> median slop than the rest.
+          Counterintuitively, winning apps have {fmt(W.delta_pct)}% <em>more</em> median slop than the rest.
         </p>
         <div className="versus">
           <div className="versus-side" data-side="winner">
@@ -244,7 +245,7 @@ export default function FindingsPage() {
         </div>
         <p className="section-intro">
           As you can see, winning does not correlate with app cleanliness. In fact, the opposite tends to be true.
-          Most hackathons employ human judging, which rewards ideas, features, presentation, and the demo over durability.
+          Most hackathons employ human judging, which rewards ideas, features, presentation, and the demo over quality.
           Winning apps tend to ship more features, meaning more surfaces to misconfigure or get wrong, and human judges do not 
           have time to judge quality consistently over hundreds of apps.
         </p>
@@ -256,7 +257,7 @@ export default function FindingsPage() {
           Lighthouse performance barely predicts anything else. Measured against slop with the
           performance axis taken out, the correlation is {RHO.perf_vs_nonperf_slop_rho} across{" "}
           {RHO.n.toLocaleString()} apps, which is close enough to zero to call the two independent.
-          In other words, speed and durability don't have any relationship.
+          In other words, speed and quality don't have any relationship.
         </p>
         <ul className="stat-list numeric">
           <li>
@@ -279,7 +280,7 @@ export default function FindingsPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">Yet exploits are rare</h2>
+        <h2 className="section-head">Yet exploits are rare...</h2>
         <p className="section-intro">
           Only {fmt(SEV.exploitable_pct)}% of apps carry something an attacker could use today. The
           largest single finding is an exposed backend, with {STAR.apps} apps serving a Supabase or
@@ -340,7 +341,7 @@ export default function FindingsPage() {
           The apps in this study were graded as a calibration to build Sloptic itself.
         </p>
         <p>
-          These are the full grade numbers that comprise the corpus used for percentile ranking on 
+          These are the full grade numbers that comprise the population used for percentile ranking on 
           active grades. A separate curve exists for passive grading.
         </p>
         <div className="cta-row">

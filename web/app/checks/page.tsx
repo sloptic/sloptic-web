@@ -4,7 +4,7 @@ import { AREAS, CATALOG_URL, TOTALS, categoriesFor } from "@/lib/checks";
 export const metadata: Metadata = {
   title: "Every check Sloptic runs",
   description:
-    "The full catalog by category, with how many checks each covers and which run on any URL versus which need you to verify the site is yours.",
+    "The full catalog by category, with how many checks each covers and which run on any URL versus what needs verification.",
 };
 
 const ACCESS_TEXT: Record<string, string> = {
@@ -17,14 +17,14 @@ export default function ChecksPage() {
   return (
     <>
       <div className="page-head">
-        <h1>Every check</h1>
+        <h1>Sloptic's checks</h1>
         <p className="page-lead">
-          The catalog is {TOTALS.total} checks across {AREAS.reduce((n, a) => n + a.categories, 0)}{" "}
-          different faults. Each check is a single file in the{" "}
+          The catalog comprises of {TOTALS.total} checks across {AREAS.reduce((n, a) => n + a.categories, 0)}{" "}
+          different kinds of slop. Each check is a single file in the{" "}
           <a href={CATALOG_URL} target="_blank" rel="noopener noreferrer">
             open grader
           </a>
-          , and this page is generated from it.
+          .
         </p>
       </div>
 
@@ -32,7 +32,7 @@ export default function ChecksPage() {
         <h2 className="section-head">The counts</h2>
         <p className="section-intro">
           {TOTALS.passive} of the {TOTALS.total} run on any URL. The remaining {TOTALS.active} send
-          test traffic, so they run only once you have shown the site is yours.
+          test traffic, so they only run once you verify your site or event.
         </p>
         <div className="table-scroll">
           <table className="count-table">
@@ -82,7 +82,7 @@ export default function ChecksPage() {
             <table className="cat-table">
               <thead>
                 <tr>
-                  <th>what it looks for</th>
+                  <th>category</th>
                   <th>checks</th>
                   <th>runs on</th>
                 </tr>

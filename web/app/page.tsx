@@ -125,13 +125,13 @@ export default function Home() {
           <li className="flow-conn" aria-hidden />
           <li className="flow-box">
             <span className="n">02</span>
-            <p>Sloptic opens it in a real browser and checks what any visitor sees.</p>
+            <p>Sloptic opens it in a browser and checks what any visitor sees.</p>
           </li>
           <li className="flow-conn" aria-hidden />
           <li className="flow-box">
             <span className="n">03</span>
             <p>
-              You get a score with a breakdown on every issue found and what was tested.
+              You get a score with a breakdown on every instance of slop found and what was tested.
             </p>
           </li>
         </ol>
@@ -267,7 +267,7 @@ export default function Home() {
             A coinage from <b>slop</b>, Merriam-Webster&apos;s word of the year for 2025 for the
             throwaway output that generative AI now produces in bulk, and <b>optic</b>, an instrument
             for bringing something into focus. The apparatus by which slop of the software kind, the
-            app that ships functional but unhardened, is resolved into a single comparable number,
+            app that ships functional but unhardened, is resolved into a single comparable score,
             serenely indifferent to whatever it was meant to be.
           </p>
         </div>

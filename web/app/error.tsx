@@ -19,7 +19,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
 
       <section className="section">
         <p className="section-intro">
-          A grade already running keeps running on the worker, and its report stays at its own link.
+          A grade already running keeps running on the worker and its report stays at its own link.
         </p>
         <div className="run-controls">
           <button className="button" type="button" onClick={reset}>

@@ -42,7 +42,7 @@ export default async function DisclosurePage({ params }: { params: { token: stri
   return (
     <>
       <div className="page-head">
-        <h1>How your entries are graded</h1>
+        <h1>What's going on here?</h1>
         <p className="page-lead">
           The organizer of <a href={`https://${host}`} rel="noopener noreferrer">{host}</a> uses
           Sloptic to grade your project if you submitted a web app. This page explains what Sloptic
@@ -51,17 +51,16 @@ export default async function DisclosurePage({ params }: { params: { token: stri
       </div>
 
       <section className="section attached">
-        <h2 className="section-head">What Sloptic does</h2>
+        <h2 className="section-head">What does Sloptic do?</h2>
         <p className="section-intro">
-          Sloptic grades a running web app from the outside, over the public internet. It does not see
-          your source code, your repository, or your accounts. It examines your app like a visitor
-          would and scores it on things every app must get right, including secrets kept out of what
-          you ship, errors handled, controls that work, accessibility, and pages loading respectably
-          fast.
+          Sloptic grades a running web app from the outside to check for slop. It does not see
+          your source code, your repository(s), or your accounts. It examines your app like a visitor
+          would and deducts points for the "slop" it finds that no app should ever have, including 
+          leaked secrets, dead buttons, broken access control, and more.
         </p>
         <p className="section-intro">
-          You get a number, the slop score, for what your app got wrong, with a breakdown of each
-          finding. You also get a percentile showing how it fares against others.{" "}
+          You get a slop score for the things your app got wrong, with a breakdown of each issue 
+          Sloptic found. You also get a percentile showing how it fares against others.{" "}
           <a href="/findings">See what the other apps looked like</a>.
         </p>
         <p className="section-intro">
@@ -71,7 +70,7 @@ export default async function DisclosurePage({ params }: { params: { token: stri
       </section>
 
       <section className="section">
-        <h2 className="section-head">What Sloptic looks for</h2>
+        <h2 className="section-head">What does Sloptic look for?</h2>
         <p className="section-intro">
           Sloptic examines your app against a catalog of{" "}
           <a href="/checks">{TOTALS.total} different checks</a>. Typically an app only gets{" "}
@@ -80,8 +79,8 @@ export default async function DisclosurePage({ params }: { params: { token: stri
         {active ? (
           <>
             <p className="section-intro">
-              This event was verified before submissions closed, so entries face the full battery,
-              passive and active.
+              This event was verified before submissions closed, so entries face the full gauntlet of
+              tests.
             </p>
             {/* THIS page is the notice the organizer's rules point at, so what a participant was
                 told is what is written here. The account and test-record sentence is not optional
@@ -90,19 +89,14 @@ export default async function DisclosurePage({ params }: { params: { token: stri
                 surprised by that after the fact is the complaint this page exists to prevent. */}
             <p className="section-intro">
               Active checks send real attack traffic at your app, including injection payloads and
-              malformed input.
-            </p>
-            <p className="section-intro">
-              They also sign up throwaway accounts and create test records, since checks like broken
-              access control need two users to compare. Expect entries in your logs and data you did
-              not create.
+              malformed input. It also registers accounts and creates test records so you may see 
+              stuff appear in your database(s).
             </p>
           </>
         ) : passiveOnly ? (
           <p className="section-intro">
             This event was verified only after its submission deadline, so entries get the passive
-            checks and nothing else. A notice published after an event closes was shown to nobody, so
-            it cannot authorize attack traffic.
+            checks and nothing else.
           </p>
         ) : (
           <p className="section-intro">
@@ -116,8 +110,7 @@ export default async function DisclosurePage({ params }: { params: { token: stri
         <h2 className="section-head">What gets graded</h2>
         <p className="section-intro">
           The URL your team submitted, and nothing else. If your submission points at a third party
-          product, a hosted notebook, a design tool, a storage bucket, it is skipped: probing it would
-          hit that company, and your team cannot agree to that on their behalf. If the
+          product, a hosted notebook, a design tool, a storage bucket, it is skipped. If the
           app cannot be reached or the URL does not resolve, it is skipped too and recorded as a DNF.
         </p>
       </section>
@@ -126,17 +119,16 @@ export default async function DisclosurePage({ params }: { params: { token: stri
         <h2 className="section-head">Exclusions</h2>
         <p className="section-intro">
           Write to <a href="mailto:hello@sloptic.org">hello@sloptic.org</a> with your submission and we
-          will exclude it. You do not need to give a reason, and it does not affect your entry in the
-          event, which the organizer judges as they always have.
+          will exclude it. No reason is needed.
         </p>
         <p className="section-intro fineprint">
           {verified
             ? `This event was verified with Sloptic on ${new Date(claim.verified_at as string).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}.`
-            : "This event has not completed verification with Sloptic yet, so no entries have been graded for it."}
+            : "This event has not completed verification with Sloptic yet."}
         </p>
         <div className="cta-row">
           <a className="button secondary" href="/methodology">
-            How the grade works
+            How grading works
           </a>
           <a className="button secondary" href="/checks">
             Every check

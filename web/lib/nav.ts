@@ -11,7 +11,7 @@ export const REFERENCE: NavLink[] = [
   { href: "/about", label: "About Sloptic" },
   { href: "/methodology", label: "How grading works" },
   { href: "/checks", label: "Every check" },
-  { href: "/findings", label: "The corpus study" },
+  { href: "/findings", label: "The state of hackathons" },
   { href: "/verify", label: "Why only some checks run" },
 ];
 

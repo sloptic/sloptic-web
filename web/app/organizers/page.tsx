@@ -4,7 +4,7 @@ import EventForm from "./EventForm";
 export const metadata: Metadata = {
   title: "Sloptic for organizers",
   description:
-    "Grade the web app entries in your hackathon on one objective scale, and give the cleanest build a prize of its own.",
+    "Grade the web app entries in your hackathon and give the cleanest build a prize of its own.",
 };
 
 export default function OrganizersPage({
@@ -22,13 +22,25 @@ export default function OrganizersPage({
         <EventForm initialEvent={searchParams.event ?? ""} />
       </div>
 
+      <section className="section" id="why-sloptic">
+        <h2 className="section-head">Why Sloptic?</h2>
+        <p className="section-intro">
+          AI has made building web apps easier than ever. Yet in a 3-5 minute demo, a judge can only see happy path, 
+          something AI can mass produce. This leaves barely any time for quality testing, which is often
+          what AI neglects outside the happy path, hence the persistence of slop.
+          Sloptic handles the quality testing, concerning the things that are wrong in any app, so judges
+          can focus on the idea, the pitch, and the demo. This way, quality is an axis worth rewarding 
+          teams for, on top of the presentation.
+        </p>
+      </section>
+
       <section className="section" id="what-you-get">
         <h2 className="section-head">What you get</h2>
         <div className="card-grid">
           <div className="card">
-            <h3>One fair scale</h3>
+            <h3>Objective grading</h3>
             <p>
-              Every web app entry graded the same way regardless of stack, so you can compare
+              Every web app entry is graded the same way regardless of stack so you can compare
               them on something other than the demo.
             </p>
           </div>
@@ -40,7 +52,7 @@ export default function OrganizersPage({
             </p>
           </div>
           <div className="card">
-            <h3>Honest results</h3>
+            <h3>Calibrated results</h3>
             <p>
               Each grade shows how much of the app could be tested, so a clean score means clean, not
               skipped.
@@ -49,20 +61,11 @@ export default function OrganizersPage({
         </div>
       </section>
 
-      <section className="section" id="why-sloptic">
-        <h2 className="section-head">Why Sloptic</h2>
-        <p className="section-intro">
-          AI has made building web apps easier than ever. Yet in a 3-5 minute demo, a judge can only see the 
-          surface of the app, something AI can produce trivially, which leaves barely any time for durability testing.
-          Sloptic handles the durability testing, concerning the things that are wrong in any app, so judges
-          can focus on the idea, the pitch, and the demo. This way, durability is an axis worth rewarding teams for, on top of pitch quality.
-        </p>
-      </section>
-
       <section className="section" id="limits">
-        <h2 className="section-head">What it cannot judge</h2>
+        <h2 className="section-head">What it can't judge</h2>
         <p className="section-intro">
-          Yet Sloptic cannot grade everything. 
+          Yet Sloptic cannot grade everything. Humans are still needed to judge the aspects unique
+          to an app. 
         </p>
         <div className="judge" data-kind="cannot">
           <h3>Still yours to judge</h3>
@@ -70,22 +73,28 @@ export default function OrganizersPage({
             <li>Whether the idea is original, useful, or any good</li>
             <li>Whether a feature does what the team says it does</li>
             <li>How hard the thing was to build</li>
+            <li>How well the team presents their app</li>
+            <li>Judgment calls the team made</li>
           </ul>
         </div>
+        <p className="section-intro">
+          Additionally, Sloptic only supports <b> web app grading</b> for deployed web apps.
+          Other projects, such as mobile apps, hardware projects, notebooks, AI/ML models, etc.,
+          are not supported. If your hackathon accepts non-web app projects,
+          it is better to use Sloptic to award a categorical prize for web apps, such as the one 
+          below.
+        </p>
       </section>
 
       <section className="section" id="prize">
-        <h2 className="section-head">Give it a prize of its own</h2>
-        <p className="section-intro">
-          Sloptic needs a running web app to look at. Other projects, such as a hardware build, a trained model, a notebook, or
-          a mobile app, are not supported. If your event only accepts web apps, you can rank it outright. If not, Sloptic
-          fits better as a category prize than as an overall ranking.
-        </p>
+        <h2 className="section-head">Suggested prize</h2>
+        
         <div className="callout" data-tone="award">
-          <p className="callout-label">suggested category</p>
           <p className="award-name">Slopless Builder</p>
           <p>
-            To the web app entry with the lowest slop score, hence the name "slopless."
+            To the web app entry with the lowest slop score, hence the name "slopless." A 
+            "slopless builder" demonstrates that they can build a web app that is not only 
+            demos well, but is also clean, secure, and performant.
           </p>
         </div>
       </section>
@@ -96,16 +105,16 @@ export default function OrganizersPage({
           <li className="flow-box">
             <span className="n">01</span>
             <p>
-              Point Sloptic at your public Devpost event and prove you run it, which ties the event to
-              your account so nobody else can grade it.
+              Point Sloptic at your public Devpost event and prove you run it by serving a link we provide.
             </p>
           </li>
           <li className="flow-conn" aria-hidden />
           <li className="flow-box">
             <span className="n">02</span>
             <p>
-              Pick how deep to go. A light grade reads what every visitor can see. A full grade adds
-              the checks that send real traffic, which your event rules disclose to entrants.
+              Pick how deep to go. A passive grade reads what every visitor can see. An active grade adds
+              the checks that send real traffic. Hence, the same link that verifies your event
+              also discloses what Sloptic will do to your submissions.
             </p>
           </li>
           <li className="flow-conn" aria-hidden />
@@ -120,17 +129,16 @@ export default function OrganizersPage({
       </section>
 
       <section className="section" id="fair">
-        <h2 className="section-head">Fair by construction</h2>
+        <h2 className="section-head">Get started</h2>
         <p className="section-intro">
-          Sloptic runs identically on every app, meaning the only difference is the app itself. Sloptic
-          shows that the stuff no app should get wrong can be graded objectively.
+          Sloptic shows that the slop that no app should ever have can be scored objectively.
         </p>
         <div className="cta-row">
           <a className="button" href="#verify-event">
             Verify your event
           </a>
           <a className="button secondary" href="/methodology">
-            How the grade works
+            How grading works
           </a>
         </div>
       </section>

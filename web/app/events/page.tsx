@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Your events",
-  description: "Verify a hackathon you run, and grade its entries on one scale.",
+  description: "Verify a hackathon you run and grade its entries.",
   robots: { index: false, follow: false },
 };
 
@@ -65,7 +65,7 @@ export default async function EventsPage({
         <AddEvent initialEvent={prefill} />
         {mayOverrideEvents(user.email) && (
           <p className="section-intro fineprint">
-            Override is on for this account: you can grade any event, passive only.
+            Override is on for this account: you can grade any event.
           </p>
         )}
       </section>

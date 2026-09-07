@@ -10,10 +10,9 @@ export default function MethodologyPage() {
   return (
     <>
       <div className="page-head">
-        <h1>How the grade works</h1>
+        <h1>How does Sloptic find slop?</h1>
         <p className="page-lead">
-          What Sloptic looks at, what it counts as a finding, how the score is built, and what it
-          does not claim
+          TL;DR: by checking what any visitor sees and grading on what is wrong no matter what the app is for. 
         </p>
       </div>
 
@@ -26,31 +25,30 @@ export default function MethodologyPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">What counts as a finding</h2>
+        <h2 className="section-head">What counts as slop?</h2>
         <p className="section-intro">
-          <b>It has to be wrong in every app.</b> Before a check is added it must answer a simple question:
+          <b>It has to be wrong in every app.</b> Before a behavior is considered slop, it must answer a simple question:
           Is there a legitimate app for which this behavior is correct? For example, a table any visitor can
           read can be right for a product catalogue. Allowing duplicates may be correct for logs but wrong for payment transactions. These examples are cases where an app can <em>legitimately
-          exhibit a particular behavior</em> and is thus not penalized for it.
+          exhibit a particular behavior</em> and thus wouldn't be considered slop.
         </p>
         <p className="section-intro">
-          However, behavior like exposed secrets, SQL injection, an unhandled server error, or a pathologically slow
+          However, behaviors like exposed secrets, SQL injection, an unhandled server error, or a pathologically slow
           app, are wrong for <em>any app you come across</em>. No app on earth exists where such behaviors are
-          &quot;correct&quot; and thus Sloptic checks for them.
+          &quot;correct&quot; and thus these are considered slop and Sloptic docks them.
         </p>
         <p className="section-intro">
-          <b>It has to be proven.</b> A finding rests on something only that fault could
-          produce, with evidence to back it up. For example, injection probes only trigger a finding when 
-          a site verifiably produces a response that could only come from execution. Unlike traditional{" "} 
+          <b>It has to be proven.</b> An instance of slop rests on something only that instance could
+          produce, with evidence to back it up. Unlike traditional{" "} 
           <a href="https://en.wikipedia.org/wiki/Dynamic_application_security_testing" target="_blank" rel="noopener noreferrer">DAST</a> tools, 
-          where a false positive can be dismissed with only some wasted time, Sloptic's findings
+          where a false positive can be dismissed with only some wasted time, the slop Sloptic sees
           must be trustworthy on their own, since (1) the score is meant to be taken at face value, and (2) any
           human intervention affects the objective nature of Sloptic.
         </p>
       </section>
 
       <section className="section">
-        <h2 className="section-head">How the score is built</h2>
+        <h2 className="section-head">How Sloptic scores</h2>
         <ul className="stat-list">
           <li>
             <span className="k">deduction only</span>
@@ -62,30 +60,29 @@ export default function MethodologyPage() {
           <li>
             <span className="k">risk priced</span>
             <span className="v">
-              A penalty is expected harm, or how often it hurts someone multiplied by how badly, rather
-              than raw severity. 
+              Sloptic penalizes slop based on expected harm, or how often it hurts someone multiplied by how bad it is
+              (i.e. the classical risk formula).
             </span>
           </li>
           <li>
             <span className="k">damped</span>
             <span className="v">
-              One root cause counts once. Variants of the same flaw collapse to a single finding, and
-              repeats within a category decay sharply, so ten pages missing one header are not ten
-              findings.
+              One kind of slop counts once. If, for example, there are 20 instances of missing headers, Sloptic 
+              will not charge 20 times, but only once. This prevents a single kind of slop from dominating the score.
             </span>
           </li>
           <li>
-            <span className="k">unbounded, not out of 100</span>
+            <span className="k">unbounded</span>
             <span className="v">
               Security, quality and performance each report their own subtotal and the three sum to the
-              score.
+              score. There are no limits on how high the score can be.
             </span>
           </li>
         </ul>
       </section>
 
       <section className="section">
-        <h2 className="section-head">Where the numbers come from</h2>
+        <h2 className="section-head">Where the scores come from</h2>
         <p className="section-intro">
           A penalty is not a matter of taste. Every number traces to a published authority, and where
           a finding lands inside that authority&apos;s range is set by what the check saw. You can find the 
@@ -169,37 +166,33 @@ export default function MethodologyPage() {
             </span>
           </li>
         </ul>
-        <p className="section-intro">
-          Within a class, a check charges the lowest price by default and raises it only when it proves
-          worse harm. For example, an access control flaw that leaks one record is priced well below one that hands
-          over a whole table.
-        </p>
       </section>
 
       <section className="section">
-        <h2 className="section-head">Two kinds of checks</h2>
+        <h2 className="section-head">Two kinds of checks for slop</h2>
         <p className="section-intro">
           <b>Passive</b> checks read what your app already shows every visitor. Running them on a
           stranger&apos;s site is no different from visiting it.
         </p>
         <p className="section-intro">
-          <b>Active</b> checks go looking for holes by sending real attacks. Doing that to a
-          site you do not own is considered unauthorized testing, so they run only once ownership is proven.{" "}
-          <a href="/verify">What verifying involves.</a>
+          <b>Active</b> checks go looking for holes by sending real attacks (because some instance of slop are
+          security vulnerabilities). Doing that to a site you don't own is considered unauthorized testing, 
+          so they only run when ownership is proven.{" "}
+          <a href="/verify">Learn more about domain verification here.</a>
         </p>
       </section>
 
       <section className="section">
-        <h2 className="section-head">How the checks are validated</h2>
+        <h2 className="section-head">How we validate our checks</h2>
         <p className="section-intro">
           Checks are calibrated against apps with known answers because no single target
-          proves much on its own.
+          proves much by itself.
         </p>
         <ul className="stat-list">
           <li>
             <span className="k">a matched pair</span>
             <span className="v">
-              One reference app deliberately broken, one clean. A check that can't tell these apart does not get added.
+              One reference app intentionally broken, one clean. A check that can't tell these apart does not get added.
             </span>
           </li>
           <li>
@@ -220,14 +213,14 @@ export default function MethodologyPage() {
             <span className="k">a population</span>
             <span className="v">
               More than 1,600 real deployed apps, which shows how often a fault occurs but not
-              whether one actually exists or not, which requires hand auditing.
+              whether one actually exists or not.
             </span>
           </li>
         </ul>
       </section>
 
       <div className="method" data-tone="limits">
-        <h2>What Sloptic does not claim</h2>
+        <h2>What Sloptic can't say</h2>
         <p>
           <b>It never says you are safe.</b> A 0 means nothing was found. The
           score cannot tell a defended thing from an absent one, and it cannot see everything. Hence, 
@@ -246,7 +239,7 @@ export default function MethodologyPage() {
             Grade an app
           </a>
           <a className="button secondary" href="https://github.com/sloptic/sloptic-main">
-            The grader, in full
+            The full grader
           </a>
         </div>
       </div>

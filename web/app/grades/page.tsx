@@ -28,7 +28,7 @@ export default async function GradesPage() {
       <div className="page-head">
         <h1>Your grades</h1>
         <p className="page-lead">
-          Grades this browser has run. They live here until they expire, or until you sign in and
+          Grades this browser has run. They live here until they expire or until you sign in and
           keep them.
         </p>
       </div>
