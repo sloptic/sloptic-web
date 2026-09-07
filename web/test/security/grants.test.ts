@@ -39,7 +39,13 @@ const DEFAULTS = {
 };
 
 type GrantSeed = { account_id: string; scope: string; expires_at: string; revoked_at?: string | null; kind?: string };
-type ClaimSeed = { account_id: string; slug: string; status: string; window_open_at_verification: boolean | null };
+type ClaimSeed = {
+  account_id: string;
+  slug: string;
+  status: string;
+  window_open_at_verification: boolean | null;
+  active_approved?: boolean;
+};
 type RunSeed = Record<string, unknown>;
 
 function db({ grants = [], claims = [], runs = [], entries = [] }: {
@@ -74,7 +80,14 @@ const ALICE_VERIFIED: ClaimSeed = {
   slug: SLUG,
   status: "verified",
   window_open_at_verification: true,
+  // Verified and inside the window, and still NOT enough. Both of those are things Alice asserted
+  // about an event Alice described, so somebody who invented the event satisfies them just as
+  // easily. Approval is the condition that is not hers to write.
+  active_approved: false,
 };
+
+/** Verified, inside the window, and approved by a human: the whole authorization. */
+const ALICE_APPROVED: ClaimSeed = { ...ALICE_VERIFIED, active_approved: true };
 
 afterEach(() => {
   delete process.env.SLOPTIC_ADMIN_ACCOUNTS;
@@ -175,14 +188,40 @@ describe("POST /api/events/run: which battery it may point at the field", () => 
     setUser(ALICE);
   });
 
-  it("allows active only for a grant holder whose event was verified before submissions closed", async () => {
-    const store = db({ grants: [ALICE_LIVE], claims: [ALICE_VERIFIED] });
+  it("allows active only for a grant holder inside the window whose event was approved", async () => {
+    const store = db({ grants: [ALICE_LIVE], claims: [ALICE_APPROVED] });
     setDb(store);
     const res = await read(
       await startRun(jsonRequest("http://x/api/events/run", { event: SLUG, mode: "active" }))
     );
     expect(res.status).toBe(201);
     expect(store.rows("event_runs")[0].mode).toBe("active");
+  });
+
+  it("refuses active for an unapproved event, however good the rest of the paperwork is", async () => {
+    // The fabricated-event case. A Devpost event you invented, our link in rules you wrote, entries
+    // submitted from accounts you made pointing at somebody else's site, verified before a deadline
+    // you chose: grant live, window open, every check passing, and Sloptic attacking strangers from
+    // our IP on your say-so. Approval is the only condition in the chain that is not yours to write.
+    const store = db({ grants: [ALICE_LIVE], claims: [ALICE_VERIFIED] });
+    setDb(store);
+    const res = await read(
+      await startRun(jsonRequest("http://x/api/events/run", { event: SLUG, mode: "active" }))
+    );
+    expect(res.status).toBe(409);
+    expect(store.rows("event_runs")).toEqual([]);
+  });
+
+  it("still starts a PASSIVE run for an unapproved event, which is the tier organizers came for", async () => {
+    // Approval gates attack traffic, not the product. A passive probe does what any visitor does,
+    // so there is no consent to establish and nothing to hold up.
+    const store = db({ grants: [ALICE_LIVE], claims: [ALICE_VERIFIED] });
+    setDb(store);
+    const res = await read(
+      await startRun(jsonRequest("http://x/api/events/run", { event: SLUG, mode: "passive" }))
+    );
+    expect(res.status).toBe(201);
+    expect(store.rows("event_runs")[0].mode).toBe("passive");
   });
 
   it("refuses active when the disclosure went up after the window closed", async () => {
@@ -304,12 +343,22 @@ describe("POST /api/events/run/mode: switching an existing run to the active bat
     expect(store.rows("event_runs")[0].mode).toBe("passive");
   });
 
-  it("flips a ready run for the grant holder whose window was open", async () => {
-    const store = db({ grants: [ALICE_LIVE], claims: [ALICE_VERIFIED], runs: [readyRun()] });
+  it("flips a ready run for the grant holder whose window was open and event approved", async () => {
+    const store = db({ grants: [ALICE_LIVE], claims: [ALICE_APPROVED], runs: [readyRun()] });
     setDb(store);
     const res = await read(await setMode(jsonRequest("http://x/mode", { id: "run-1", mode: "active" })));
     expect(res.status).toBe(200);
     expect(store.rows("event_runs")[0].mode).toBe("active");
+  });
+
+  it("refuses to FLIP a passive run active for an unapproved event", async () => {
+    // The door that matters most. Starting passive is self-serve, so without this the whole gate is
+    // one POST away from irrelevant.
+    const store = db({ grants: [ALICE_LIVE], claims: [ALICE_VERIFIED], runs: [readyRun()] });
+    setDb(store);
+    const res = await read(await setMode(jsonRequest("http://x/mode", { id: "run-1", mode: "active" })));
+    expect(res.status).toBe(409);
+    expect(store.rows("event_runs")[0].mode).toBe("passive");
   });
 
   it("refuses active when the window was closed at verification", async () => {

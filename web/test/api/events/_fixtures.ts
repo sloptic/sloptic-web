@@ -93,7 +93,12 @@ export function organizerGrant(over: Row = {}): Row {
 }
 
 /** A verified claim whose disclosure predates the submission deadline, which is what the active
- *  tier reads as participant consent. */
+ *  tier reads as participant consent.
+ *
+ *  UNAPPROVED by default, matching the column default, and deliberately so. Approval is a separate
+ *  act by a human, and a fixture that handed it out for free would let the gate rot without a single
+ *  test going red. A test that wants the active battery has to say `active_approved: true` and thereby
+ *  say which of the three conditions it is exercising. */
 export function verifiedClaim(over: Row = {}): Row {
   return {
     id: "claim-1",
@@ -101,8 +106,14 @@ export function verifiedClaim(over: Row = {}): Row {
     slug: SLUG,
     status: "verified",
     window_open_at_verification: true,
+    active_approved: false,
     ...over,
   };
+}
+
+/** The only claim shape that reaches the active battery without operator privilege. */
+export function approvedClaim(over: Row = {}): Row {
+  return verifiedClaim({ active_approved: true, ...over });
 }
 
 /** Stage a race deterministically: `effect` runs immediately before the FIRST query on (table, kind)

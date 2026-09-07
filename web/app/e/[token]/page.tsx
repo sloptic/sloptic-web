@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 export default async function DisclosurePage({ params }: { params: { token: string } }) {
   const { data: claim } = await supabaseAdmin()
     .from("event_claims")
-    .select("slug, status, verified_at, window_open_at_verification")
+    .select("slug, status, verified_at, window_open_at_verification, active_approved")
     .eq("token", params.token)
     .maybeSingle();
 
@@ -36,8 +36,19 @@ export default async function DisclosurePage({ params }: { params: { token: stri
   const verified = claim.status === "verified";
   // Three states, not two. NULL means we could not tell whether the window was open, and rendering
   // that as either answer would tell participants something we do not know.
-  const active = verified && claim.window_open_at_verification === true;
-  const passiveOnly = verified && claim.window_open_at_verification === false;
+  // Approval is part of the answer this page gives, not just part of the gate. What a participant is
+  // owed here is what will actually happen to their app, and an event that is verified inside the
+  // window still gets the passive floor until a human has approved it, so saying "the full gauntlet"
+  // on the strength of the window alone would be telling them about traffic that never arrives.
+  const active =
+    verified && claim.window_open_at_verification === true && claim.active_approved === true;
+  // NULL still means uncertain, and approval must not collapse that. We know it is passive when the
+  // window was definitively closed, or when it was definitively open and nobody has approved the
+  // event. An unknown window stays unknown either way, because approval says nothing about it.
+  const passiveOnly =
+    verified &&
+    (claim.window_open_at_verification === false ||
+      (claim.window_open_at_verification === true && claim.active_approved !== true));
 
   return (
     <>
@@ -95,13 +106,14 @@ export default async function DisclosurePage({ params }: { params: { token: stri
           </>
         ) : passiveOnly ? (
           <p className="section-intro">
-            This event was verified only after its submission deadline, so entries get the passive
-            checks and nothing else.
+            This event gets the passive checks and nothing else. No attack traffic is sent, nothing
+            is submitted to your app, and nothing about it is changed.
           </p>
         ) : (
           <p className="section-intro">
             Which battery this event gets is settled when the organizer verifies it. Active checks
-            apply only if that happened before the submission deadline.
+            apply only if that happened before the submission deadline, and only if we have looked
+            at the event ourselves and agreed to it.
           </p>
         )}
       </section>

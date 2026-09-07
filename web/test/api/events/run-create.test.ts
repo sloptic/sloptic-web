@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { fakeDb, ONE_LIVE_RUN, type FakeSupabase } from "../../helpers/supabase";
 import { setDb, setUser, resetRouteMocks, jsonRequest, malformedRequest, getRequest, read } from "../../helpers/route";
-import { DEFAULTS, FUTURE, ORGANIZER, PAST, SLUG, STRANGER, interleave, organizerGrant, run, verifiedClaim } from "./_fixtures";
+import { DEFAULTS, FUTURE, ORGANIZER, PAST, SLUG, STRANGER, approvedClaim, interleave, organizerGrant, run, verifiedClaim } from "./_fixtures";
 
 vi.mock("@/lib/supabase", async () => {
   const { getDb } = await import("../../helpers/route");
@@ -162,8 +162,8 @@ describe("POST /api/events/run: passive by default", () => {
     expect(status).toBe(409);
   });
 
-  it("allows active for a live grant plus a claim verified inside the window", async () => {
-    db.rows("event_claims").push(verifiedClaim());
+  it("allows active for a live grant, a claim verified inside the window, and approval", async () => {
+    db.rows("event_claims").push(approvedClaim());
     const { status } = await read(await post({ event: SLUG, mode: "active" }));
     expect(status).toBe(201);
     expect(db.rows("event_runs")[0].mode).toBe("active");

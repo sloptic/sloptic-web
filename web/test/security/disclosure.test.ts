@@ -43,6 +43,9 @@ const verifiedClaim = (over: ClaimSeed = {}): ClaimSeed => ({
   status: "verified",
   verified_at: "2026-02-01T00:00:00.000Z",
   window_open_at_verification: true,
+  // Unapproved by default, as the column is. What this page owes a participant is what will actually
+  // happen to their app, and an unapproved event gets the passive floor however the window landed.
+  active_approved: false,
   ...over,
 });
 
@@ -77,10 +80,20 @@ describe("/e/<token>", () => {
   // and broke on a rewrite that kept the promise intact, which is a test measuring the wrong thing.
   const WARNS_OF_ATTACKS = /send real attack traffic/i;
 
-  it("warns of attack traffic only when the window was open at verification", async () => {
-    setDb(store([verifiedClaim()]));
+  it("warns of attack traffic when the window was open and the event approved", async () => {
+    setDb(store([verifiedClaim({ active_approved: true })]));
     const html = await markup("the-real-token");
     expect(html).toMatch(WARNS_OF_ATTACKS);
+  });
+
+  it("promises no attack traffic for an unapproved event, whatever the window says", async () => {
+    // The page must not describe traffic that will not arrive. An event inside its window is still
+    // passive until a human has approved it, and telling participants otherwise would be a warning
+    // about something that never happens, which is its own way of not being believed next time.
+    setDb(store([verifiedClaim()]));
+    const html = await markup("the-real-token");
+    expect(html).not.toMatch(WARNS_OF_ATTACKS);
+    expect(html).toContain("passive checks and nothing else");
   });
 
   it("says passive only when the disclosure went up after the deadline", async () => {
@@ -93,6 +106,8 @@ describe("/e/<token>", () => {
   });
 
   it("renders an unknown window as uncertainty, never as either answer", async () => {
+    // Approval must not collapse the third state. NULL means we could not tell whether the window
+    // was open, and an unapproved event whose window is unknown is still unknown, not passive.
     setDb(store([verifiedClaim({ window_open_at_verification: null })]));
     const html = await markup("the-real-token");
     expect(html).not.toContain("full battery");

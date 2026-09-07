@@ -99,6 +99,7 @@ export default function EventActions({
   slug,
   verified,
   canActive,
+  awaitingApproval,
   canOverride,
   initialClaim,
   initialRuns,
@@ -109,6 +110,7 @@ export default function EventActions({
   verified: boolean;
   /** Whether the full battery may be asked for. Decided on the server; this only draws the button. */
   canActive: boolean;
+  awaitingApproval?: boolean;
   canOverride: boolean;
   initialClaim?: Claim | null;
   initialRuns?: Run[];
@@ -398,7 +400,13 @@ export default function EventActions({
                         className={live.mode === "active" ? "on" : ""}
                         aria-pressed={live.mode === "active"}
                         disabled={busy || live.mode === "active" || !canActive}
-                        title={!canActive ? "Active grading needs the disclosure verified before the deadline." : undefined}
+                        title={
+                          !canActive
+                            ? awaitingApproval
+                              ? "Active grading of a field is approved by hand. Email hello@sloptic.org with your event."
+                              : "Active grading needs the disclosure verified before the deadline."
+                            : undefined
+                        }
                         onClick={() => void act(async () => {
                           await post("/api/events/run/mode", { id: live.id, mode: "active" });
                           return "Switched to active.";

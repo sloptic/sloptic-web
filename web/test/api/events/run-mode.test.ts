@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { fakeDb, ONE_LIVE_RUN, type FakeSupabase, type Row } from "../../helpers/supabase";
 import { setDb, setUser, resetRouteMocks, jsonRequest, malformedRequest, read } from "../../helpers/route";
-import { DEFAULTS, ORGANIZER, PAST, SLUG, STRANGER, entry, organizerGrant, run, spyQueries, stored, verifiedClaim } from "./_fixtures";
+import { DEFAULTS, ORGANIZER, PAST, SLUG, STRANGER, approvedClaim, entry, organizerGrant, run, spyQueries, stored, verifiedClaim } from "./_fixtures";
 
 vi.mock("@/lib/supabase", async () => {
   const { getDb } = await import("../../helpers/route");
@@ -36,11 +36,12 @@ function seed(over: Row = {}): void {
   ];
 }
 
-/** The full, live authorization for an active event grade: an unexpired account-bound grant plus a
- *  disclosure that predates the submission deadline. */
+/** The full, live authorization for an active event grade: an unexpired account-bound grant, a
+ *  disclosure that predates the submission deadline, and a human's approval of the event. All three,
+ *  because the first two are asserted by the same party and a fabricated event satisfies both. */
 function authorized(): void {
   db.rows("grants").push(organizerGrant());
-  db.rows("event_claims").push(verifiedClaim());
+  db.rows("event_claims").push(approvedClaim());
 }
 
 beforeEach(() => {

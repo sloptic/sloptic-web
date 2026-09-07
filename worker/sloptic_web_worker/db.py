@@ -1117,7 +1117,27 @@ def may_grade_actively(conn: psycopg.Connection, job_id: str) -> tuple[bool, str
             (row["account_id"], row["event_slug"]),
         ).fetchone()
         if live:
-            return True, ""
+            # The grant says this account runs the event. Approval says a human agreed the event is
+            # real, which is the only link in the organizer chain the organizer does not write
+            # themselves: a fabricated Devpost event with our link in its own rules and entries
+            # pointing at strangers' sites satisfies everything else on this path.
+            #
+            # Re-read HERE for the same reason the grant is, and it is the more useful of the two to
+            # be able to withdraw. A field of 200 sits in the queue for hours, so an event that turns
+            # out to be fraudulent after the first few reports land has to stop at the next entry,
+            # and un-approving it is the small hammer. Revoking the grant would also work and takes
+            # the organizer's passive runs down with it.
+            approved = conn.execute(
+                """
+                SELECT 1 FROM event_claims
+                 WHERE account_id = %s AND slug = %s AND status = 'verified'
+                   AND active_approved;
+                """,
+                (row["account_id"], row["event_slug"]),
+            ).fetchone()
+            if approved:
+                return True, ""
+            return False, f"event {row['event_slug']} is not approved for active grading"
         # Admin is the exception to "an event run needs an organizer grant". The run must have been
         # created as an admin run AND the account must still be on the allowlist now, both, so a flag
         # left on a row cannot authorize by itself and neither can a bare membership.

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { currentUser } from "@/lib/auth";
 import { isAdmin, mayOverrideEvents } from "@/lib/flags";
+import { activeEventRefusal } from "@/lib/event-active";
 import { suspensionFor } from "@/lib/suspension";
 
 export const runtime = "nodejs";
@@ -81,22 +82,8 @@ export async function POST(req: NextRequest) {
       );
     }
     if (!admin) {
-      const { data: claim } = await db
-        .from("event_claims")
-        .select("window_open_at_verification")
-        .eq("account_id", user.id)
-        .eq("slug", run.slug)
-        .eq("status", "verified")
-        .maybeSingle();
-      if (claim?.window_open_at_verification !== true) {
-        return NextResponse.json(
-          {
-            error:
-              "This event was not verified before its submission deadline, so entries get the passive checks only.",
-          },
-          { status: 409 }
-        );
-      }
+      const refusal = await activeEventRefusal(db, user.id, run.slug);
+      if (refusal) return NextResponse.json({ error: refusal }, { status: 409 });
     }
   }
 

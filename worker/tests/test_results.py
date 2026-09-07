@@ -58,6 +58,21 @@ def _grant(conn, account, kind, scope, *, expires="now() + interval '90 days'", 
     )
 
 
+def _approved_claim(conn, account, slug="hack", *, approved=True):
+    """A verified claim for this account and event, approved or not.
+
+    Approval is the half of the organizer authorization that the organizer does not write. The grant
+    only says they control the event's Devpost pages, which is exactly what someone who invented the
+    event also has.
+    """
+    conn.execute(
+        """INSERT INTO event_claims (account_id, slug, token, status, verified_at,
+                                     window_open_at_verification, active_approved)
+           VALUES (%s, %s, %s, 'verified', now(), true, %s)""",
+        (account, slug, f"tok-{slug}-{approved}", approved),
+    )
+
+
 def _run(conn, account, *, slug="hack", mode="active", status="grading", admin=False):
     row = conn.execute(
         """INSERT INTO event_runs (account_id, slug, mode, status, admin)
@@ -551,12 +566,42 @@ class TestMayGradeActively:
             gid = _grade(conn, origin=origin, mode="active", account=account)
             assert db.may_grade_actively(conn, gid)[0] is False, origin
 
-    def test_an_organizer_grant_covers_the_entries_of_the_event_it_was_issued_for(self, conn, account):
+    def test_an_organizer_grant_plus_approval_covers_the_entries_of_that_event(self, conn, account):
         run = _run(conn, account, slug="hack")
         gid = _grade(conn, origin="https://team-one.example.com", mode="active",
                      account=account, run=run)
         _grant(conn, account, "organizer_event", "hack")
+        _approved_claim(conn, account, "hack")
         assert db.may_grade_actively(conn, gid) == (True, "")
+
+    def test_an_unapproved_event_sends_no_attack_traffic_however_live_the_grant(self, conn, account):
+        # The fabricated-event case, at the last gate that can still stop it. Stand up a Devpost
+        # event, publish our link in rules you wrote, submit entries from accounts you made pointing
+        # at someone else's site, verify inside your own window: the grant below is genuine and every
+        # other check on this path passes. Approval is what is missing, and it is the only condition
+        # in the chain that is not the organizer's to assert.
+        run = _run(conn, account, slug="hack")
+        gid = _grade(conn, origin="https://someone-elses-site.example.com", mode="active",
+                     account=account, run=run)
+        _grant(conn, account, "organizer_event", "hack")
+        _approved_claim(conn, account, "hack", approved=False)
+        ok, why = db.may_grade_actively(conn, gid)
+        assert ok is False
+        assert "not approved" in why
+
+    def test_withdrawing_approval_stops_the_rest_of_the_field(self, conn, account):
+        # Why this is re-read here rather than trusted from confirm time. A field of 200 sits in the
+        # queue for hours, so an event that turns out to be fraudulent after the first reports land
+        # has to stop at the NEXT entry. Un-approving is the small hammer; revoking the grant would
+        # also work and would take the organizer's passive runs down with it.
+        run = _run(conn, account, slug="hack")
+        gid = _grade(conn, origin="https://team-one.example.com", mode="active",
+                     account=account, run=run)
+        _grant(conn, account, "organizer_event", "hack")
+        _approved_claim(conn, account, "hack")
+        assert db.may_grade_actively(conn, gid)[0] is True
+        conn.execute("UPDATE event_claims SET active_approved = false WHERE slug = 'hack'")
+        assert db.may_grade_actively(conn, gid)[0] is False
 
     def test_an_organizer_grant_for_one_event_does_not_cover_another_event_s_field(self, conn, account):
         run = _run(conn, account, slug="other-hack")

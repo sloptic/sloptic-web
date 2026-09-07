@@ -4,6 +4,7 @@ import { currentUser } from "@/lib/auth";
 import { parseEventSlug, BadEvent } from "@/lib/devpost-slug";
 import { mayOverrideEvents, isAdmin } from "@/lib/flags";
 import { runsForAccount } from "@/lib/event-runs";
+import { activeEventRefusal } from "@/lib/event-active";
 import { suspensionFor } from "@/lib/suspension";
 
 export const runtime = "nodejs";
@@ -70,22 +71,8 @@ export async function POST(req: NextRequest) {
   let mode: "passive" | "active" = body.mode === "active" ? "active" : "passive";
   if (override && !admin) mode = "passive";
   if (mode === "active" && !admin) {
-    const { data: claim } = await db
-      .from("event_claims")
-      .select("window_open_at_verification")
-      .eq("account_id", user.id)
-      .eq("slug", slug)
-      .eq("status", "verified")
-      .maybeSingle();
-    if (claim?.window_open_at_verification !== true) {
-      return NextResponse.json(
-        {
-          error:
-            "This event was not verified before its submission deadline, so entries get the passive checks only.",
-        },
-        { status: 409 }
-      );
-    }
+    const refusal = await activeEventRefusal(db, user.id, slug);
+    if (refusal) return NextResponse.json({ error: refusal }, { status: 409 });
   }
 
   // One live run per event per account. A second resolve while one is in flight would grade the

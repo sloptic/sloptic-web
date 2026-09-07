@@ -21,7 +21,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
       .is("revoked_at", null).maybeSingle(),
     db.from("event_claims").select("id, slug, token, status, check_status, check_detail, checked_at")
       .eq("account_id", user.id).eq("slug", params.slug).order("issued_at", { ascending: false }),
-    db.from("event_claims").select("window_open_at_verification")
+    db.from("event_claims").select("window_open_at_verification, active_approved")
       .eq("account_id", user.id).eq("slug", params.slug).eq("status", "verified"),
     db.from("event_runs").select("id")
       .eq("account_id", user.id).eq("slug", params.slug),
@@ -50,14 +50,20 @@ export default async function EventPage({ params }: { params: { slug: string } }
 
   // Whether the active battery may even be offered for this event. The route's own preconditions,
   // asked here only so a button that would be refused is never drawn: a live grant this account
-  // holds for this slug AND a verification that happened while entrants could still read the
-  // disclosure, OR operator admin, which skips both. The route and the worker check again; this
-  // decides nothing.
+  // holds for this slug, a verification that happened while entrants could still read the
+  // disclosure, AND a human's approval of the event, OR operator admin, which skips all three. The
+  // route and the worker check again; this decides nothing.
   const canActive =
     admin ||
     (!!grant &&
       new Date(grant.expires_at) > new Date() &&
-      (verified ?? []).some((c) => c.window_open_at_verification === true));
+      (verified ?? []).some((c) => c.window_open_at_verification === true && c.active_approved === true));
+  // Told apart from "not verified in time", because the two ask different things of the organizer.
+  // One is a deadline they have already missed and can do nothing about; the other is an email.
+  const awaitingApproval =
+    !canActive &&
+    !!grant &&
+    (verified ?? []).some((c) => c.window_open_at_verification === true && c.active_approved !== true);
 
   const when = (iso: string) =>
     new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
@@ -79,6 +85,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
         slug={params.slug}
         verified={!!grant}
         canActive={canActive}
+        awaitingApproval={awaitingApproval}
         canOverride={admin || mayOverrideEvents(user.email)}
         initialClaim={claimRow}
         initialRuns={seededRuns}

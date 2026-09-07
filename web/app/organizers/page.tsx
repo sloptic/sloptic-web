@@ -112,9 +112,12 @@ export default function OrganizersPage({
           <li className="flow-box">
             <span className="n">02</span>
             <p>
-              Pick how deep to go. A passive grade reads what every visitor can see. An active grade adds
-              the checks that send real traffic. Hence, the same link that verifies your event
-              also discloses what Sloptic will do to your submissions.
+              Pick how deep to go. A passive grade reads what every visitor can see, and runs as soon
+              as you verify. An active grade adds the checks that send real traffic, so it needs the
+              disclosure to have been up before your deadline and a word with us first: email{" "}
+              <a href="mailto:hello@sloptic.org">hello@sloptic.org</a> and we will look at your
+              event. Hence, the same link that verifies your event also discloses what Sloptic will
+              do to your submissions.
             </p>
           </li>
           <li className="flow-conn" aria-hidden />
