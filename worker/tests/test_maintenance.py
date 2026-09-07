@@ -484,6 +484,36 @@ class TestHeartbeat:
         db.heartbeat(conn, "polling", "")
         assert conn.execute("SELECT reason FROM worker_status").fetchone()["reason"] is None
 
+    def test_blocked_lanes_are_published_while_the_worker_is_still_grading(self, conn):
+        # THE case the coarse state could not express, and the whole reason the column exists. With
+        # the public budget spent and event allowance left, this worker is honestly "grading", so a
+        # reader looking at state alone concluded a public submission was about to be picked up. The
+        # web door then accepted grades nothing would ever claim and failed them an hour later
+        # blaming a worker that was alive the entire time.
+        db.heartbeat(conn, "grading", "2 of 4 in flight", None,
+                     {"public": "daily budget spent (300/300 in 24h)"})
+        row = conn.execute("SELECT state, blocked_lanes FROM worker_status").fetchone()
+        assert row["state"] == "grading"
+        assert row["blocked_lanes"] == {"public": "daily budget spent (300/300 in 24h)"}
+
+    def test_a_reopened_lane_is_written_back_empty(self, conn):
+        # A map that is only ever written and never unwritten is a worse lie than the one it fixed:
+        # the door would keep refusing after the 24h window rolled and the budget came back.
+        db.heartbeat(conn, "holding", "spent", None, {"public": "spent", "event": "spent"})
+        assert conn.execute("SELECT blocked_lanes FROM worker_status").fetchone()["blocked_lanes"]
+        db.heartbeat(conn, "polling")
+        assert conn.execute("SELECT blocked_lanes FROM worker_status").fetchone()["blocked_lanes"] == {}
+
+    def test_every_beat_the_supervisor_writes_carries_the_lane_map(self):
+        # Read out of the supervisor's own source, like the state check above, because the bug was
+        # not a wrong value: it was one branch of three forgetting to pass it at all, which no
+        # assertion about a single heartbeat would have caught. A fourth branch added later without
+        # the map fails here.
+        calls = re.findall(r"beat\.set\((?:[^()]|\([^()]*\))*\)", inspect.getsource(supervisor))
+        assert len(calls) >= 3, "the supervisor stopped setting the heartbeat the way this test reads it"
+        for call in calls:
+            assert "blocked" in call, f"this beat publishes no lane map: {call}"
+
     def test_a_long_reason_is_truncated_rather_than_failing_the_beat(self, conn):
         # A beat that raises is a beat that does not land, and the cost of that is the site
         # reporting a live worker as dead. Better a clipped reason than a frozen clock.

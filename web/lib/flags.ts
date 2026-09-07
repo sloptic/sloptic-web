@@ -40,6 +40,19 @@ export const QUEUE_FULL_MESSAGE =
   "Too many grades are already waiting. Try again in a few minutes.";
 
 /**
+ * Said when the worker is alive but has decided not to claim the public lane: a spent daily budget,
+ * or a challenge backoff protecting the IP the whole population is measured from.
+ *
+ * One message for every such reason, deliberately. The visitor's next action is the same in all of
+ * them (come back later), and the reasons themselves are operating detail this endpoint is not the
+ * place to publish. What matters is that it is TRUE: the old path accepted the grade, held it an
+ * hour and then failed it with "no worker was available to run it", which blamed a worker that was
+ * alive and working, and read to the visitor as a broken site rather than a busy one.
+ */
+export const GRADING_PAUSED_MESSAGE =
+  "Sloptic is not taking new grades right now. Try again later.";
+
+/**
  * Accounts allowed to start an event run WITHOUT the organizer ownership check, by email.
  *
  * `SLOPTIC_EVENT_OVERRIDE=you@example.com,other@example.com`. Empty by default, so it is off unless

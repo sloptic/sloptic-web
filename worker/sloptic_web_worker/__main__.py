@@ -51,12 +51,13 @@ class _Heartbeat:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._state = ("polling", "", None)     # state, reason, in_flight
+        self._state = ("polling", "", None, {})     # state, reason, in_flight, blocked lanes
         self._stop = threading.Event()
 
-    def set(self, state: str, reason: str = "", in_flight: str | None = None) -> None:
+    def set(self, state: str, reason: str = "", in_flight: str | None = None,
+            blocked: dict[str, str] | None = None) -> None:
         with self._lock:
-            self._state = (state, reason, in_flight)
+            self._state = (state, reason, in_flight, blocked or {})
 
     def _run(self) -> None:
         conn = None
@@ -65,8 +66,8 @@ class _Heartbeat:
                 if conn is None or conn.closed:
                     conn = db.connect()
                 with self._lock:
-                    state, reason, in_flight = self._state
-                db.heartbeat(conn, state, reason, in_flight)
+                    state, reason, in_flight, blocked = self._state
+                db.heartbeat(conn, state, reason, in_flight, blocked)
             except Exception as e:  # noqa: BLE001 - liveness reporting must never kill the worker
                 print(f"[beat]  heartbeat failed: {type(e).__name__}: {e}", flush=True)
                 conn = None
@@ -759,13 +760,18 @@ def main() -> None:
             # The heartbeat thread does the writing on its own timer. Report the OLDEST in-flight
             # job, which is the one a stuck queue is stuck behind.
             oldest = max(running, key=lambda r: r.age()).job.id if running else None
+            # `blocked` goes on every beat regardless of state, and that is the point of it. The
+            # three states below describe what this worker IS doing; only the map describes what it
+            # has decided not to do. With the public budget spent and event allowance left, the
+            # honest state is "grading", and a door reading state alone would keep taking public
+            # submissions that nothing will ever claim.
             if not lanes:
-                beat.set("holding", halted, oldest)
+                beat.set("holding", halted, oldest, blocked)
             elif running:
                 beat.set("grading", f"{len(running)} of {config.MAX_CONCURRENT_GRADES} in flight",
-                         oldest)
+                         oldest, blocked)
             else:
-                beat.set("polling", "", None)
+                beat.set("polling", "", None, blocked)
 
             # AFTER the breaker is consulted, and gated on it. A challenge backoff exists because
             # our IP was challenged repeatedly, and a recovery pass is a near-full battery aimed at

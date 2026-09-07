@@ -24,7 +24,11 @@ export async function GET() {
   const db = supabaseAdmin();
 
   const [{ data: worker, error: workerErr }, { count: queued, error: queueErr }] = await Promise.all([
-    db.from("worker_status").select("last_seen, state, reason, in_flight").eq("id", "worker").maybeSingle(),
+    db
+      .from("worker_status")
+      .select("last_seen, state, reason, in_flight, blocked_lanes")
+      .eq("id", "worker")
+      .maybeSingle(),
     db.from("grades").select("id", { count: "exact", head: true }).eq("status", "queued"),
   ]);
 
@@ -50,10 +54,31 @@ export async function GET() {
     problems.push("queue unreadable");
   }
   // A live worker that is deliberately not claiming is still a grade that would not finish, which
-  // is this route's own definition of degraded. The heartbeat says so ("holding" plus the reason:
-  // a tripped challenge backoff holds both lanes for 48h, a spent daily budget holds one until
-  // midnight), and reading only last_seen reported 200 straight through it.
-  if (workerAlive && worker?.state === "holding") {
+  // is this route's own definition of degraded. Reading only last_seen reported 200 straight
+  // through it.
+  //
+  // Per lane now, because `state` says 'holding' only when NOTHING is claimable: with the public
+  // budget spent and event allowance left the worker is honestly 'grading', and this route used to
+  // answer 200 while every public submission was going nowhere. That is the one case where a
+  // monitor most needs to speak up, since it happens under exactly the load that publicity creates.
+  //
+  // The PUBLIC lane decides the verdict, and the event lane only reports. This route's question is
+  // whether a grade submitted right now would finish, and a stranger submitting one URL is on the
+  // public lane; an event lane at its ceiling is an organizer-facing condition their board already
+  // shows. Degrading on it would page whoever is on call because an organizer graded 500 apps,
+  // exactly as designed, and a monitor that cries at correct behaviour gets muted and then it
+  // protects nothing. Both lanes blocked still degrades, because public is one of them.
+  //
+  // The public lane reaching its cap DOES page you, and that is intended: it means demand exceeded
+  // capacity, which is worth learning on the day rather than from logs a week later. It clears
+  // itself when the 24h window rolls.
+  const blocked = (worker?.blocked_lanes ?? {}) as Record<string, string>;
+  const blockedLanes = Object.keys(blocked).sort();
+  if (workerAlive && blocked.public) {
+    problems.push(`worker is not claiming public: ${blocked.public}`);
+  } else if (workerAlive && worker?.state === "holding") {
+    // A worker older than migration 0034 publishes no lane map. Keep the coarse answer rather than
+    // reporting healthy at it, since a half-deployed pair is exactly when a monitor earns its keep.
     problems.push(`worker is holding: ${worker?.reason || "not claiming any lane"}`);
   }
 
@@ -73,6 +98,9 @@ export async function GET() {
         // that id let anyone poll every ten seconds and harvest most ids on the service. A monitor
         // needs to know whether the worker is busy, not which grade it is busy with.
         busy: Boolean(worker?.in_flight),
+        // Lane NAMES only. The reasons are already spelled out in `problems`, and repeating them
+        // here would just be two copies to keep in step.
+        blocked_lanes: blockedLanes,
       },
       queued: queued ?? null,
     },

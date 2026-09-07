@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 
 import psycopg
 from psycopg.rows import dict_row
+from psycopg.types.json import Json
 
 from . import config, platform
 
@@ -37,21 +38,32 @@ def save_progress(conn: psycopg.Connection, job_id: str, progress: dict) -> None
         pass
 
 
-def heartbeat(conn: psycopg.Connection, state: str, reason: str = "", in_flight: str | None = None) -> None:
-    """Tell the world this worker is alive, and whether it is claiming.
+def heartbeat(conn: psycopg.Connection, state: str, reason: str = "",
+              in_flight: str | None = None,
+              blocked_lanes: dict[str, str] | None = None) -> None:
+    """Tell the world this worker is alive, whether it is claiming, and what it is NOT claiming.
 
     Written every poll, including when idle: an empty queue updates nothing else in the schema, so
     without this there is no way to distinguish a healthy idle worker from no worker at all.
+
+    `blocked_lanes` is written on EVERY beat, not only while holding. It is the answer to a question
+    `state` cannot express, because a lane blocks on its own: with the public budget spent and event
+    allowance left, this worker is genuinely 'grading', and a reader looking only at `state` would
+    conclude a public submission was about to be picked up. Passing it every time also means the map
+    clears itself the moment a budget rolls over; a blocked lane that is only ever written and never
+    unwritten would be a worse lie than the one this fixes.
     """
     conn.execute(
         """
-        INSERT INTO worker_status (id, last_seen, state, reason, in_flight)
-        VALUES ('worker', now(), %(state)s, %(reason)s, %(in_flight)s)
+        INSERT INTO worker_status (id, last_seen, state, reason, in_flight, blocked_lanes)
+        VALUES ('worker', now(), %(state)s, %(reason)s, %(in_flight)s, %(blocked)s)
         ON CONFLICT (id) DO UPDATE SET
             last_seen = now(), state = EXCLUDED.state,
-            reason = EXCLUDED.reason, in_flight = EXCLUDED.in_flight;
+            reason = EXCLUDED.reason, in_flight = EXCLUDED.in_flight,
+            blocked_lanes = EXCLUDED.blocked_lanes;
         """,
-        {"state": state, "reason": reason[:500] or None, "in_flight": in_flight},
+        {"state": state, "reason": reason[:500] or None, "in_flight": in_flight,
+         "blocked": Json(blocked_lanes or {})},
     )
 
 

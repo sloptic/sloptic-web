@@ -67,8 +67,8 @@ export default function ReportIssuePage() {
         <p className="section-intro">
           Funny enough, Sloptic grades other people's apps for exactly this.
           Email <a href="mailto:security@sloptic.org">security@sloptic.org</a> with what you found
-          and how to reproduce it. We will not pursue you for good faith reports that stay in scope.
-          <b>Please note what is in and out of scope down below</b>:
+          and how to reproduce it. We will not pursue you for good faith reports that stay in scope. <b>Please note 
+            what is in and out of scope down below</b>:
         </p>
         <p className="section-intro">In scope: sloptic.org and its API ONLY.</p>
         {/* The scope limit that actually matters. A reader who wants to stress test something will

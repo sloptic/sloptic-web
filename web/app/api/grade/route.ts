@@ -3,7 +3,13 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { normalizeTarget, UrlRejected } from "@/lib/origin";
 import { egressPrecheck } from "@/lib/egress";
 import { allow, clientIp, hashIp } from "@/lib/ratelimit";
-import { gradingOpen, GRADING_CLOSED_MESSAGE, maxQueueDepth, QUEUE_FULL_MESSAGE } from "@/lib/flags";
+import {
+  gradingOpen,
+  GRADING_CLOSED_MESSAGE,
+  maxQueueDepth,
+  QUEUE_FULL_MESSAGE,
+  GRADING_PAUSED_MESSAGE,
+} from "@/lib/flags";
 import { currentUser } from "@/lib/auth";
 import { suspensionFor } from "@/lib/suspension";
 
@@ -56,16 +62,40 @@ export async function POST(req: NextRequest) {
   // Public submissions only. An event's grades sit in their own lane and the worker always serves a
   // person waiting on one grade first, so counting them here would let one 52 app field close the
   // site to everyone, which is the thing the lane exists to prevent.
-  const { count: waiting, error: depthErr } = await db
-    .from("grades")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "queued")
-    .is("event_run_id", null);
+  //
+  // Two questions, one round trip: is the queue too long, and has the worker already decided not to
+  // serve this lane at all. They fail the same way and for the same reason, so they belong together.
+  const [{ count: waiting, error: depthErr }, { data: worker, error: workerErr }] = await Promise.all([
+    db
+      .from("grades")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "queued")
+      .is("event_run_id", null),
+    db.from("worker_status").select("blocked_lanes").eq("id", "worker").maybeSingle(),
+  ]);
   // A failed count is not evidence of a full queue. Let it through: the queue timeout is the
   // backstop, and refusing on an unreadable count would close the site on a transient database blip.
   if (depthErr) console.error("queue depth unreadable:", depthErr.message);
   if (!depthErr && (waiting ?? 0) >= maxQueueDepth()) {
     return NextResponse.json({ error: QUEUE_FULL_MESSAGE, waiting }, { status: 503 });
+  }
+
+  // The worker publishes which lanes it is not claiming. Refusing here is the whole point: the
+  // budget belongs to the worker, so the door used to accept work the worker had already ruled out,
+  // hold it for the queue window and then fail it blaming a worker that was alive the entire time.
+  //
+  // Read rather than re-derived. The web tier could count the last 24 hours itself, but the ceiling
+  // lives in the worker box's env and Vercel's is a different env, so a second copy of the number
+  // would drift and the door would start refusing at a different point than the worker stops. One
+  // authority, the same argument claim_job makes for not copying its priority onto every row.
+  //
+  // Fails OPEN, like the count above: an unreadable heartbeat is not evidence of a blocked lane, and
+  // closing the site on a transient database blip is the worse error of the two.
+  if (workerErr) console.error("worker lanes unreadable:", workerErr.message);
+  const blockedLanes = (worker?.blocked_lanes ?? null) as Record<string, string> | null;
+  if (!workerErr && blockedLanes?.public) {
+    console.warn("refusing a grade: public lane blocked:", blockedLanes.public);
+    return NextResponse.json({ error: GRADING_PAUSED_MESSAGE }, { status: 503 });
   }
 
   // 5. Enqueue, attached to the account if there is one. Without this a signed-in user's own grade
