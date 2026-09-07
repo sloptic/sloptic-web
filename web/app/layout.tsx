@@ -75,7 +75,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body>
-        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeInit }} />
+        {/* suppressHydrationWarning covers a mismatch the BROWSER creates, not one we do. A nonce is
+            scrubbed from the DOM once the document is parsed, deliberately: leaving it readable
+            would let an injected CSS selector or DOM read lift it and forge a trusted script. So
+            React hydrates, reads the attribute back as "", compares it to the nonce it just
+            rendered, and reports a mismatch on every page load. Nothing is wrong and nothing needs
+            reconciling; the warning is only noise, and noise in that console is how a real
+            hydration bug goes unnoticed. */}
+        <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: themeInit }} />
         {/* Cookieless, same-origin page analytics: paths, referrers, country, device class. The one
             measurement the privacy policy names, and the only script the site carries. */}
         <Analytics />

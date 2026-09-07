@@ -11,39 +11,12 @@
 
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-
-/** The policy, built per request around a fresh nonce.
- *
- *  strict-dynamic is what makes this workable: scripts Next loads from its own nonced loader inherit
- *  trust, so the chunk filenames do not have to be enumerated here. Older browsers that do not know
- *  strict-dynamic fall back to 'self'.
- *
- *  style-src keeps 'unsafe-inline' and that is a deliberate limit rather than an oversight: React
- *  writes inline style attributes (the progress bars and score bars here are width percentages) and
- *  no nonce reaches those. Inline STYLE is not script execution, which is why the grader judges
- *  script-src and not this.
- */
-function policy(nonce: string): string {
-  return [
-    "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https: 'unsafe-inline'`,
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
-    "font-src 'self'",
-    // The API routes talk to Supabase from the SERVER, but the browser client signs in directly.
-    "connect-src 'self' https://*.supabase.co https://*.supabase.in",
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "object-src 'none'",
-    "upgrade-insecure-requests",
-  ].join("; ");
-}
+import { policy } from "@/lib/csp";
 
 export async function middleware(request: NextRequest) {
   // 16 bytes of randomness per response. crypto.randomUUID is available on the edge runtime.
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-  const csp = policy(nonce);
+  const csp = policy(nonce, process.env.NODE_ENV === "development");
 
   // On the REQUEST so the layout can read it for its own inline script, and on the response so the
   // browser enforces it. Next reads x-nonce to nonce the script tags it generates itself.
