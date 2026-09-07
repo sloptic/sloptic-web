@@ -3606,3 +3606,30 @@ h1.report-url {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
+
+/* The field: a name column that should read as text, beside two narrow ones that should not wrap.
+ *
+ * .count-table right-aligns every cell and exempts only :first-child, which is correct for the
+ * numeric tables it was written for. Here the tick column becomes the first child the moment a run
+ * is gradeable, so the submission names silently stopped being exempt and right-aligned, wrapping
+ * long slugs so the tail of the name sat alone against the right edge.
+ *
+ * The name cell is also display:flex (checkbox beside link), which takes it out of the table's
+ * column-sizing algorithm, so it grew to fill and squeezed "not graded" onto two lines. Pinning the
+ * two right-hand columns to their content gives the width back to the names, where it is useful.
+ */
+.field-table th,
+.field-table td {
+  text-align: left;
+}
+.field-table tbody th {
+  word-break: break-word;
+}
+.field-table thead th:nth-last-child(2),
+.field-table tbody td:nth-last-child(2),
+.field-table .col-action,
+.field-table tbody td:last-child {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}

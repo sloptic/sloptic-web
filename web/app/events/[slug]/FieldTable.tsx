@@ -316,7 +316,9 @@ export default function FieldTable({
       )}
 
       <div className="table-scroll">
-        <table className="count-table">
+        {/* field-table scopes the column sizing: .count-table is shared with /checks and the
+            event boards, and its right-aligned-by-default rule is right for those. */}
+        <table className="count-table field-table">
           <thead>
             <tr>
               {canGrade && runId && selectable.length > 0 && <th className="pick-col" />}
