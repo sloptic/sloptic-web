@@ -553,7 +553,19 @@ export default function EventActions({
                   </span>
                 </div>
                 <div className="run-controls">
-                  <button className="button" type="button" disabled={busy}
+                  {/* The results of the run that just finished, which this card used to not offer at
+                      all. A settled run's field is on its own board rather than inline (history rows
+                      carry no table, or the page would grow one per run), so when the last run
+                      settled everything on screen collapsed to "grade it again" and the work read as
+                      having been thrown away. It was in the Runs table below the whole time, which
+                      is not the same as being where you are looking. Same condition the table uses:
+                      a board exists once the run is past resolving and ready. */}
+                  {lastRun && lastRun.status !== "resolving" && lastRun.status !== "ready" && (
+                    <a className="button" href={`/events/${slug}/${lastRun.id}`}>
+                      See the results
+                    </a>
+                  )}
+                  <button className={lastRun ? "button secondary" : "button"} type="button" disabled={busy}
                           onClick={() => void act(async () => { await post("/api/events/run", { event: slug }); return null; })}>
                     {lastRun ? "Grade it again" : "Grade this event"}
                   </button>
