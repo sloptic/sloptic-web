@@ -243,15 +243,54 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
           in this order: lowest slop score --&gt; whether a catastrophic finding was found --&gt; worst 
           single finding --&gt; how much slop the app was exposed to --&gt; how many kinds of checks applied. 
         </p>
-        {ranked.length === 0 ? (
+        {/* The didn't-finish list lives inside BoardTable, so swapping the whole component out for
+            "nothing has finished grading yet" took the failures with it. A field where NOTHING was
+            reached rendered as an empty page, which is the run an organizer most needs to look at:
+            it is the difference between "the grader has not got to it" and "every app in my event
+            is down". BoardTable already draws no table when there is nothing ranked, so it can be
+            rendered whenever there is anything at all to say.
+
+            Stats stay behind ranked.length, since a distribution over no scores is a picture of
+            nothing. */}
+        {ranked.length === 0 && dnfRows.length === 0 ? (
           <p className="section-intro">Nothing has finished grading yet.</p>
         ) : (
           <>
-            <BoardStats rows={boardRows} />
+            {ranked.length > 0 && <BoardStats rows={boardRows} />}
+            {ranked.length === 0 && (
+              <p className="section-intro">
+                Nothing has been scored yet. What the run has settled so far is below.
+              </p>
+            )}
             <BoardTable rows={boardRows} dnf={dnfRows} />
           </>
         )}
       </section>
+
+      {/* Entries nobody tried to grade, which the page computed and then dropped on the floor. An
+          organizer counting rows found the header promising more of a field than anything below it
+          accounted for, and the missing ones are the entries where the answer is the shortest: this
+          submission points at a repo, or a design tool, or nothing at all. Kept out of the
+          didn't-finish list because "we tried and could not" and "there was nothing to try" are
+          different answers, and only the first is about the app being unwell. */}
+      {skipped.length > 0 && (
+        <section className="section">
+          <h2 className="section-head">Nothing to grade ({skipped.length})</h2>
+          <p className="section-intro">
+            These entries have no deployed app behind them, so there was nothing to point a check at.
+          </p>
+          <ul className="dnf-list">
+            {skipped.map((e) => (
+              <li key={e.project_url as string}>
+                <a href={e.project_url as string} target="_blank" rel="noopener noreferrer">
+                  {projectName(e.project_url as string)}
+                </a>
+                <span>{e.skip_reason as string}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {gated.length > 0 && (
         <section className="section">
