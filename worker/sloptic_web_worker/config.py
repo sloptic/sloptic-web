@@ -5,6 +5,7 @@ takes precedence for local overrides. In production, real environment variables 
 """
 
 import os
+import pathlib
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -23,7 +24,37 @@ def _require(name: str) -> str:
 
 
 DATABASE_URL = _require("DATABASE_URL")
-CATALOG_DIR = os.environ.get("CATALOG_DIR", "../../sloptic-main/catalog")
+def _default_catalog_dir() -> str:
+    """The catalog the INSTALLED grader carries, falling back to the old sibling-clone path.
+
+    Since 2.2.0 the wheel ships its probes at sloptic/catalog, so the grader knows where its own
+    battery is and nothing here needs to guess. The old default was the relative
+    "../../sloptic-main/catalog", which is right only when the worker runs from a checkout with the
+    clone beside it, and wrong silently: load_catalog on a missing directory returns EMPTY, and an
+    empty catalog scores every app 0. Asking the package first removes the most likely way to reach
+    that state at all.
+
+    The fallback is anchored to THIS FILE, not to the working directory. The old default was the
+    relative "../../sloptic-main/catalog", which resolves to a different place depending on where
+    the worker was started from: correct under systemd (WorkingDirectory=worker/), and pointing at
+    a nonexistent /home/sloptic-main/catalog when run from the repo root. A path that means
+    different things depending on how you launched the process is a bad default for the one input
+    whose absence silently scores every app 0.
+
+    CATALOG_DIR still overrides, for working against a checkout while developing the grader.
+    """
+    try:
+        from sloptic.catalog import default_catalog_dir
+        packaged = default_catalog_dir()
+        if packaged.is_dir():
+            return str(packaged)
+    except Exception:  # noqa: BLE001 - an older grader, or none installed yet
+        pass
+    # <repo parent>/sloptic-main/catalog, the sibling-clone layout the README describes.
+    return str(pathlib.Path(__file__).resolve().parents[2].parent / "sloptic-main" / "catalog")
+
+
+CATALOG_DIR = os.environ.get("CATALOG_DIR") or _default_catalog_dir()
 
 # Where the Devpost ingest cache lives, so re-resolving a gallery reuses each submission's already
 # fetched links instead of re-crawling the whole field every time an organizer grades again. Keyed
