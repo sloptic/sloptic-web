@@ -25,6 +25,7 @@ import { POST as claim } from "@/app/api/verify/claim/route";
 import { POST as recheck } from "@/app/api/verify/recheck/route";
 import { POST as revoke } from "@/app/api/verify/revoke/route";
 import { POST as renew } from "@/app/api/verify/renew/route";
+import { POST as forget } from "@/app/api/verify/forget/route";
 import { MAX_LIVE_CLAIMS } from "@/lib/ratelimit";
 
 const ALICE = { id: "u-alice", email: "alice@example.com" };
@@ -244,5 +245,49 @@ describe("a term that has ended can be renewed", () => {
 
     expect(res.status).toBe(409);
     expect(getDb().store.domain_claims[0].renew_requested_at).toBeFalsy();
+  });
+});
+
+describe("a finished claim can be taken off the list", () => {
+  const req = (id = "claim-alice") => jsonRequest("http://localhost/api/verify/forget", { id });
+  const rows = () => getDb().store.domain_claims;
+
+  it("removes one that was given up", async () => {
+    setDb(fakeDb({ store: { domain_claims: [claimRow({ status: "revoked" })], grants: [], grades: [] } }));
+
+    expect((await forget(req())).status).toBe(200);
+    expect(rows()).toHaveLength(0);
+  });
+
+  it("removes one we gave up looking for", async () => {
+    setDb(fakeDb({ store: { domain_claims: [claimRow({ status: "failed" })], grants: [], grades: [] } }));
+
+    expect((await forget(req())).status).toBe(200);
+    expect(rows()).toHaveLength(0);
+  });
+
+  it("refuses to delete a live claim, which is what revoke is for", async () => {
+    // Deleting a verified claim would drop the row the worker re-reads the proofs from while
+    // leaving the grant alive. Ending a live claim has to go through revoke, which revokes the
+    // grant first.
+    for (const status of ["pending", "verified"]) {
+      setDb(fakeDb({ store: { domain_claims: [claimRow({ status })], grants: [], grades: [] } }));
+
+      expect((await forget(req())).status).toBe(404);
+      expect(rows()).toHaveLength(1);
+    }
+  });
+
+  it("will not remove another account's row, and does not confirm it exists", async () => {
+    setDb(fakeDb({ store: { domain_claims: [claimRow({ status: "revoked" })], grants: [], grades: [] } }));
+    setUser(MALLORY);
+
+    expect((await forget(req())).status).toBe(404);
+    expect(rows()).toHaveLength(1);
+  });
+
+  it("refuses an anonymous caller", async () => {
+    setUser(null);
+    expect((await forget(req())).status).toBe(401);
   });
 });

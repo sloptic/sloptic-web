@@ -66,6 +66,16 @@ function proofsHold(c: Claim): boolean {
   return c.file_status === "ok" && c.dns_status === "ok";
 }
 
+/** The claim is finished with, one way or the other: given up, or given up on.
+ *
+ *  Its proof columns still hold whatever the last look saw, which for a domain that WAS verified is
+ *  two greens. Rendering those is a lie by leftover: it says the proofs stand on a claim that
+ *  authorises nothing. A dead claim's proofs are not a state, they are history.
+ */
+function isOver(c: Claim): boolean {
+  return c.status === "revoked" || c.status === "failed";
+}
+
 /** The 90 day term is over. The claim still says verified and both proofs may still be published:
  *  what has lapsed is the grant, and with it the answer to "may this account grade this actively". */
 function termExpired(c: Claim): boolean {
@@ -295,8 +305,10 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
           <summary className="domain-summary">
             <span className="domain-name">{c.origin.replace(/^https?:\/\//, "")}</span>
             <span className="domain-proofs">
-              <Pill label="file" status={c.file_status} checking={isChecking(c)} />
-              <Pill label="dns" status={c.dns_status} checking={isChecking(c)} />
+              {/* Neutral once the claim is over. The columns still say "ok" from the last look, and
+                  a green pill beside "given up" reads as still verified. */}
+              <Pill label="file" status={isOver(c) ? null : c.file_status} checking={isChecking(c) && !isOver(c)} />
+              <Pill label="dns" status={isOver(c) ? null : c.dns_status} checking={isChecking(c) && !isOver(c)} />
             </span>
             <span className="domain-verdict">{claimLine(c)}</span>
           </summary>
@@ -472,6 +484,15 @@ export default function VerifyFlow({ signedIn, initialClaims }: {
                   }}
                 >
                   Give it up
+                </button>
+              )}
+              {isOver(c) && (
+                // The only control a finished claim needs. Without it a given-up domain sat on the
+                // account page for ever with no way to clear it, which is how a list of six domains
+                // becomes a list of twenty.
+                <button className="button secondary" type="button" disabled={busy}
+                        onClick={() => void act(c.id, "/api/verify/forget", "Removed.")}>
+                  Remove from list
                 </button>
               )}
             </div>
