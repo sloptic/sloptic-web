@@ -71,18 +71,25 @@ describe("/e/<token>", () => {
     await expect(markup("the-real-token")).rejects.toThrow("NEXT_NOT_FOUND");
   });
 
-  it("promises the full battery only when the window was open at verification", async () => {
+  // Anchored on the SENTENCE that does the disclosing, not on a phrase. The wording here is Ian's
+  // and will keep changing; what must not change is that a participant is told attack traffic is
+  // coming when it is, and is not told so when it is not. An earlier version matched "full battery"
+  // and broke on a rewrite that kept the promise intact, which is a test measuring the wrong thing.
+  const WARNS_OF_ATTACKS = /send real attack traffic/i;
+
+  it("warns of attack traffic only when the window was open at verification", async () => {
     setDb(store([verifiedClaim()]));
     const html = await markup("the-real-token");
-    expect(html).toContain("full battery");
-    expect(html).toContain("attack traffic");
+    expect(html).toMatch(WARNS_OF_ATTACKS);
   });
 
   it("says passive only when the disclosure went up after the deadline", async () => {
     setDb(store([verifiedClaim({ window_open_at_verification: false })]));
     const html = await markup("the-real-token");
     expect(html).toContain("passive checks and nothing else");
-    expect(html).not.toContain("full battery");
+    // The load-bearing half: a notice published after the event closed was shown to nobody, so it
+    // cannot authorize attack traffic, and must not read as though it did.
+    expect(html).not.toMatch(WARNS_OF_ATTACKS);
   });
 
   it("renders an unknown window as uncertainty, never as either answer", async () => {
