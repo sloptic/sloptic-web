@@ -24,6 +24,16 @@
   --qa: #2f6d99;
   --performance: #3f8a58;
 
+  /* Amber, for a check that was PREVENTED rather than failed: a challenge blocked it, so nothing
+     was found and nothing passed. It must not read as the red of a finding.
+
+     This token was used in five places and defined in none. Four carried an inline #b7791f
+     fallback, so they rendered a fixed amber that could not follow the theme and only reached about
+     3.5:1 on paper, under the 4.5:1 this product deducts other people points for. The fifth had no
+     fallback, so its declaration was invalid and the text simply had no colour. Tuned per theme
+     now, like every other token here. */
+  --warn: #8a5a12;
+
   /* --font-sans / --font-mono are set by next/font on the <html> class (they carry their own fallback
      faces). Do NOT redefine them here: `--font-sans: var(--font-sans, ...)` is a self-reference cycle
      that makes the variable invalid and drops the whole app to the browser default font. */
@@ -49,6 +59,7 @@
   --security: #d6604a;
   --qa: #5f9dcb;
   --performance: #62b082;
+  --warn: #e0a33f;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -2938,9 +2949,9 @@ a.mast-user:hover {
 /* A grade a challenge blocked, in whole or in part. Amber, not the red of a finding: nothing was
    found here, the checks were prevented, and the two must not read alike. */
 .challenge-note {
-  border: 1px solid color-mix(in srgb, var(--warn, #b7791f) 45%, var(--line));
-  border-left: 3px solid var(--warn, #b7791f);
-  background: color-mix(in srgb, var(--warn, #b7791f) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--line));
+  border-left: 3px solid var(--warn);
+  background: color-mix(in srgb, var(--warn) 8%, transparent);
   border-radius: 6px;
   padding: 0.75rem 1rem;
   margin: 1rem 0;
@@ -2964,7 +2975,7 @@ a.mast-user:hover {
 /* A provisional score: a challenge-blocked check is being retried and may move it. A superscript B
    on the score, explained on hover and once per page. */
 .prov-mark {
-  color: var(--warn, #b7791f);
+  color: var(--warn);
   font-size: 0.65em;
   font-weight: 600;
   margin-left: 0.2em;
