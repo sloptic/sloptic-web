@@ -17,7 +17,7 @@ export default function AboutPage() {
         <div>
           <h1>About Sloptic</h1>
           <p className="page-lead">
-            Sloptic grades any running web app from outside. It does not need source code.
+            Sloptic grades any running web app from outside and looks for slop.
           </p>
         </div>
         <BrandMark size={112} className="page-head-brand" />
