@@ -28,7 +28,9 @@ export default function PrivacyPage() {
         <h2 className="section-head">What we do not collect</h2>
         <p className="section-intro">
           Worth saying first, because it is unusual. Sloptic runs no advertising, no tracking pixels,
-          no session recorder, and no third-party request of any kind. The one measurement we take is
+          and no session recorder. Your browser talks to two places besides us: our database and
+          sign-in provider when you sign in, and Google or GitHub if you pick one of those to sign in
+          with. Both are listed below. The one measurement we take is
           analytics on our own domain: page paths, referrers, country, and device class, counted
           cookielessly by our host with no fingerprinting, no cross-site tracking, and no IP storage.
           The URL you submit never appears in analytics. We do not sell or share personal data.
@@ -95,8 +97,11 @@ export default function PrivacyPage() {
         <h2 className="section-head">Cookies</h2>
         <p className="section-intro">
           One kind: the session cookie that keeps you signed in. There are no advertising cookies, and
-          the analytics is cookieless. Signing out clears it. Your browser also keeps a local list of
-          grades you ran, which stays in your browser, is never sent to us, and is cleared with your site data.
+          the analytics is cookieless. Signing out clears it, and the local list below with it. Your
+          browser also keeps a list of grades you ran, so you can find them again without an account.
+          It lives in your browser and is cleared with your site data. When you open your grades we
+          send those ids back to look them up, which is the only way to show you their scores; we
+          issued them, and we do not learn anything new from it.
         </p>
       </section>
 
@@ -112,6 +117,19 @@ export default function PrivacyPage() {
             <span className="v">
               hosting for the website, and the cookieless page analytics: paths, referrers, country,
               device class, and a few product events. No cookies, no IP storage, no cross-site tracking.
+            </span>
+          </li>
+          <li>
+            <span className="k">Resend</span>
+            <span className="v">
+              the service that delivers our email: your sign-in links, and the message telling you a
+              grade finished. It receives your address and what the message says.
+            </span>
+          </li>
+          <li>
+            <span className="k">Zoho</span>
+            <span className="v">
+              the mailbox behind hello@sloptic.org, so anything you email us is held there.
             </span>
           </li>
           <li>
