@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import RecoverySup from "@/app/RecoverySup";
 import AsideTable from "./AsideTable";
+import Pager, { usePaged } from "@/app/Pager";
 import type { RecoveryMarks } from "@/lib/grades";
 
 export type BoardRow = {
@@ -31,8 +32,6 @@ export type DnfRow = { name: string; project_url: string; note: string; marks?: 
 
 type Key = "rank" | "name" | "slop" | "ratio" | "lighthouse" | "exposure" | "catastrophic";
 
-const PAGE = 25;
-
 function fmt(v: number | null): string {
   if (v === null || Number.isNaN(v)) return "-";
   return Number.isInteger(v) ? String(v) : v.toFixed(1);
@@ -53,7 +52,6 @@ const COLUMNS: { key: Key; label: string; asc: boolean }[] = [
 
 export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRow[] }) {
   const [sort, setSort] = useState<{ key: Key; asc: boolean }>({ key: "rank", asc: true });
-  const [page, setPage] = useState(0);
 
   // The rank is the board's own order, so it is kept as the identity of a row rather than recomputed
   // per sort. Sorting by performance should not renumber anyone.
@@ -72,17 +70,12 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
     return (av - bv) * dir;
   });
 
-  const last = Math.max(0, Math.ceil(sorted.length / PAGE) - 1);
   // The row count changes under a live refresh (regrades repoint links, recovered catastrophes
-  // migrate rows), so the page is clamped to what the shrunk list can still show.
-  const from = Math.min(page, last) * PAGE;
-  const shown = sorted.slice(from, from + PAGE);
-  useEffect(() => {
-    if (page > last) setPage(last);
-  }, [page, last]);
+  // migrate rows), which the shared hook clamps for.
+  const paged = usePaged(sorted);
 
   function click(key: Key) {
-    setPage(0);
+    paged.setPage(0);
     setSort((s) =>
       s.key === key
         ? { key, asc: !s.asc }
@@ -111,7 +104,7 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
             </tr>
           </thead>
           <tbody>
-            {shown.map((r) => (
+            {paged.shown.map((r) => (
               <tr key={r.project_url}>
                 <td>{r.rank}</td>
                 <th scope="row">
@@ -140,26 +133,8 @@ export default function BoardTable({ rows, dnf }: { rows: BoardRow[]; dnf: DnfRo
       {/* Directly under the table, because that is the only thing it pages. Below the didn't-finish
           list it read as paging THAT, which is worse than it sounds on a board like treehacks:
           "1 to 25 of 104" sitting under a list of entries that did not finish invites the reader to
-          think 104 of them failed. The list is whole and unpaginated either way. */}
-      {sorted.length > PAGE && (
-        <div className="pager">
-          <button className="link-button" type="button" disabled={page === 0} onClick={() => setPage(0)}>
-            first
-          </button>
-          <button className="link-button" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>
-            previous
-          </button>
-          <span>
-            {from + 1} to {Math.min(from + PAGE, sorted.length)} of {sorted.length}
-          </span>
-          <button className="link-button" type="button" disabled={page >= last} onClick={() => setPage(page + 1)}>
-            next
-          </button>
-          <button className="link-button" type="button" disabled={page >= last} onClick={() => setPage(last)}>
-            last
-          </button>
-        </div>
-      )}
+          think 104 of them failed. That list now pages too, under itself, for the same reason. */}
+      <Pager {...paged} />
       {(rows.some((r) => r.provisional || r.marks.retry || r.marks.none || r.marks.partial || r.marks.full || r.marks.limited) ||
         dnf.some((d) => !!d.marks && (d.marks.retry || d.marks.none || d.marks.partial || d.marks.full || d.marks.limited))) && (
         <p className="marks-key">

@@ -4,6 +4,7 @@ import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import BoardTable, { type BoardRow, type DnfRow } from "./BoardTable";
 import AsideTable from "./AsideTable";
+import ExportCsv, { type CsvRow } from "./ExportCsv";
 import AutoRefresh from "@/app/AutoRefresh";
 import BoardStats from "./BoardStats";
 import { TOTALS } from "@/lib/checks";
@@ -12,6 +13,10 @@ import { recoveryMarks, isLimitedEngagement, type RecoveryMarks } from "@/lib/gr
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Event board", robots: { index: false, follow: false } };
 
+// Report links in the export are absolute: the file leaves the site, and a spreadsheet cell holding
+// /grade/<id> is a link to nowhere on the machine that opens it.
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sloptic.org";
+
 function projectName(url: string): string {
   return url.replace(/\/+$/, "").split("/").pop() || url;
 }
@@ -19,6 +24,8 @@ function projectName(url: string): string {
 type Row = {
   name: string;
   project_url: string;
+  /** What was actually graded. Not shown on the board, carried for the export. */
+  app_url: string | null;
   grade_id: string | null;
   status: string | null;
   slop: number | null;
@@ -63,7 +70,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
 
   const { data: entries } = await db
     .from("event_entries")
-    .select("project_url, skip_reason, grade_id")
+    .select("project_url, app_url, skip_reason, grade_id")
     .eq("run_id", run.id);
 
   const ids = (entries ?? []).map((e) => e.grade_id).filter(Boolean) as string[];
@@ -97,6 +104,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
       return {
         name: projectName(e.project_url),
         project_url: e.project_url,
+        app_url: (e.app_url as string | null) ?? null,
         grade_id: e.grade_id,
         status: gradeStatus.get(e.grade_id as string) ?? null,
         slop: r ? Number(r.slop_score) : null,
@@ -201,6 +209,72 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
     })),
   ];
   const skipped = (entries ?? []).filter((e) => e.skip_reason);
+  // The export is assembled from the same four groups the page renders, in the same order, so the
+  // file and the screen cannot disagree about who placed where or what happened to whom.
+  const reportUrl = (id: string | null) => (id ? `${SITE}/grade/${id}` : null);
+  const csvRows: CsvRow[] = [
+    ...ranked.map((r, i) => ({
+      rank: i + 1,
+      section: "ranked",
+      submission: r.name,
+      slop: r.slop,
+      percentile: r.cleaner,
+      ratio: r.potential && r.slop !== null ? Number(((r.slop / r.potential) * 100).toFixed(1)) : null,
+      exposure: r.potential,
+      lighthouse: r.lighthouse,
+      catastrophic: r.catastrophic,
+      app_url: r.app_url,
+      devpost_url: r.project_url,
+      report_url: reportUrl(r.grade_id),
+      note: r.limited ? "limited battery" : "",
+    })),
+    ...gated.map((r) => ({
+      rank: null,
+      section: "not ranked",
+      submission: r.name,
+      slop: r.slop,
+      percentile: null,
+      ratio: null,
+      exposure: r.potential,
+      lighthouse: r.lighthouse,
+      catastrophic: r.catastrophic,
+      app_url: r.app_url,
+      devpost_url: r.project_url,
+      report_url: reportUrl(r.grade_id),
+      note: "carries a finding an attacker could use today",
+    })),
+    ...dnfRows.map((d) => ({
+      rank: null,
+      section: "didn't finish",
+      submission: d.name,
+      slop: null,
+      percentile: null,
+      ratio: null,
+      exposure: null,
+      lighthouse: null,
+      catastrophic: null,
+      app_url: rows.find((r) => r.project_url === d.project_url)?.app_url ?? null,
+      devpost_url: d.project_url,
+      report_url: null,
+      note: d.note,
+    })),
+    ...skipped.map((e) => ({
+      rank: null,
+      section: "nothing to grade",
+      submission: projectName(e.project_url as string),
+      slop: null,
+      percentile: null,
+      ratio: null,
+      exposure: null,
+      lighthouse: null,
+      catastrophic: null,
+      app_url: (e.app_url as string | null) ?? null,
+      devpost_url: e.project_url as string,
+      report_url: null,
+      note: e.skip_reason as string,
+    })),
+  ];
+
   const total = (entries ?? []).length;
 
   return (
@@ -235,6 +309,15 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         <p className="section-intro">
           Default is sorted by lowest slop score. Lower is better. 
         </p>
+        {/* Above the table rather than below it: an organizer who has come here to get the field out
+            should not have to page to the end of it first. */}
+        <div className="cta-row">
+          <ExportCsv
+            rows={csvRows}
+            slug={run.slug}
+            runDate={new Date(run.created_at as string).toISOString().slice(0, 10)}
+          />
+        </div>
         <p className="section-intro">
           Note that two apps can score the same and place differently, due to tiebreaks. Tiebreaks are
           in this order: lowest slop score --&gt; whether a catastrophic finding was found --&gt; worst 

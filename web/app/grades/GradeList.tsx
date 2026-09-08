@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Pager, { usePaged } from "@/app/Pager";
 import { forgetGrades, readHistory, rememberGrade } from "@/lib/history";
 import { ANON_REPORT_DAYS, daysUntil, reportExpiresAt } from "@/lib/retention";
 import { ordinal, type GradeSummary } from "@/lib/grades";
@@ -191,6 +192,11 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
     }
   }
 
+  // ABOVE the early returns, deliberately. usePaged holds state, and a hook that only runs on the
+  // renders that get past "Looking..." changes the hook count mid-mount, which React treats as
+  // fatal. The empty and loading branches below are exactly such returns.
+  const paged = usePaged(grades ?? []);
+
   if (grades === null) return <p className="section-intro">Looking...</p>;
 
   if (grades.length === 0) {
@@ -257,7 +263,7 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
             </tr>
           </thead>
           <tbody>
-            {grades.map((g) => (
+            {paged.shown.map((g) => (
               <tr key={g.id}>
                 <th scope="row">
                   <a href={`/grade/${g.id}`}>{g.origin.replace(/^https?:\/\//, "")}</a>
@@ -277,6 +283,10 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
           </tbody>
         </table>
       </div>
+      {/* An account that has graded for a while accumulates hundreds of these, and the whole list
+          rendered at once turned the account page into a scroll. The rows shrink from under it when
+          one is deleted, which is what the shared clamp is for. */}
+      <Pager {...paged} />
 
       {addForm}
 

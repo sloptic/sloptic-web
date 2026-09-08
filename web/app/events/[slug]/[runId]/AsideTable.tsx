@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import Pager, { usePaged } from "@/app/Pager";
 import RecoverySup from "@/app/RecoverySup";
 import type { RecoveryMarks } from "@/lib/grades";
 
@@ -31,8 +32,6 @@ export type AsideRow = {
   grade_id?: string | null;
 };
 
-const PAGE = 25;
-
 type Key = "name" | "reason" | "slop";
 
 function fmt(v: number | null | undefined): string {
@@ -52,7 +51,6 @@ export default function AsideTable({
   // which is not an order a reader can predict, and "find my submission" is the thing being asked of
   // these lists far more often than any ranking is.
   const [sort, setSort] = useState<{ key: Key; asc: boolean }>({ key: "name", asc: true });
-  const [page, setPage] = useState(0);
 
   const hasReason = rows.some((r) => r.reason);
   const hasSlop = rows.some((r) => r.slop !== undefined && r.slop !== null);
@@ -84,17 +82,12 @@ export default function AsideTable({
     return (av - bv) * dir;
   });
 
-  const last = Math.max(0, Math.ceil(sorted.length / PAGE) - 1);
-  const from = Math.min(page, last) * PAGE;
-  const shown = sorted.slice(from, from + PAGE);
   // The list shrinks under a live refresh (a retry recovers a score and the row leaves for the
-  // board), so a page that no longer exists has to fall back rather than render empty.
-  useEffect(() => {
-    if (page > last) setPage(last);
-  }, [page, last]);
+  // board), which the shared hook clamps for.
+  const paged = usePaged(sorted);
 
   function click(key: Key) {
-    setPage(0);
+    paged.setPage(0);
     setSort((s) =>
       s.key === key ? { key, asc: !s.asc } : { key, asc: columns.find((c) => c.key === key)?.asc ?? true }
     );
@@ -122,7 +115,7 @@ export default function AsideTable({
             </tr>
           </thead>
           <tbody>
-            {shown.map((r) => (
+            {paged.shown.map((r) => (
               <tr key={r.project_url}>
                 <th scope="row">
                   <a href={r.project_url} target="_blank" rel="noopener noreferrer">{r.name}</a>
@@ -140,25 +133,7 @@ export default function AsideTable({
           </tbody>
         </table>
       </div>
-      {sorted.length > PAGE && (
-        <div className="pager">
-          <button className="link-button" type="button" disabled={page === 0} onClick={() => setPage(0)}>
-            first
-          </button>
-          <button className="link-button" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>
-            previous
-          </button>
-          <span>
-            {from + 1} to {Math.min(from + PAGE, sorted.length)} of {sorted.length}
-          </span>
-          <button className="link-button" type="button" disabled={page >= last} onClick={() => setPage(page + 1)}>
-            next
-          </button>
-          <button className="link-button" type="button" disabled={page >= last} onClick={() => setPage(last)}>
-            last
-          </button>
-        </div>
-      )}
+      <Pager {...paged} />
     </>
   );
 }
