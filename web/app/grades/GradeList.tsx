@@ -195,7 +195,11 @@ export default function GradeList({ signedIn }: { signedIn: boolean }) {
   // ABOVE the early returns, deliberately. usePaged holds state, and a hook that only runs on the
   // renders that get past "Looking..." changes the hook count mid-mount, which React treats as
   // fatal. The empty and loading branches below are exactly such returns.
-  const paged = usePaged(grades ?? []);
+  //
+  // Ten, not the 25 the board uses. That number is sized for a hackathon field of hundreds; this is
+  // one person's own history, the rows are dense, and at 25 an account with twenty grades gets no
+  // pager at all and just keeps scrolling, which is the state this was added to fix.
+  const paged = usePaged(grades ?? [], 10);
 
   if (grades === null) return <p className="section-intro">Looking...</p>;
 
