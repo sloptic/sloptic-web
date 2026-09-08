@@ -29,21 +29,31 @@ const row = (over: Partial<CsvRow> = {}): CsvRow => ({ ...base, ...over });
 
 let captured: Blob | null = null;
 
+// Patched onto the real URL rather than stubbed over it. `vi.stubGlobal("URL", {...URL, ...})` looks
+// equivalent and is not: URL's statics are non-enumerable, so the spread copies none of them and the
+// global loses `new URL()` for the rest of the file.
+const realCreate = URL.createObjectURL;
+const realRevoke = URL.revokeObjectURL;
+
 beforeEach(() => {
   captured = null;
   // jsdom has no object URLs, and the blob is the artefact under test, so this is the seam.
-  vi.stubGlobal("URL", {
-    ...URL,
-    createObjectURL: (b: Blob) => {
-      captured = b;
-      return "blob:test";
-    },
-    revokeObjectURL: () => {},
-  });
+  URL.createObjectURL = (b: Blob) => {
+    captured = b;
+    return "blob:test";
+  };
+  URL.revokeObjectURL = () => {};
 });
-afterEach(() => {
+afterEach(async () => {
   cleanup();
-  vi.unstubAllGlobals();
+  // The component frees the object URL on a zero-delay timer, deliberately: revoking it in the same
+  // tick cancels the download in some browsers. So the callback is still queued when a test ends,
+  // and tearing the stubs down first left it calling a method that was no longer there. Failing
+  // AFTER the assertions passed, from a timer, in whichever test happened to be last.
+  await new Promise((r) => setTimeout(r, 0));
+  URL.createObjectURL = realCreate;
+  URL.revokeObjectURL = realRevoke;
+  vi.restoreAllMocks();
 });
 
 async function csv(rows: CsvRow[]): Promise<string> {
@@ -140,6 +150,5 @@ describe("the board export", () => {
     render(<ExportCsv rows={[row()]} slug="hacknight" runDate="2026-09-08" />);
     fireEvent.click(screen.getByRole("button", { name: /export csv/i }));
     expect(clicks).toContain("sloptic-hacknight-2026-09-08.csv");
-    vi.restoreAllMocks();
   });
 });
