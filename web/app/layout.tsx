@@ -91,7 +91,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <BrandMark size={22} />
             sloptic
           </a>
-          <span className="masthead-note">checks any web app for slop</span>
+          <span className="masthead-note">web app slop checker</span>
           <span className="masthead-spacer" />
           <nav className="mast-nav">
             {/* The reference pages fold into one menu so the masthead stays scannable. /about is the

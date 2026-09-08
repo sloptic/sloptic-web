@@ -56,7 +56,7 @@ export default async function Image() {
             sloptic
           </div>
           <div style={{ marginTop: 28, fontSize: 40, color: MUTED, letterSpacing: "-0.01em" }}>
-            checks any web app for slop
+            web app slop checker
           </div>
         </div>
 
