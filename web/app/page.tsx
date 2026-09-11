@@ -70,7 +70,7 @@ export default function Home() {
       <section className="hero">
         <h1 className="lede">How much slop is in your app?</h1>
         <p className="deck">
-          Paste a URL. Sloptic looks at your app the way a visitor would and scores on the slop it finds. Lower is better.
+          Paste a link and Sloptic will poke at your app and score on the slop it finds. Lower is better.
         </p>
 
         <form onSubmit={submit} className="grade-form">
@@ -120,7 +120,7 @@ export default function Home() {
         <ol className="flowchart">
           <li className="flow-box">
             <span className="n">01</span>
-            <p>Paste a URL. No setup needed.</p>
+            <p>Paste a link to your app. No setup needed.</p>
           </li>
           <li className="flow-conn" aria-hidden />
           <li className="flow-box">
