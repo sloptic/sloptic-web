@@ -7,7 +7,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { fakeDb } from "../helpers/supabase";
-import { setDb, setUser, resetRouteMocks, jsonRequest, read, getDb } from "../helpers/route";
+import { setDb, setUser, resetRouteMocks, jsonRequest, read, getDb, liveWorker } from "../helpers/route";
 
 vi.mock("@/lib/supabase", async () => {
   const { getDb } = await import("../helpers/route");
@@ -43,6 +43,9 @@ function db(suspended: Record<string, unknown> = {}) {
           ...suspended },
       ],
       grades: [],
+      // Present so the door's liveness check is never what refuses: this file asserts that a
+      // SUSPENSION refuses, and a test that passes for the wrong reason proves nothing.
+      worker_status: [liveWorker()],
       domain_claims: [],
       grants: [],
       rate_limits: [],

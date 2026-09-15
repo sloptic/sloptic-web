@@ -12,7 +12,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { fakeDb, type FakeSupabase } from "../../helpers/supabase";
-import { setDb, setUser, resetRouteMocks, jsonRequest, malformedRequest, read } from "../../helpers/route";
+import { setDb, setUser, resetRouteMocks, jsonRequest, malformedRequest, read, liveWorker } from "../../helpers/route";
 
 vi.mock("@/lib/supabase", async () => {
   const { getDb } = await import("../../helpers/route");
@@ -52,7 +52,7 @@ let db: FakeSupabase;
 const savedEnv = { ...process.env };
 
 beforeEach(() => {
-  db = fakeDb({ store: { grades: [], rate_limits: [] } });
+  db = fakeDb({ store: { grades: [], rate_limits: [], worker_status: [liveWorker()] } });
   setDb(db);
   setUser(null);
   dns.answers.clear();

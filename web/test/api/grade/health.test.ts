@@ -39,9 +39,48 @@ const alive = () => db.rows("worker_status").push({ id: "worker", last_seen: iso
 
 describe("GET /api/status", () => {
   it("mirrors the flag the POST route enforces", async () => {
+    alive();
     expect((await read(await status())).body.grading_open).toBe(true);
     process.env.GRADING_OPEN = "0";
     expect((await read(await status())).body.grading_open).toBe(false);
+  });
+
+  it("closes the form when the worker has stopped, with no flag touched", async () => {
+    // THE case this exists for. A corpus run stops the worker for days; nobody flips GRADING_OPEN,
+    // and without this the form keeps taking submissions into a queue that expires nothing while the
+    // worker is gone and is then failed wholesale on its first pass back.
+    db.rows("worker_status").push({ id: "worker", last_seen: iso(10 * 60_000), state: "polling" });
+    expect((await read(await status())).body.grading_open).toBe(false);
+  });
+
+  it("closes the form when no worker has ever checked in", async () => {
+    expect((await read(await status())).body.grading_open).toBe(false);
+  });
+
+  it("carries the operator's note so a planned outage can say so", async () => {
+    // Set from the box by maintenance.sh in the same breath as systemctl stop, which is why it is a
+    // column and not an env var: the person stopping the worker has a shell, not a deploy.
+    db.rows("worker_status").push({
+      id: "worker",
+      last_seen: iso(10 * 60_000),
+      state: "polling",
+      paused_note: "Down for the corpus re-run. Back next week.",
+    });
+    const { body } = await read(await status());
+    expect(body.grading_open).toBe(false);
+    expect(body.note).toBe("Down for the corpus re-run. Back next week.");
+  });
+
+  it("leaves the note null when nobody set one, rather than inventing a reason", async () => {
+    db.rows("worker_status").push({ id: "worker", last_seen: iso(10 * 60_000), state: "polling" });
+    expect((await read(await status())).body.note).toBeNull();
+  });
+
+  it("does not ask the database when the flag is already off", async () => {
+    // The answer cannot change, and the landing page is the most-hit route on the site.
+    process.env.GRADING_OPEN = "0";
+    await status();
+    expect(db.calls.filter((c) => c.table === "worker_status")).toEqual([]);
   });
 
   it("is never cached, since a stale answer offers a form that will be refused", async () => {

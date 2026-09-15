@@ -15,6 +15,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   // null while unknown, so the form is never wrongly shown as closed on first paint
   const [open, setOpen] = useState<boolean | null>(null);
+  const [closedNote, setClosedNote] = useState<string | null>(null);
   const [openCh, setOpenCh] = useState<string>("security");
   // Deleting an account lands here with ?deleted=1 and, until now, nothing said so.
   const [deleted, setDeleted] = useState(false);
@@ -31,7 +32,11 @@ export default function Home() {
     let live = true;
     fetch("/api/status", { cache: "no-store" })
       .then((r) => r.json())
-      .then((d) => live && setOpen(Boolean(d.grading_open)))
+      .then((d) => {
+        if (!live) return;
+        setOpen(Boolean(d.grading_open));
+        setClosedNote(typeof d.note === "string" && d.note.trim() ? d.note.trim() : null);
+      })
       .catch(() => live && setOpen(null));
     return () => {
       live = false;
@@ -92,9 +97,13 @@ export default function Home() {
             Your account is deleted. Reports you saved are anonymous now and go in 30 days.
           </p>
         )}
+        {/* The operator's own sentence when there is one. "Grading is not open yet" is true and
+            useless for a planned week: someone who is told why, and roughly when, comes back, and
+            someone who is told nothing assumes the site is broken. The note is set from the box in
+            the same script that stops the worker, so it cannot drift out of step with the outage. */}
         {open === false && (
           <p className="closed-note" role="status">
-            Grading is not open yet.
+            {closedNote ?? "Grading is not open yet."}
           </p>
         )}
         {error && (

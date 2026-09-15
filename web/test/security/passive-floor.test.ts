@@ -15,7 +15,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { fakeDb, type FakeSupabase } from "../helpers/supabase";
-import { setDb, setUser, resetRouteMocks, jsonRequest, read } from "../helpers/route";
+import { setDb, setUser, resetRouteMocks, jsonRequest, read, liveWorker } from "../helpers/route";
 
 vi.mock("@/lib/supabase", async () => {
   const { getDb } = await import("../helpers/route");
@@ -47,6 +47,9 @@ function store(): FakeSupabase {
       grades: [],
       // Alice has proved she controls this origin. That authorizes HER, and it is still not a
       // property of the origin: nothing about this row may change what a submission enqueues.
+      // The door refuses without a live one, and what this file is about is the BATTERY a submission
+      // gets, never whether there is a worker to run it.
+      worker_status: [liveWorker()],
       grants: [
         {
           id: "gr1",

@@ -13,7 +13,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { fakeDb, type FakeSupabase } from "../../helpers/supabase";
-import { setDb, setUser, resetRouteMocks, jsonRequest, read } from "../../helpers/route";
+import { setDb, setUser, resetRouteMocks, jsonRequest, read, liveWorker } from "../../helpers/route";
 
 vi.mock("@/lib/supabase", async () => {
   const { getDb } = await import("../../helpers/route");
@@ -37,7 +37,7 @@ let db: FakeSupabase;
 const savedEnv = { ...process.env };
 
 beforeEach(() => {
-  db = fakeDb({ store: { grades: [], rate_limits: [], worker_status: [] } });
+  db = fakeDb({ store: { grades: [], rate_limits: [], worker_status: [liveWorker()] } });
   setDb(db);
   setUser(null);
   process.env.GRADING_OPEN = "1";
@@ -52,14 +52,10 @@ afterEach(() => {
 
 /** A live worker, with whatever it has decided not to claim. */
 function worker(blocked_lanes: Record<string, string>, state = "grading") {
-  db.rows("worker_status").push({
-    id: "worker",
-    last_seen: iso(3_000),
-    state,
-    reason: "",
-    in_flight: null,
-    blocked_lanes,
-  });
+  // Replaces the live default rather than sitting beside it: worker_status is one row keyed on
+  // 'worker', and two would let a query pick whichever came first.
+  db.rows("worker_status").length = 0;
+  db.rows("worker_status").push(liveWorker({ state, blocked_lanes }));
 }
 
 let ip = 0;
@@ -143,6 +139,9 @@ describe("GET /api/health, a lane nobody is draining", () => {
   it("falls back to the coarse holding reason for a worker older than the lane map", async () => {
     // Migration and worker deploy do not land at the same instant. Reporting healthy in that gap
     // would be the one moment a monitor is asleep.
+    // A row with no lane map at all, which is what a worker predating migration 0034 writes. It has
+    // to REPLACE the seeded one: worker_status is a single row keyed on 'worker'.
+    db.rows("worker_status").length = 0;
     db.rows("worker_status").push({
       id: "worker",
       last_seen: iso(3_000),
@@ -153,5 +152,46 @@ describe("GET /api/health, a lane nobody is draining", () => {
     const { status, body } = await read(await health());
     expect(status).toBe(503);
     expect((body.problems as string[]).join(" ")).toMatch(/holding/i);
+  });
+});
+
+describe("POST /api/grade when there is no worker at all", () => {
+  it("refuses a stale heartbeat rather than queueing into a week-long outage", async () => {
+    // expire_queued_jobs runs INSIDE the worker, so a stopped one expires nothing while it is gone
+    // and then fails the whole backlog on its first pass back, blaming a worker that was stopped on
+    // purpose. The corpus sprint is 7.6 days of exactly this.
+    db.rows("worker_status").length = 0;
+    db.rows("worker_status").push(liveWorker({}, 10 * 60));
+    const { status } = await read(await submit());
+    expect(status).toBe(503);
+    expect(db.rows("grades")).toEqual([]);
+  });
+
+  it("gives the operator's note back, so the refusal says why and roughly how long", async () => {
+    db.rows("worker_status").length = 0;
+    db.rows("worker_status").push(
+      liveWorker({ paused_note: "Down for the corpus re-run. Back next week." }, 10 * 60),
+    );
+    const { body } = await read(await submit());
+    expect(body.error).toBe("Down for the corpus re-run. Back next week.");
+  });
+
+  it("falls back to a plain refusal when nobody left a note", async () => {
+    db.rows("worker_status").length = 0;
+    db.rows("worker_status").push(liveWorker({}, 10 * 60));
+    const { body } = await read(await submit());
+    expect(body.error).toMatch(/not taking new grades/i);
+  });
+
+  it("refuses when no worker has ever checked in", async () => {
+    db.rows("worker_status").length = 0;
+    expect((await read(await submit())).status).toBe(503);
+  });
+
+  it("fails OPEN when the heartbeat cannot be read", async () => {
+    // Same call as the queue depth and lane checks beside it: an unreadable row is not evidence of a
+    // missing worker, and closing the site on a database blip is the worse of the two mistakes.
+    db.failures.push({ table: "worker_status", error: { code: "42501", message: "permission denied" } });
+    expect((await read(await submit())).status).toBe(202);
   });
 });

@@ -12,6 +12,7 @@ import {
 } from "@/lib/flags";
 import { currentUser } from "@/lib/auth";
 import { suspensionFor } from "@/lib/suspension";
+import { workerLiveness } from "@/lib/worker-status";
 
 export const runtime = "nodejs"; // needs node:dns / node:crypto; not edge
 export const dynamic = "force-dynamic";
@@ -65,14 +66,24 @@ export async function POST(req: NextRequest) {
   //
   // Two questions, one round trip: is the queue too long, and has the worker already decided not to
   // serve this lane at all. They fail the same way and for the same reason, so they belong together.
-  const [{ count: waiting, error: depthErr }, { data: worker, error: workerErr }] = await Promise.all([
+  const [{ count: waiting, error: depthErr }, { data: worker, error: workerErr }, live] = await Promise.all([
     db
       .from("grades")
       .select("id", { count: "exact", head: true })
       .eq("status", "queued")
       .is("event_run_id", null),
     db.from("worker_status").select("blocked_lanes").eq("id", "worker").maybeSingle(),
+    workerLiveness(db),
   ]);
+
+  // No worker at all, which is a different refusal from a worker that will not claim. Without this
+  // the door accepted into a queue nothing drains: expire_queued_jobs runs inside the worker, so a
+  // stopped one expires nothing while it is gone and then fails the entire backlog on its first pass
+  // back, blaming itself. A week-long corpus run would end by destroying a week of submissions.
+  if (!live.alive) {
+    console.warn(`refusing a grade: no worker heartbeat (age ${live.ageSeconds ?? "never"}s)`);
+    return NextResponse.json({ error: live.note || GRADING_PAUSED_MESSAGE }, { status: 503 });
+  }
   // A failed count is not evidence of a full queue. Let it through: the queue timeout is the
   // backstop, and refusing on an unreadable count would close the site on a transient database blip.
   if (depthErr) console.error("queue depth unreadable:", depthErr.message);

@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { gradingOpen } from "@/lib/flags";
+// One definition of "dead" for the monitor, the landing form and the door. They disagreed once and
+// the disagreement was invisible: health reported the outage while the form kept taking work.
+import { HEARTBEAT_STALE_SECONDS } from "@/lib/worker-status";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-// The worker writes a heartbeat every 15s. Allow generous slack for a slow poll or clock skew, the
-// same window the grade page uses, so the two never disagree about whether a worker exists.
-const HEARTBEAT_STALE_SECONDS = 90;
 
 // GET /api/health -> 200 when grading actually works end to end, 503 when it does not.
 //
