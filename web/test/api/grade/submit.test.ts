@@ -164,10 +164,26 @@ describe("POST /api/grade, schemes and shapes that are not gradeable targets", (
   });
 
   it("refuses a string that is not a URL at all", async () => {
-    for (const url of ["example.com", "not a url", "//example.com", "https://"]) {
+    for (const url of ["not a url", "https://", "http://"]) {
       expect((await submit(url)).status, url).toBe(400);
     }
     expect(db.rows("grades")).toEqual([]);
+  });
+
+  it("takes an address with no scheme and reads it as https", async () => {
+    // What a person types into a browser bar. http:// was always accepted here, so demanding the
+    // prefix protected nothing: it only turned "myapp.com" into an error message.
+    const cases: [string, string][] = [
+      ["example.com", "https://example.com"],
+      ["//two.example.com", "https://two.example.com"],
+      ["three.example.com:8443", "https://three.example.com:8443"],
+      ["four.example.com/dash?x=1", "https://four.example.com"],
+    ];
+    for (const [url, origin] of cases) {
+      const { status, body } = await read(await submit(url));
+      expect(status, url).toBe(202);
+      expect(body.origin, url).toBe(origin);
+    }
   });
 
   it("refuses an internal name at the parse gate, without asking a resolver", async () => {
