@@ -1,4 +1,6 @@
+import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { gradingOpen, GRADING_CLOSED_MESSAGE, GRADING_PAUSED_MESSAGE } from "@/lib/flags";
 
 /** Is there a worker, and if not, what should we say?
  *
@@ -56,4 +58,42 @@ export async function workerLiveness(db: SupabaseClient): Promise<Liveness> {
     unreadable: false,
     ageSeconds,
   };
+}
+
+/** Said by the routes that make the worker FETCH rather than grade: a gallery resolve, a Devpost
+ *  re-check, a served-file and DNS proof. "Not taking new grades" is the wrong sentence for someone
+ *  trying to verify a domain, and being told the wrong thing is how a working feature gets reported
+ *  as broken. */
+export const CHECKS_PAUSED_MESSAGE =
+  "Sloptic cannot run checks right now. Try again later.";
+
+/**
+ * The refusal every route that needs the worker should make, or null to carry on.
+ *
+ * ONE function because there are ten such routes and they were gated three different ways: the grade
+ * door checked the flag and the heartbeat, two event routes checked only the flag, and seven checked
+ * nothing at all. So a visitor could not queue a grade during an outage but could still start a
+ * gallery resolve that spins on "Reading the gallery" until somebody comes back, or file a domain
+ * claim that is never checked. The same failure, quieter, spread across routes nobody would think to
+ * look at while stopping a service.
+ *
+ * The operator's note outranks both generics, because it is the only one that can say how long.
+ */
+export async function gradingUnavailable(
+  db: SupabaseClient,
+  kind: "grade" | "check" = "grade",
+): Promise<NextResponse | null> {
+  // GRADING_OPEN gates GRADING, which is what it has always meant and all it has ever gated. A
+  // gallery resolve or a domain proof is worker work but it is not a grade, and folding the flag in
+  // here would have switched verification off on every deployment that has grading deliberately
+  // closed, which is a behaviour change wearing the clothes of an outage fix. The heartbeat is the
+  // signal that actually answers "is there a worker", and it covers both kinds.
+  if (kind === "grade" && !gradingOpen()) {
+    return NextResponse.json({ error: GRADING_CLOSED_MESSAGE }, { status: 503 });
+  }
+  const live = await workerLiveness(db);
+  if (live.alive) return null;
+  console.warn(`refusing ${kind}: no worker heartbeat (age ${live.ageSeconds ?? "never"}s)`);
+  const fallback = kind === "grade" ? GRADING_PAUSED_MESSAGE : CHECKS_PAUSED_MESSAGE;
+  return NextResponse.json({ error: live.note || fallback }, { status: 503 });
 }

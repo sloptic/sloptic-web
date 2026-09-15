@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { currentUser } from "@/lib/auth";
 import { suspensionFor } from "@/lib/suspension";
+import { gradingUnavailable } from "@/lib/worker-status";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest) {
   const suspended = await suspensionFor(user.id);
   if (suspended) return NextResponse.json({ error: suspended.reason }, { status: 403 });
 
+
   let body: { id?: string };
   try {
     body = await req.json();
@@ -27,6 +29,13 @@ export async function POST(req: NextRequest) {
   }
 
   // Scoped to the caller's own pending claims, so an id from somewhere else reaches nothing.
+  // LAST, not first. This is a cheap global refusal and the checks above it are about the CALLER:
+  // who they are, whether the thing is theirs, and whether they have asked too often. Refusing
+  // availability ahead of those turns a 404 and a 429 into a 503, which loses the answer the
+  // caller needed and stops an outage from counting against anyone's rate limit. Same position the
+  // grade door puts it in: everything about the request first, then whether we can serve it.
+  const down = await gradingUnavailable(supabaseAdmin(), "check");
+  if (down) return down;
   const { data, error } = await supabaseAdmin()
     .from("event_claims")
     .update({ check_due_at: new Date().toISOString() })

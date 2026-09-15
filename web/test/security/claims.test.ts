@@ -15,6 +15,7 @@ import {
   jsonRequest,
   malformedRequest,
   read,
+  liveWorker,
 } from "../helpers/route";
 
 vi.mock("@/lib/supabase", async () => {
@@ -41,6 +42,8 @@ const CLAIM_DEFAULTS = {
 function seeded(): FakeSupabase {
   return fakeDb({
     store: {
+      // The worker-backed routes refuse without a live heartbeat; this file is about authorization.
+      worker_status: [liveWorker()],
       event_claims: [
         {
           id: "claim-alice",
@@ -268,6 +271,7 @@ describe("POST /api/events/recheck", () => {
   it("will not re-open a settled claim", async () => {
     const db = fakeDb({
       store: {
+        worker_status: [liveWorker()],
         event_claims: [
           { id: "c1", account_id: ALICE.id, slug: "done-hack", token: "t", status: "verified", check_due_at: "2026-01-01T00:00:00.000Z" },
           { id: "c2", account_id: ALICE.id, slug: "gone-hack", token: "u", status: "revoked", check_due_at: "2026-01-01T00:00:00.000Z" },

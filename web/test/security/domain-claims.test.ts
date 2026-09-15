@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { fakeDb, type FakeSupabase } from "../helpers/supabase";
-import { setDb, setUser, resetRouteMocks, jsonRequest, read, getDb } from "../helpers/route";
+import { setDb, setUser, resetRouteMocks, jsonRequest, read, getDb, liveWorker } from "../helpers/route";
 
 vi.mock("@/lib/supabase", async () => {
   const { getDb } = await import("../helpers/route");
@@ -51,7 +51,7 @@ function claimRow(over: Record<string, unknown> = {}) {
 }
 
 function seeded(extra: Record<string, unknown[]> = {}): FakeSupabase {
-  return fakeDb({ store: { domain_claims: [claimRow()], grants: [], grades: [], ...extra } });
+  return fakeDb({ store: { domain_claims: [claimRow()], grants: [], grades: [], worker_status: [liveWorker()], ...extra } });
 }
 
 beforeEach(() => {
@@ -177,7 +177,7 @@ describe("a term that has ended can be renewed", () => {
     jsonRequest("http://localhost/api/verify/renew", { id, attest });
 
   beforeEach(() => setDb(fakeDb({
-    store: { domain_claims: [claimRow({ status: "verified" })], grants: [], grades: [] },
+    store: { domain_claims: [claimRow({ status: "verified" })], grants: [], grades: [], worker_status: [liveWorker()] },
   })));
 
   it("records the request and brings the next check forward", async () => {

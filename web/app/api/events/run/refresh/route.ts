@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { currentUser } from "@/lib/auth";
 import { suspensionFor } from "@/lib/suspension";
+import { gradingUnavailable } from "@/lib/worker-status";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ export async function POST(req: NextRequest) {
   // claimed origin, so it needs the same gate the grade path has.
   const suspended = await suspensionFor(user.id);
   if (suspended) return NextResponse.json({ error: suspended.reason }, { status: 403 });
+
   let body: { id?: string };
   try {
     body = await req.json();
@@ -75,6 +77,13 @@ export async function POST(req: NextRequest) {
   // The status predicate is repeated on the WRITE, not just the read above. Without it a cancel
   // landing between the two would be overwritten and the run would come back to life as resolving,
   // after the organizer had been told it stopped.
+  // LAST, not first. This is a cheap global refusal and the checks above it are about the CALLER:
+  // who they are, whether the thing is theirs, and whether they have asked too often. Refusing
+  // availability ahead of those turns a 404 and a 429 into a 503, which loses the answer the
+  // caller needed and stops an outage from counting against anyone's rate limit. Same position the
+  // grade door puts it in: everything about the request first, then whether we can serve it.
+  const down = await gradingUnavailable(supabaseAdmin(), "check");
+  if (down) return down;
   const { data: refreshed, error } = await db
     .from("event_runs")
     .update({ status: "resolving", started_at: null, finished_at: null, refresh_requested: true })

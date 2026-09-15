@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { currentUser } from "@/lib/auth";
 import { allow, bucket, VERIFY_LIMIT } from "@/lib/ratelimit";
 import { suspensionFor } from "@/lib/suspension";
+import { gradingUnavailable } from "@/lib/worker-status";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest) {
   // suspension has to reach the paths that make the worker fetch something.
   const suspended = await suspensionFor(user.id);
   if (suspended) return NextResponse.json({ error: suspended.reason }, { status: 403 });
+
 
   // Each call sets check_due_at to now, so an unlimited loop here is an unlimited stream of
   // connections to the claimed origin, on demand, from the worker's address. The claim being the
@@ -55,6 +57,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `That claim is ${claim.status}.` }, { status: 409 });
   }
 
+  // LAST, not first. This is a cheap global refusal and the checks above it are about the CALLER:
+  // who they are, whether the thing is theirs, and whether they have asked too often. Refusing
+  // availability ahead of those turns a 404 and a 429 into a 503, which loses the answer the
+  // caller needed and stops an outage from counting against anyone's rate limit. Same position the
+  // grade door puts it in: everything about the request first, then whether we can serve it.
+  const down = await gradingUnavailable(supabaseAdmin(), "check");
+  if (down) return down;
   const { error } = await db
     .from("domain_claims")
     .update({ check_due_at: new Date().toISOString() })

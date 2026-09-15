@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { fakeDb, ONE_LIVE_RUN, type FakeSupabase } from "../../helpers/supabase";
-import { setDb, setUser, resetRouteMocks, jsonRequest, malformedRequest, read } from "../../helpers/route";
+import { setDb, setUser, resetRouteMocks, jsonRequest, malformedRequest, read, liveWorker } from "../../helpers/route";
 import { DEFAULTS, ORGANIZER, STRANGER, entry, grade, interleave, run, stored } from "./_fixtures";
 
 vi.mock("@/lib/supabase", async () => {
@@ -32,6 +32,8 @@ beforeEach(() => {
 
   process.env.GRADING_OPEN = "1";
   db = fakeDb({ uniques: [ONE_LIVE_RUN], defaults: DEFAULTS });
+  // Every route under test needs a worker to hand its work to, and refuses without one.
+  db.rows("worker_status").push(liveWorker());
   setDb(db);
   setUser(ORGANIZER);
 });

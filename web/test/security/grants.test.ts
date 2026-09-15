@@ -10,7 +10,7 @@
  */
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { fakeDb, ONE_LIVE_RUN, type FakeSupabase } from "../helpers/supabase";
-import { setDb, setUser, resetRouteMocks, jsonRequest, malformedRequest, read } from "../helpers/route";
+import { setDb, setUser, resetRouteMocks, jsonRequest, malformedRequest, read, liveWorker } from "../helpers/route";
 
 vi.mock("@/lib/supabase", async () => {
   const { getDb } = await import("../helpers/route");
@@ -56,6 +56,8 @@ function db({ grants = [], claims = [], runs = [], entries = [] }: {
 }): FakeSupabase {
   return fakeDb({
     store: {
+      // The worker-backed routes refuse without a live heartbeat; this file is about authorization.
+      worker_status: [liveWorker()],
       grants: grants.map((g, i) => ({
         id: `grant-${i}`,
         kind: "organizer_event",

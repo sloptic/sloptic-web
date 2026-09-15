@@ -4,8 +4,9 @@ import { currentUser } from "@/lib/auth";
 import { randomUUID } from "node:crypto";
 import { normalizeTarget } from "@/lib/origin";
 import { egressPrecheck } from "@/lib/egress";
-import { gradingOpen, GRADING_CLOSED_MESSAGE, isAdmin } from "@/lib/flags";
+import { isAdmin } from "@/lib/flags";
 import { suspensionFor } from "@/lib/suspension";
+import { gradingUnavailable } from "@/lib/worker-status";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,9 +36,12 @@ export async function POST(req: NextRequest) {
   // The same authority the single-URL route answers at. Queueing a field with nothing to grade it
   // fills a board with rows that spin, and an organizer watching that cannot tell a closed service
   // from a slow one.
-  if (!gradingOpen()) {
-    return NextResponse.json({ error: GRADING_CLOSED_MESSAGE }, { status: 503 });
-  }
+  // The flag AND the heartbeat now, through the same helper the rest of the worker-backed routes
+  // use. The flag alone left this open through every unplanned outage and through the corpus runs,
+  // where the worker is stopped on purpose for days: the field queued, nothing drained it, and the
+  // whole backlog was failed on the worker's first pass back.
+  const down = await gradingUnavailable(supabaseAdmin(), "grade");
+  if (down) return down;
 
 
   let body: { id?: string; regrade?: boolean };
