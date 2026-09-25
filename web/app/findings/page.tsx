@@ -176,9 +176,9 @@ export default function FindingsPage() {
           {/* Read from the corpus. It said "Only one scored 0", which was true of 2026.3 and is false
               of 2026.4: no app scored 0, and the cleanest scored 1. */}
           {A.clean_zero === 0
-            ? `No app scored 0, and the cleanest scored ${fmt(D.min)}.`
+            ? `No app scored 0 and the cleanest scored ${fmt(D.min)}.`
             : `Only ${A.clean_zero.toLocaleString()} scored 0.`}{" "}
-          In other words, there is at least some slop in almost every app.
+          In other words, there is slop in every app.
         </p>
         <Histogram />
         <h2 className="section-head">
@@ -203,9 +203,9 @@ export default function FindingsPage() {
       <section className="section">
         <h2 className="section-head">What kinds of slop did apps have?</h2>
         <p className="section-intro">
-          Different kinds of slop have different severities. While most are chronic, a nontrivial number
-          of apps have serious, severe, or even critical problems. The table below shows the 
-          number of instances of slop of each kind as well as how many apps have at least one of them.
+          Different kinds of slop have different severities. While most are chronic, quite a few 
+          apps have serious or even critical problems. The table below shows the 
+          number of instances of slop of each kind and how many apps have each.
         </p>
         <Bands />
         <br />
@@ -213,10 +213,6 @@ export default function FindingsPage() {
           Grading an app by its single worst slop instance gives the stats below. Each one contains the
           ones under it, so almost 3 in 5 projects carry a significant problem and virtually every app
           overlooks some hygiene. 
-        </p>
-        <p className="section-intro">
-          <em>(A significant problem has a penalty more than 20, and an acute problem
-          has a penalty of more than 40.)</em>
         </p>
         <Levels />
       </section>
@@ -229,11 +225,11 @@ export default function FindingsPage() {
             3.0 corpus measures their observed surface as the same size (p = 0.70).
             Source: sloptic-main CORPUS_REPORT.md 4.7. The p values are transcribed from there because
             the figures file does not carry them; every other number here is read from the file. */}
-        <h2 className="section-head">Do winners ship cleaner apps?</h2>
+        <h2 className="section-head">Do winners ship less slop?</h2>
         <p className="section-intro">
-          No, and not dirtier either. Winning apps carry a median slop of {fmt(W.winner.median)} against{" "}
-          {fmt(W.non_winner.median)} for everyone else, a gap small enough to be chance (p = 0.22). Winners
-          crash, leak secrets and ship dead controls at the same rates as everyone else.
+          No, but not more either. Winning apps carry a median slop of {fmt(W.winner.median)} against{" "}
+          {fmt(W.non_winner.median)} for everyone else, which is a gap small enough to be chance (p = 0.22). Winners' apps
+          crash, leak secrets and have nonfunctioning buttons at the same rates as everyone else.
         </p>
         <div className="versus">
           <div className="versus-side" data-side="winner">
@@ -248,7 +244,7 @@ export default function FindingsPage() {
           </div>
         </div>
         <p className="section-intro">
-          The one real difference is speed. Winning apps ship heavier pages and score lower on Lighthouse
+          But speed does differ, as winning apps are heavier and hence score lower on Lighthouse
           (p = 0.003):
         </p>
         <div className="versus">
@@ -263,20 +259,14 @@ export default function FindingsPage() {
             <span className="versus-n">{ACTIVE.lighthouse.non_winners.n.toLocaleString()} apps</span>
           </div>
         </div>
-        <p className="section-intro">
-          Winning does not predict durability. Most hackathons are judged by people, who reward the idea,
-          the presentation and the demo, and a demo cannot show whether an app holds up once real users
-          arrive.
-        </p>
       </section>
 
       <section className="section">
         <h2 className="section-head">Fast != clean</h2>
         <p className="section-intro">
-          Lighthouse performance barely predicts anything else. Measured against slop with the
-          performance axis taken out, the correlation is {RHO.perf_vs_nonperf_slop_rho} across{" "}
+          Lighthouse performance barely predicts anything else. Measured against slop without the performance
+          axis, the correlation is {RHO.perf_vs_nonperf_slop_rho} across{" "} the
           {RHO.n.toLocaleString()} apps, which is close enough to zero to call the two independent.
-          In other words, speed and quality don't have any relationship.
         </p>
         <ul className="stat-list numeric">
           <li>
@@ -320,13 +310,13 @@ export default function FindingsPage() {
         <p className="section-intro">
           Sloptic attempted {A.attempted.toLocaleString()} apps and graded{" "}
           {A.graded.toLocaleString()} of them, or {fmt(A.graded_pct)}%. Most of the rest
-          were due to link rot (expired free tier), timeouts, a WAF challenge, or other reasons.
+          were due to link rot (expired free tier), timeouts, a WAF/bot challenge, or other reasons.
         </p>
         <div className="table-scroll">
           <table className="count-table">
             <thead>
               <tr>
-                <th>why an app was not graded</th>
+                <th>no grade reason</th>
                 <th>apps</th>
               </tr>
             </thead>
