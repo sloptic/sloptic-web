@@ -16,14 +16,18 @@ import {
 import { CATEGORY_FACTS, PROBE_INDEX } from "@/lib/checks.generated";
 import { LABELS } from "@/lib/check-labels";
 
-const ALL_AREAS: Area[] = ["security", "qa", "performance"];
+// Written out rather than read from AREA_ORDER, on purpose: this is the tripwire. The day the grader
+// adds or splits an axis again, this test should fail and send someone to check every place the site
+// shows axes, the way 3.0's accessibility split did.
+const ALL_AREAS: Area[] = ["security", "qa", "accessibility", "performance"];
 
-// CLAUDE.md fixes these three numbers: sloptic/safety.py classifies 44 passive and 58 active of 102,
-// and the passive curve was built from exactly that selection. A drift here is not a cosmetic
-// mismatch, it is the product and the frozen curve measuring different things.
+// Pinned on purpose. sloptic/safety.py at 3.0.0 classifies 45 passive and 61 active of 106, and
+// passive-2026.2 was built from exactly that selection. A drift here is not a cosmetic mismatch, it
+// is the product and the frozen curve measuring different things, and every page quoting a count
+// needs a human to look at it.
 describe("the battery totals", () => {
-  it("counts the 102 checks the catalog holds, 44 of them passive", () => {
-    expect(TOTALS).toEqual({ total: 102, passive: 44, active: 58 });
+  it("counts the 106 checks the 3.0 catalog holds, 45 of them passive", () => {
+    expect(TOTALS).toEqual({ total: 106, passive: 45, active: 61 });
   });
 
   it("splits every check into exactly one of passive and active", () => {
@@ -59,14 +63,14 @@ describe("the battery totals", () => {
     }
   });
 
-  it("has no category outside the three axes", () => {
+  it("has no category outside the four axes", () => {
     for (const f of CATEGORY_FACTS) expect(ALL_AREAS).toContain(f.area);
   });
 });
 
 describe("AREAS", () => {
-  it("lists the three axes the score is split across, in score order", () => {
-    expect(AREAS.map((a) => a.id)).toEqual(["security", "qa", "performance"]);
+  it("lists the four axes the score is split across, in the order the grader reports them", () => {
+    expect(AREAS.map((a) => a.id)).toEqual(["security", "qa", "accessibility", "performance"]);
   });
 
   it("sums each area from its own categories", () => {
@@ -78,7 +82,7 @@ describe("AREAS", () => {
     }
   });
 
-  it("accounts for the whole battery across the three areas", () => {
+  it("accounts for the whole battery across the four areas", () => {
     expect(AREAS.reduce((n, a) => n + a.probes, 0)).toBe(TOTALS.total);
     expect(AREAS.reduce((n, a) => n + a.passive, 0)).toBe(TOTALS.passive);
   });
@@ -111,7 +115,7 @@ describe("PASSIVE_BY_AREA", () => {
     expect(ALL_AREAS.reduce((n, id) => n + PASSIVE_BY_AREA[id], 0)).toBe(TOTALS.passive);
   });
 
-  it("covers all three areas, so no area divides by undefined", () => {
+  it("covers all four areas, so no area divides by undefined", () => {
     for (const id of ALL_AREAS) expect(typeof PASSIVE_BY_AREA[id]).toBe("number");
   });
 });
@@ -181,7 +185,9 @@ describe("sampleFor", () => {
 
 describe("describeProbe", () => {
   it("names a passive probe and the area it scores", () => {
-    expect(describeProbe("qa-a11y-001")).toEqual({ area: "qa", name: LABELS.accessibility.name });
+    // Accessibility is its own axis since 3.0; it scored inside quality before, which is why this
+    // probe answered "qa" until then.
+    expect(describeProbe("qa-a11y-001")).toEqual({ area: "accessibility", name: LABELS.accessibility.name });
   });
 
   it("names an active probe too, so a live line can say what it is running", () => {
@@ -251,7 +257,7 @@ describe("categoryName", () => {
 });
 
 describe("the editorial copy", () => {
-  it("blurbs all three areas", () => {
+  it("blurbs all four areas", () => {
     for (const id of ALL_AREAS) expect(AREA_BLURBS[id].length).toBeGreaterThan(0);
   });
 

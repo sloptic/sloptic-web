@@ -6,7 +6,7 @@ import { rememberGrade } from "@/lib/history";
 import { useRouter } from "next/navigation";
 import { AREAS, AREA_BLURBS, categoriesFor } from "@/lib/checks";
 import { provisionalCleanerThan } from "@/lib/corpus";
-import ScoreBand from "./ScoreBand";
+import ScoreBand, { fmtScore } from "./ScoreBand";
 import { SAMPLE_SCORE, SAMPLE_ROWS, SAMPLE_FINDINGS, SAMPLE_PASSED } from "@/lib/sample-grade";
 
 export default function Home() {
@@ -250,7 +250,8 @@ export default function Home() {
                   <span className="finding-cat">{f.name}</span>
                   <span className="finding-desc">{f.desc}</span>
                 </span>
-                <span className="finding-pen">+{f.penalty}</span>
+                {/* What it ADDED, as the report shows it, so the column sums to the axis above. */}
+                <span className="finding-pen">+{fmtScore(f.points)}</span>
               </div>
             ))}
             {SAMPLE_PASSED.map((f) => (

@@ -115,9 +115,20 @@ export const LABELS: Record<string, Label> = {
     href: "https://developers.google.com/search/docs/crawling-indexing/http-network-errors",
   },
   "input-validation": { name: "input validation", href: `${OWASP}/Input_Validation_Cheat_Sheet.html` },
-  seo: {
-    name: "crawlability",
-    href: "https://developers.google.com/search/docs/fundamentals/seo-starter-guide",
+  // 3.0 moved qa-seo-001 out of quality into accessibility and renamed its category, so the old
+  // `seo` label had nothing left to label. The probe asks for a viewport meta tag, without which a
+  // phone renders the desktop page shrunk to unreadable, and a description. The viewport half is
+  // why it now sits with accessibility.
+  "mobile-visibility": {
+    name: "mobile viewport and description",
+    href: `${MDN}/Web/HTML/Guides/Viewport_meta_element`,
+  },
+  // New in 3.0: a page the app links to still showing generator filler (lorem ipsum, an LLM's own
+  // meta text, two or more distinct [Placeholder] brackets). A string match, never a judgment of
+  // whether the page looks finished.
+  "scaffold-content": {
+    name: "leftover template text",
+    href: "https://iso25000.com/index.php/en/iso-25000-standards/iso-25010",
   },
 
   availability: { name: "availability", href: `${MDN}/Web/HTTP/Reference/Status/503` },
@@ -159,6 +170,7 @@ export const LABELS: Record<string, Label> = {
 
 export const AREA_LABELS: Record<string, string> = {
   security: "security",
-  qa: "accessibility & quality",
+  qa: "quality",
+  accessibility: "accessibility",
   performance: "performance",
 };

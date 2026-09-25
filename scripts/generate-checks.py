@@ -113,6 +113,20 @@ def main() -> int:
         print(f"  stale ids:    {sorted(classified - ids)}", file=sys.stderr)
         return 1
 
+    # The axes, in the order the grader reports them (sloptic.cli._axis_line), and every bundle the
+    # catalog uses must be one of them. Emitted as the Area type rather than typed by hand, because a
+    # hand-written union is how 3.0 broke this: accessibility became its own bundle, and a type that
+    # still listed three axes would have let the site silently drop a real subtotal.
+    known = ("security", "qa", "accessibility", "performance")
+    bundles = {p.bundle for p in probes}
+    stray = bundles - set(known)
+    if stray:
+        print(f"the catalog uses bundles this generator does not know: {sorted(stray)}. "
+              f"Add them to `known` in axis order, then label them in check-labels.ts.",
+              file=sys.stderr)
+        return 1
+    areas = [a for a in known if a in bundles]
+
     cats: dict[tuple[str, str], list] = defaultdict(list)
     for p in probes:
         cats[(p.bundle, p.category)].append(p.id)
@@ -145,7 +159,9 @@ def main() -> int:
 // Facts only: which categories exist, how many checks each holds, and which run without
 // verification. Human labels live in check-labels.ts.
 
-export type Area = "security" | "qa" | "performance";
+export type Area = {" | ".join(f'"{a}"' for a in areas)};
+/** The axes, in the order the grader reports them. Iterate this rather than listing axes by hand. */
+export const AREA_ORDER: Area[] = [{", ".join(f'"{a}"' for a in areas)}];
 /** open: every check runs on any URL. gated: every check needs verification. mixed: some of each. */
 export type Access = "open" | "gated" | "mixed";
 
@@ -173,7 +189,7 @@ export const PROBE_INDEX: Record<string, [Area, string]> = {{
 
     print(f"wrote {OUT.relative_to(HERE.parent)}")
     print(f"  {len(probes)} checks, {passive} passive, {len(rows)} categories")
-    for area in ("security", "qa", "performance"):
+    for area in areas:
         n = [r for r in rows if r["area"] == area]
         print(f"  {area}: {len(n)} categories, {sum(r['probes'] for r in n)} checks")
     mixed = [r["slug"] for r in rows if r["access"] == "mixed"]

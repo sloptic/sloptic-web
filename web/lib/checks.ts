@@ -2,6 +2,7 @@
 // half directly, so the counts always come from the grader and the wording always comes from us.
 
 import {
+  AREA_ORDER,
   CATEGORY_FACTS,
   PROBE_INDEX,
   TOTALS,
@@ -11,7 +12,7 @@ import {
 } from "./checks.generated";
 import { AREA_LABELS, LABELS } from "./check-labels";
 
-export { TOTALS };
+export { TOTALS, AREA_ORDER };
 export { AREA_LABELS };
 export type { Area, Access, CategoryFact };
 
@@ -32,9 +33,11 @@ export function categoriesFor(area: Area): Category[] {
     .sort((a, b) => b.probes - a.probes || a.name.localeCompare(b.name));
 }
 
-export const AREAS: { id: Area; label: string; probes: number; passive: number; categories: number }[] = (
-  ["security", "qa", "performance"] as Area[]
-).map((id) => {
+// From the generated order, never a list typed here. A hand-written ["security", "qa", "performance"]
+// is a valid Area[] even after 3.0 split accessibility out, so the type checker cannot catch it: it
+// just stops showing the fourth axis. That is how a real subtotal goes missing without an error.
+export const AREAS: { id: Area; label: string; probes: number; passive: number; categories: number }[] =
+  AREA_ORDER.map((id) => {
   const facts = CATEGORY_FACTS.filter((f) => f.area === id);
   return {
     id,
@@ -49,7 +52,9 @@ export const AREAS: { id: Area; label: string; probes: number; passive: number; 
 export const AREA_BLURBS: Record<Area, string> = {
   security:
     "Getting this wrong costs the people who trusted your app. Sloptic looks for missing defenses and secrets left in the code you ship, following the OWASP Top 10.",
-  qa: "Apps that are unusable or crash unexpectedly frusturate users. Sloptic checks for inaccessibility (WCAG), broken links, error handling, and other quality issues that degrade the user experience.",
+  qa: "Apps that are unusable or crash unexpectedly frusturate users. Sloptic checks for broken links, error handling, dead controls, and other quality issues that degrade the user experience.",
+  accessibility:
+    "An app some people cannot use is broken for them, whatever it looks like to you. Sloptic checks every page against WCAG with axe: contrast, labels, and the rest.",
   performance:
     "Most people will not wait for a slow app, so Sloptic uses Lighthouse to measure real load speed and page weight.",
 };

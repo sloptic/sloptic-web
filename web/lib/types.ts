@@ -1,3 +1,4 @@
+import type { Area } from "./checks.generated";
 // Shapes shared across the API and UI. Mirrors shared/contract.md.
 
 export type GradeStatus = "queued" | "running" | "done" | "failed" | "cancelled";
@@ -62,7 +63,9 @@ export interface GradeResult {
   slop_score: number;
   /** Only the axes that scored. A clean axis is absent, not zero: the first real grade
    *  returned { qa, security } with no performance key. */
-  axis_slop: Partial<Record<"security" | "qa" | "performance", number>>;
+  // Partial: the grader OMITS an axis with nothing wrong rather than zeroing it, and a 2.x grade has
+  // no accessibility key at all, since that axis did not exist until 3.0.
+  axis_slop: Partial<Record<Area, number>>;
   coverage: Coverage;
   platform?: Record<string, unknown> | null;
   surface?: Record<string, unknown> | null;
@@ -96,7 +99,7 @@ export interface GradeResult {
   outcomes?: Outcome[] | null;
   /** Per axis, the damped score this app would carry if every applicable check had fired. Always
    *  >= axis_slop, so actual/potential says how much of its own failure surface the app avoided. */
-  axis_potential?: Partial<Record<"security" | "qa" | "performance", number>> | null;
+  axis_potential?: Partial<Record<Area, number>> | null;
   /** Probes a bot challenge stopped from running. With an empty coverage it means the whole battery
    *  was blocked and the grade was withheld; a subset means a mid-grade challenge truncated the tail
    *  (which retry_blocked then recovers). */

@@ -14,20 +14,35 @@ import { SAMPLE_SCORE, SAMPLE_ROWS, SAMPLE_FINDINGS, SAMPLE_PASSED } from "@/lib
 import { PASSIVE_BY_AREA, TOTALS, type Area } from "@/lib/checks";
 import { PASSIVE } from "@/lib/corpus";
 
+// Summed on POINTS, what each finding added after the dampers, because that is the number the page
+// shows and the report promises sums. Summing penalties was the old sample's mistake: three findings
+// in one category damp to 10.5, not 13, and a test that summed penalties agreed with the wrong answer.
 const sumBy = (axis: string) =>
-  SAMPLE_FINDINGS.filter((f) => f.axis === axis).reduce((n, f) => n + f.penalty, 0);
+  SAMPLE_FINDINGS.filter((f) => f.axis === axis).reduce((n, f) => n + f.points, 0);
 
 describe("the sample adds up the way a scored report does", () => {
   it("sums each axis's findings to that axis's slop", () => {
     // "rows sum to their category header and the headers sum to the score" is what the real report
     // promises above its findings list. A sample that does not is teaching the wrong arithmetic.
     for (const row of SAMPLE_ROWS) {
-      expect(sumBy(row.id)).toBe(row.slop);
+      expect(sumBy(row.id)).toBeCloseTo(row.slop, 5);
     }
   });
 
   it("sums the axes to the headline score", () => {
-    expect(SAMPLE_ROWS.reduce((n, r) => n + r.slop, 0)).toBe(SAMPLE_SCORE);
+    expect(SAMPLE_ROWS.reduce((n, r) => n + r.slop, 0)).toBeCloseTo(SAMPLE_SCORE, 5);
+  });
+
+  it("never shows a finding adding more than it is worth alone", () => {
+    // The dampers only ever reduce. A point value above its penalty would mean the numbers were typed
+    // rather than computed.
+    for (const f of SAMPLE_FINDINGS) expect(f.points).toBeLessThanOrEqual(f.penalty);
+  });
+
+  it("shows every axis the score is split across, accessibility included", () => {
+    // 3.0 made accessibility its own axis. A sample still showing three would be previewing a report
+    // the site no longer produces.
+    expect(SAMPLE_ROWS.map((r) => r.id)).toEqual(["security", "qa", "accessibility", "performance"]);
   });
 
   it("shows every finding it counted, so the arithmetic is checkable on screen", () => {
@@ -68,8 +83,8 @@ describe("the sample agrees with the battery the site advertises", () => {
 describe("the sample looks like a real app, not a flattering one", () => {
   it("sits inside the middle half of real passive grades", () => {
     // A sample scoring 3 would be an advertisement, and one scoring 150 would be a warning. The
-    // corpus ships its own quartiles, so "typical" is a measured range rather than a number I liked:
-    // q1 25, median 39, q3 59.7 across 1,750 apps.
+    // corpus ships its own quartiles, so "typical" is a measured range rather than a number I liked,
+    // read from the vendored figures so it moves when the ruler does.
     const d = PASSIVE.distribution as { q1: number; q3: number };
     expect(SAMPLE_SCORE).toBeGreaterThanOrEqual(d.q1);
     expect(SAMPLE_SCORE).toBeLessThanOrEqual(d.q3);

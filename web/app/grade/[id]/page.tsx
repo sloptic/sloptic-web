@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { track } from "@vercel/analytics";
 import type { GradeView, GradeResult, Finding, Coverage, GradeProgress, CardEntry, Outcome } from "@/lib/types";
-import { AREA_LABELS, AREAS, PASSIVE_BY_AREA, TOTALS, categoryName, describeCategory, describeProbe, type Area } from "@/lib/checks";
+import { AREA_LABELS, AREA_ORDER, AREAS, PASSIVE_BY_AREA, TOTALS, categoryName, describeCategory, describeProbe, type Area } from "@/lib/checks";
 import { daysUntil } from "@/lib/retention";
 import { provisionalCleanerThan } from "@/lib/corpus";
 import { failureText, ordinal, recoveryMarks } from "@/lib/grades";
@@ -16,7 +16,6 @@ const POLL_MS = 3000;
 const MAX_POLL_FAILS = 8;   // ~1 minute of server errors before giving up on the page
 const RETRY_POLL_MS = 20000; // a finished grade with a blocked tail is re-checked at this cadence,
 //                              since the next recovery pass is minutes out, not seconds
-const AREA_ORDER: Area[] = ["security", "qa", "performance"];
 
 /** The score is a damped decimal, so 21.6 must read as 21.6 and 22 must not read as 22.0. Postgres
  *  numeric arrives over JSON as a string, so coerce before formatting. */

@@ -2,7 +2,9 @@
 // Facts only: which categories exist, how many checks each holds, and which run without
 // verification. Human labels live in check-labels.ts.
 
-export type Area = "security" | "qa" | "performance";
+export type Area = "security" | "qa" | "accessibility" | "performance";
+/** The axes, in the order the grader reports them. Iterate this rather than listing axes by hand. */
+export const AREA_ORDER: Area[] = ["security", "qa", "accessibility", "performance"];
 /** open: every check runs on any URL. gated: every check needs verification. mixed: some of each. */
 export type Access = "open" | "gated" | "mixed";
 
@@ -15,6 +17,8 @@ export type CategoryFact = {
 };
 
 export const CATEGORY_FACTS: CategoryFact[] = [
+  { slug: "accessibility", area: "accessibility", probes: 2, passive: 2, access: "open" },
+  { slug: "mobile-visibility", area: "accessibility", probes: 1, passive: 1, access: "open" },
   { slug: "caching", area: "performance", probes: 1, passive: 1, access: "open" },
   { slug: "dom-size", area: "performance", probes: 1, passive: 1, access: "open" },
   { slug: "font-loading", area: "performance", probes: 1, passive: 1, access: "open" },
@@ -27,7 +31,6 @@ export const CATEGORY_FACTS: CategoryFact[] = [
   { slug: "request-count", area: "performance", probes: 1, passive: 1, access: "open" },
   { slug: "speed", area: "performance", probes: 1, passive: 1, access: "open" },
   { slug: "web-vitals", area: "performance", probes: 2, passive: 2, access: "open" },
-  { slug: "accessibility", area: "qa", probes: 2, passive: 2, access: "open" },
   { slug: "availability", area: "qa", probes: 3, passive: 3, access: "open" },
   { slug: "broken-links", area: "qa", probes: 1, passive: 1, access: "open" },
   { slug: "console-errors", area: "qa", probes: 1, passive: 1, access: "open" },
@@ -43,10 +46,10 @@ export const CATEGORY_FACTS: CategoryFact[] = [
   { slug: "input-validation", area: "qa", probes: 2, passive: 0, access: "gated" },
   { slug: "password-reset", area: "qa", probes: 1, passive: 0, access: "gated" },
   { slug: "race-condition", area: "qa", probes: 2, passive: 0, access: "gated" },
-  { slug: "seo", area: "qa", probes: 1, passive: 1, access: "open" },
+  { slug: "scaffold-content", area: "qa", probes: 1, passive: 1, access: "open" },
   { slug: "ui-honesty", area: "qa", probes: 5, passive: 3, access: "mixed" },
   { slug: "access-control", area: "security", probes: 7, passive: 0, access: "gated" },
-  { slug: "backend-exposure", area: "security", probes: 2, passive: 0, access: "gated" },
+  { slug: "backend-exposure", area: "security", probes: 3, passive: 0, access: "gated" },
   { slug: "command-injection", area: "security", probes: 1, passive: 0, access: "gated" },
   { slug: "cors", area: "security", probes: 1, passive: 1, access: "open" },
   { slug: "csrf", area: "security", probes: 1, passive: 0, access: "gated" },
@@ -64,9 +67,9 @@ export const CATEGORY_FACTS: CategoryFact[] = [
   { slug: "path-traversal", area: "security", probes: 1, passive: 0, access: "gated" },
   { slug: "rate-limiting", area: "security", probes: 1, passive: 0, access: "gated" },
   { slug: "response-splitting", area: "security", probes: 1, passive: 0, access: "gated" },
-  { slug: "secrets-exposure", area: "security", probes: 2, passive: 2, access: "open" },
+  { slug: "secrets-exposure", area: "security", probes: 3, passive: 2, access: "mixed" },
   { slug: "security-headers", area: "security", probes: 7, passive: 7, access: "open" },
-  { slug: "session", area: "security", probes: 4, passive: 0, access: "gated" },
+  { slug: "session", area: "security", probes: 5, passive: 0, access: "gated" },
   { slug: "session-management", area: "security", probes: 1, passive: 0, access: "gated" },
   { slug: "sql-injection", area: "security", probes: 5, passive: 0, access: "gated" },
   { slug: "ssrf", area: "security", probes: 1, passive: 0, access: "gated" },
@@ -77,7 +80,7 @@ export const CATEGORY_FACTS: CategoryFact[] = [
   { slug: "xxe", area: "security", probes: 1, passive: 0, access: "gated" },
 ];
 
-export const TOTALS = { total: 102, passive: 44, active: 58 };
+export const TOTALS = { total: 106, passive: 45, active: 61 };
 
 /** Probe id -> [area, kind], for every probe in the catalog. Lets a report name the checks that
  *  passed (the grade record lists them by id only) and the live progress line name the check it is
@@ -96,8 +99,8 @@ export const PROBE_INDEX: Record<string, [Area, string]> = {
   "perf-requests-001": ["performance", "request-count"],
   "perf-ttfb-001": ["performance", "speed"],
   "perf-weight-001": ["performance", "page-weight"],
-  "qa-a11y-001": ["qa", "accessibility"],
-  "qa-a11y-002": ["qa", "accessibility"],
+  "qa-a11y-001": ["accessibility", "accessibility"],
+  "qa-a11y-002": ["accessibility", "accessibility"],
   "qa-backnav-001": ["qa", "ui-honesty"],
   "qa-chunk-001": ["qa", "ui-honesty"],
   "qa-console-001": ["qa", "console-errors"],
@@ -123,12 +126,14 @@ export const PROBE_INDEX: Record<string, [Area, string]> = {
   "qa-race-001": ["qa", "race-condition"],
   "qa-race-002": ["qa", "race-condition"],
   "qa-reset-001": ["qa", "password-reset"],
-  "qa-seo-001": ["qa", "seo"],
+  "qa-scaffold-001": ["qa", "scaffold-content"],
+  "qa-seo-001": ["accessibility", "mobile-visibility"],
   "qa-staleui-001": ["qa", "ui-honesty"],
   "sec-authbypass-001": ["security", "access-control"],
   "sec-backend-001": ["security", "backend-exposure"],
   "sec-backend-002": ["security", "access-control"],
   "sec-backend-003": ["security", "backend-exposure"],
+  "sec-backend-004": ["security", "backend-exposure"],
   "sec-cmdi-001": ["security", "command-injection"],
   "sec-cors-001": ["security", "cors"],
   "sec-csp-001": ["security", "security-headers"],
@@ -165,11 +170,13 @@ export const PROBE_INDEX: Record<string, [Area, string]> = {
   "sec-redirect-001": ["security", "open-redirect"],
   "sec-secrets-001": ["security", "secrets-exposure"],
   "sec-secrets-002": ["security", "secrets-exposure"],
+  "sec-secrets-003": ["security", "secrets-exposure"],
   "sec-session-001": ["security", "session"],
   "sec-session-002": ["security", "session"],
   "sec-session-003": ["security", "session"],
   "sec-session-004": ["security", "session-management"],
   "sec-session-005": ["security", "session"],
+  "sec-session-006": ["security", "session"],
   "sec-split-001": ["security", "response-splitting"],
   "sec-sqli-001": ["security", "sql-injection"],
   "sec-sqli-002": ["security", "sql-injection"],
