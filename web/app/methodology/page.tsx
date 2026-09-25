@@ -49,50 +49,46 @@ export default function MethodologyPage() {
         </p>
       </section>
 
-      {/* The builder's seat (3.0 handoff). Linked from the performance and accessibility lines on
-          every report. It explains why a team misses slop, it does not redefine slop, which is why it
-          sits after the definition and not in place of it. Draft copy: the table is the handoff's,
-          verbatim; the two paragraphs around it are plain placeholders for Ian to rewrite. */}
+      {/* The builder's seat (3.0 handoff), linked from the performance and accessibility lines on
+          every report. It explains why a team misses slop and does not redefine it, so it sits after
+          the definition. The rails from the handoff hold here too: Lighthouse SIMULATES the phone on
+          the grading box, never "tested on a phone", and the phone framing is for performance only. */}
       <section className="section" id="your-seat">
         <h2 className="section-head">Why is my score bad when my app is fast?</h2>
         <p className="section-intro">
-          Because Sloptic grades your app from seats your team does not sit in. Almost every failure it
-          counts looks fine from where the app was built:
+          Some kinds of slop are easy to miss when you build and test an app yourself. The table below
+          shows the most common ones and how Sloptic checks for each.
         </p>
-        <div className="table-scroll">
+        <div className="seat-wrap">
           <table className="count-table seat-table">
             <thead>
               <tr>
-                <th>failure</th>
-                <th>why the team does not see it</th>
-                <th>what Sloptic does instead</th>
+                <th>slop</th>
+                <th>why it&apos;s missed</th>
+                <th>how Sloptic checks</th>
               </tr>
             </thead>
             <tbody>
               {SEAT_ROWS.map((r) => (
                 <tr key={r.failure}>
                   <th scope="row">{r.failure}</th>
-                  <td>{r.invisible}</td>
-                  <td>{r.instead}</td>
+                  <td data-label="why it's missed">{r.invisible}</td>
+                  <td data-label="how Sloptic checks">{r.instead}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {/* The guardrails from the handoff, kept by this wording: Lighthouse SIMULATES the phone on the
-            grading box and scales CPU time, it never runs on one, so "measured as a phone would load
-            it" and never "tested on a phone". The phone framing is for performance only. */}
         <p className="section-intro">
-          For performance, Lighthouse measures the app as a mid range phone ({LH.device}, a {LH.screen}{" "}
-          screen) on slow 4G would load it: a {LH.rttMs} ms round trip, {LH.downMbps} Mbps down, and CPU
-          work slowed {LH.cpuSlowdown} times. It simulates that on the grading box rather than running on a
-          phone. Across the corpus, {fmt(fireRate("perf-lighthouse-001") ?? 0)}% of apps scored below 90,
-          and the median was {fmt(ACTIVE.lighthouse.overall.median)}.
+          For performance, Lighthouse measures how the app would load on a mid range phone ({LH.device},
+          with a {LH.screen} screen) over slow 4G, i.e. a {LH.rttMs} ms round trip, {LH.downMbps} Mbps
+          down, and CPU work taking {LH.cpuSlowdown} times as long. Sloptic simulates this on the machine
+          that grades your app. Across the corpus, {fmt(fireRate("perf-lighthouse-001") ?? 0)}% of apps
+          scored below 90, and the median score was {fmt(ACTIVE.lighthouse.overall.median)}.
         </p>
         <p className="section-intro">
-          For accessibility, {fmt(fireRate("qa-a11y-001") ?? 0)}% of apps had at least one finding, and
-          most of those were text too faint to read against its background. That is a contrast check, and
-          it matters most to people with low vision and anyone reading in glare.
+          For accessibility, {fmt(fireRate("qa-a11y-001") ?? 0)}% of apps had at least one instance of
+          slop, and about 4 in 5 of those had text too faint to read against its background.
         </p>
       </section>
 

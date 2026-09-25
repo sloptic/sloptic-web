@@ -587,17 +587,6 @@ a {
   padding: 0.55rem 0;
   border-bottom: 1px solid var(--line);
 }
-/* The builder's seat table on /methodology: three columns of sentences, so they read left aligned
-   rather than taking count-table's right alignment for numbers. */
-.seat-table th,
-.seat-table td {
-  text-align: left;
-  vertical-align: top;
-}
-.seat-table td {
-  color: var(--ink-soft);
-}
-
 /* The builder's seat line under an axis: spans the whole row, quiet, and never mistaken for a value. */
 .sample-axis-note {
   grid-column: 1 / -1;
@@ -1254,6 +1243,69 @@ code {
   border-bottom: 0;
   color: var(--ink);
   font-weight: 600;
+}
+
+/* The builder's seat table on /methodology: three columns of sentences, so they read left aligned
+   in the body face, and the table keeps to the prose column around it. After the count-table rules
+   on purpose: same specificity, so order decides. On a phone each row stacks,
+   with the column name above each cell, because three columns of sentences cannot fit 390px. */
+.seat-wrap {
+  max-width: 40rem;
+  margin: 0 0 2.25rem;
+}
+.seat-table {
+  min-width: 0;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.95rem;
+}
+.seat-table th,
+.seat-table td {
+  text-align: left;
+  vertical-align: top;
+}
+.seat-table thead th {
+  font-family: var(--font-mono);
+}
+.seat-table tbody th {
+  display: table-cell;
+  width: 26%;
+}
+.seat-table td {
+  color: var(--ink-soft);
+}
+@media (max-width: 42rem) {
+  .seat-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .seat-table tr,
+  .seat-table tbody th,
+  .seat-table td {
+    display: block;
+    width: auto;
+  }
+  .seat-table tr {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .seat-table tbody th,
+  .seat-table td {
+    padding: 0.15rem 0;
+    border-bottom: 0;
+  }
+  .seat-table tbody th {
+    font-weight: 600;
+  }
+  .seat-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
 }
 
 /* The field table's status column carries the progress bar, so give it room: the default lets the
