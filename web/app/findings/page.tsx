@@ -4,8 +4,8 @@ import EventSpread from "./EventSpread";
 
 export const metadata: Metadata = {
   title: "What do hackathon apps look like?",
-  description:
-    "The state of hackathon apps across 80 hackathons as Sloptic grades them.",
+  // Read from the corpus, like every other number on this page, so it moves when the corpus does.
+  description: `The state of hackathon apps across ${ACTIVE.provenance.n_events} hackathons as Sloptic grades them.`,
 };
 
 const D = ACTIVE.distribution;
@@ -51,9 +51,13 @@ function Histogram() {
           <text x={x(D.q3) + 6} y="34">Q3 at {fmt(D.q3)}</text>
         </g>
         <g className="tick">
-          {[0, 50, 100, 150, 200].map((v) => (
-            <text key={v} x={x(v)} y={H + 20}>{v}</text>
-          ))}
+          {/* Every 50 up to the last bin, not a fixed list. The 3.0 corpus runs to 337.5, and ticks
+              that stopped at 200 left the right third of the axis unlabelled. */}
+          {Array.from({ length: Math.floor((bins[bins.length - 1][1] || 0) / 50) + 1 }, (_, i) => i * 50)
+            .filter((v) => x(v) < W_ - 60)
+            .map((v) => (
+              <text key={v} x={x(v)} y={H + 20}>{v}</text>
+            ))}
           <text x={W_} y={H + 20} textAnchor="end">slop score</text>
         </g>
       </svg>
@@ -167,7 +171,12 @@ export default function FindingsPage() {
         <h2 className="section-head">Almost nothing is clean</h2>
         <p className="section-intro">
           The median is {fmt(D.median)}, and a
-          quarter scored above {fmt(D.q3)}. Only one scored 0. 
+          quarter scored above {fmt(D.q3)}.{" "}
+          {/* Read from the corpus. It said "Only one scored 0", which was true of 2026.3 and is false
+              of 2026.4: no app scored 0, and the cleanest scored 1. */}
+          {A.clean_zero === 0
+            ? `No app scored 0, and the cleanest scored ${fmt(D.min)}.`
+            : `Only ${A.clean_zero.toLocaleString()} scored 0.`}{" "}
           In other words, there is at least some slop in almost every app.
         </p>
         <Histogram />
@@ -212,9 +221,18 @@ export default function FindingsPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">Winners ship more slop?!</h2>
+        {/* Rewritten for the 3.0 corpus. It used to read "Winners ship more slop?!" and say the opposite
+            of cleanliness "tends to be true", but the median gap is not significant (p = 0.22), and
+            winners crash, leak and ship dead controls at the same rates. The only real difference is
+            performance. It also said winners ship more features and so more surface to get wrong; the
+            3.0 corpus measures their observed surface as the same size (p = 0.70).
+            Source: sloptic-main CORPUS_REPORT.md 4.7. The p values are transcribed from there because
+            the figures file does not carry them; every other number here is read from the file. */}
+        <h2 className="section-head">Do winners ship cleaner apps?</h2>
         <p className="section-intro">
-          Counterintuitively, winning apps have {fmt(W.delta_pct)}% <em>more</em> median slop than the rest.
+          No, and not dirtier either. Winning apps carry a median slop of {fmt(W.winner.median)} against{" "}
+          {fmt(W.non_winner.median)} for everyone else, a gap small enough to be chance (p = 0.22). Winners
+          crash, leak secrets and ship dead controls at the same rates as everyone else.
         </p>
         <div className="versus">
           <div className="versus-side" data-side="winner">
@@ -229,25 +247,25 @@ export default function FindingsPage() {
           </div>
         </div>
         <p className="section-intro">
-          The same is true for Lighthouse:
+          The one real difference is speed. Winning apps ship heavier pages and score lower on Lighthouse
+          (p = 0.003):
         </p>
         <div className="versus">
           <div className="versus-side" data-side="winner">
             <span className="versus-num"><b>{fmt(ACTIVE.lighthouse.winners.median)}</b></span>
             <span className="versus-cap">median Lighthouse score, winners</span>
-            <span className="versus-n">{W.winner.n} apps</span>
+            <span className="versus-n">{ACTIVE.lighthouse.winners.n} apps</span>
           </div>
           <div className="versus-side">
             <span className="versus-num">{fmt(ACTIVE.lighthouse.non_winners.median)}</span>
             <span className="versus-cap">median Lighthouse score, everyone else</span>
-            <span className="versus-n">{W.non_winner.n.toLocaleString()} apps</span>
+            <span className="versus-n">{ACTIVE.lighthouse.non_winners.n.toLocaleString()} apps</span>
           </div>
         </div>
         <p className="section-intro">
-          As you can see, winning does not correlate with app cleanliness. In fact, the opposite tends to be true.
-          Most hackathons employ human judging, which rewards ideas, features, presentation, and the demo over quality.
-          Winning apps tend to ship more features, meaning more surfaces to misconfigure or get wrong, and human judges do not 
-          have time to judge quality consistently over hundreds of apps.
+          Winning does not predict durability. Most hackathons are judged by people, who reward the idea,
+          the presentation and the demo, and a demo cannot show whether an app holds up once real users
+          arrive.
         </p>
       </section>
 
@@ -283,8 +301,9 @@ export default function FindingsPage() {
         <h2 className="section-head">Yet exploits are rare...</h2>
         <p className="section-intro">
           Only {fmt(SEV.exploitable_pct)}% of apps carry something an attacker could use today. The
-          largest single finding is an exposed backend, with {STAR.apps} apps serving a Supabase or
-          Firebase database that anyone could read, because row level security was not turned on.
+          largest single finding is an exposed backend, with {STAR.apps} apps serving a database that
+          anyone could read, {STAR.breakdown.supabase} of them on Supabase with row level security turned
+          off.
           Of those, {STAR.breakdown.bulk_records} returned records in bulk and{" "}
           {STAR.breakdown.with_pii_columns} held personal data in its columns.
         </p>

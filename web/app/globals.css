@@ -587,6 +587,30 @@ a {
   padding: 0.55rem 0;
   border-bottom: 1px solid var(--line);
 }
+/* The builder's seat table on /methodology: three columns of sentences, so they read left aligned
+   rather than taking count-table's right alignment for numbers. */
+.seat-table th,
+.seat-table td {
+  text-align: left;
+  vertical-align: top;
+}
+.seat-table td {
+  color: var(--ink-soft);
+}
+
+/* The builder's seat line under an axis: spans the whole row, quiet, and never mistaken for a value. */
+.sample-axis-note {
+  grid-column: 1 / -1;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--muted);
+  margin-top: -0.25rem;
+}
+.sample-axis-note a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .sample-axis-name {
   font-family: var(--font-mono);
   font-size: 0.82rem;

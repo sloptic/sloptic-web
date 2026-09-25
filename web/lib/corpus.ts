@@ -73,3 +73,11 @@ export function provisionalCleanerThan(slop: number, mode: "passive" | "active")
   }
   return Math.max(0, Math.min(100, Math.round((worse / dist.n) * 100)));
 }
+
+/** The share of graded apps a probe fired on, read from the corpus's own fire_frequency table.
+ *  Null when the probe is not in it, which a caller must render as absent rather than as 0%. */
+export function fireRate(probeId: string, mode: "active" | "passive" = "active"): number | null {
+  const table = ((mode === "active" ? ACTIVE : PASSIVE) as { fire_frequency?: { probe_id: string; pct: number }[] })
+    .fire_frequency;
+  return table?.find((r) => r.probe_id === probeId)?.pct ?? null;
+}

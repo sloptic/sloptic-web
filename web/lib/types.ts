@@ -56,7 +56,7 @@ export interface Coverage {
 }
 
 export interface GradeResult {
-  /** The battery that ran. "passive" is the 44-check floor any URL gets; "active" is the full
+  /** The battery that ran. "passive" is the passive floor any URL gets (45 checks since 3.0); "active" is the full
    *  battery, which needs a verified origin or a verified event. Widened from the passive-only
    *  literal now that the UI has to name which measurement a percentile came from: the two rank on
    *  different frozen curves and must never be presented as the same number. */

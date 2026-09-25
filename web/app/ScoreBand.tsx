@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { AXIS_SEAT, SEAT_HREF } from "@/lib/seat";
+import type { Area } from "@/lib/checks";
 
 /** The verdict band: the score, where it places, the per-axis bars, and the readout toggle.
  *
@@ -137,6 +139,13 @@ export default function ScoreBand({
                     </>
                   )}
                 </span>
+                {/* The builder's seat, under the two axes where a grade most surprises the team that
+                    built the app. Visible without a click, because the surprise happens here. */}
+                {AXIS_SEAT[row.id as Area] && (
+                  <span className="sample-axis-note">
+                    {AXIS_SEAT[row.id as Area]} <a href={SEAT_HREF}>Why?</a>
+                  </span>
+                )}
               </div>
             );
           })}

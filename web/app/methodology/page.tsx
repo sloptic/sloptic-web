@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { ACTIVE, fireRate, fmt } from "@/lib/corpus";
+import { LIGHTHOUSE_PROFILE as LH, SEAT_ROWS } from "@/lib/seat";
 
 export const metadata: Metadata = {
   title: "How Sloptic grades",
@@ -47,6 +49,53 @@ export default function MethodologyPage() {
         </p>
       </section>
 
+      {/* The builder's seat (3.0 handoff). Linked from the performance and accessibility lines on
+          every report. It explains why a team misses slop, it does not redefine slop, which is why it
+          sits after the definition and not in place of it. Draft copy: the table is the handoff's,
+          verbatim; the two paragraphs around it are plain placeholders for Ian to rewrite. */}
+      <section className="section" id="your-seat">
+        <h2 className="section-head">Why is my score bad when my app is fast?</h2>
+        <p className="section-intro">
+          Because Sloptic grades your app from seats your team does not sit in. Almost every failure it
+          counts looks fine from where the app was built:
+        </p>
+        <div className="table-scroll">
+          <table className="count-table seat-table">
+            <thead>
+              <tr>
+                <th>failure</th>
+                <th>why the team does not see it</th>
+                <th>what Sloptic does instead</th>
+              </tr>
+            </thead>
+            <tbody>
+              {SEAT_ROWS.map((r) => (
+                <tr key={r.failure}>
+                  <th scope="row">{r.failure}</th>
+                  <td>{r.invisible}</td>
+                  <td>{r.instead}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* The guardrails from the handoff, kept by this wording: Lighthouse SIMULATES the phone on the
+            grading box and scales CPU time, it never runs on one, so "measured as a phone would load
+            it" and never "tested on a phone". The phone framing is for performance only. */}
+        <p className="section-intro">
+          For performance, Lighthouse measures the app as a mid range phone ({LH.device}, a {LH.screen}{" "}
+          screen) on slow 4G would load it: a {LH.rttMs} ms round trip, {LH.downMbps} Mbps down, and CPU
+          work slowed {LH.cpuSlowdown} times. It simulates that on the grading box rather than running on a
+          phone. Across the corpus, {fmt(fireRate("perf-lighthouse-001") ?? 0)}% of apps scored below 90,
+          and the median was {fmt(ACTIVE.lighthouse.overall.median)}.
+        </p>
+        <p className="section-intro">
+          For accessibility, {fmt(fireRate("qa-a11y-001") ?? 0)}% of apps had at least one finding, and
+          most of those were text too faint to read against its background. That is a contrast check, and
+          it matters most to people with low vision and anyone reading in glare.
+        </p>
+      </section>
+
       <section className="section">
         <h2 className="section-head">How Sloptic scores</h2>
         <ul className="stat-list">
@@ -74,8 +123,8 @@ export default function MethodologyPage() {
           <li>
             <span className="k">unbounded</span>
             <span className="v">
-              Security, quality and performance each report their own subtotal and the three sum to the
-              score. There are no limits on how high the score can be.
+              Security, quality, accessibility and performance each report their own subtotal and the
+              four sum to the score. There are no limits on how high the score can be.
             </span>
           </li>
         </ul>

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { AREAS, AREA_BLURBS, categoriesFor } from "@/lib/checks";
 import { provisionalCleanerThan } from "@/lib/corpus";
 import ScoreBand, { fmtScore } from "./ScoreBand";
+import { SEAT_HREF } from "@/lib/seat";
 import { SAMPLE_SCORE, SAMPLE_ROWS, SAMPLE_FINDINGS, SAMPLE_PASSED } from "@/lib/sample-grade";
 
 export default function Home() {
@@ -123,6 +124,13 @@ export default function Home() {
             Sloptic is a web app grader. It checks how much slop your web app has, like a leaked
             secret, a crash, a page taking forever to load, and more. As these are unacceptable to
             any app, Sloptic can grade any app you point it at no matter what it does.
+          </p>
+          {/* The builder's seat (3.0 handoff): UNDER the definition, never in place of it, because it
+              explains why teams miss slop rather than saying what slop is. The handoff's sentence,
+              verbatim. */}
+          <p className="what-text">
+            Sloptic shows you your app from{" "}
+            <a href={SEAT_HREF}>the seats your team never sits in</a>.
           </p>
         </div>
 
