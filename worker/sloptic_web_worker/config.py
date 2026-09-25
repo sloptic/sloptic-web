@@ -12,8 +12,30 @@ from dotenv import load_dotenv
 
 # config.py -> sloptic_web_worker -> worker -> repo root
 _ROOT = Path(__file__).resolve().parents[2]
-load_dotenv(_ROOT / "worker" / ".env")   # optional local override, loaded first (dotenv won't clobber)
-load_dotenv(_ROOT / ".env")              # the shared root .env
+
+
+def _load_dotenv(path: Path) -> None:
+    """Read a .env file if this process CAN, and carry on if it cannot.
+
+    Under systemd the file has already been read: the unit's EnvironmentFile= makes systemd, as root,
+    inject every variable before Python starts, and load_dotenv never overrides a variable that is
+    already set. So this read only matters in development, and a file the service user cannot open
+    used to be fatal for no reason at all. It happened on 2026-09-25: rewriting .env with `sed -i`
+    replaced the file, the replacement lost the group that let the `sloptic` user read it, and the
+    worker died at import every ten seconds with every variable it needed already in its environment.
+
+    Refusing to start is still right when something REQUIRED is missing, and _require below does that
+    with a message naming the variable, which is more use than a PermissionError about a file.
+    """
+    try:
+        load_dotenv(path)
+    except PermissionError:
+        print(f"[config] cannot read {path}; relying on the process environment "
+              f"(systemd's EnvironmentFile= supplies it under the service)", flush=True)
+
+
+_load_dotenv(_ROOT / "worker" / ".env")   # optional local override, loaded first (dotenv won't clobber)
+_load_dotenv(_ROOT / ".env")              # the shared root .env
 
 
 def _require(name: str) -> str:
