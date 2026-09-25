@@ -1137,6 +1137,18 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
                           <p className="desc">{entry.expected}</p>
                         </div>
                       )}
+                      {/* The evidence rule, said out loud. Withheld rows arrive with no reason, target or
+                          evidence, and without this they read as a finding the grader forgot to explain. */}
+                      {f.withheld && (
+                        <div className="row2">
+                          <span className="term">What we saw instead</span>
+                          <p className="desc">
+                            Where this is, and how to reproduce it, is shown only to a verified owner of
+                            this app, since anyone holding this link could otherwise use it.{" "}
+                            <a href="/verify">Verify you own the app</a> to see it.
+                          </p>
+                        </div>
+                      )}
                       {(entry?.actual || ev.length > 0) && (
                         <div className="row2">
                           <span className="term">What we saw instead</span>

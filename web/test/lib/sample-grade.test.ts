@@ -33,9 +33,12 @@ describe("the sample adds up the way a scored report does", () => {
     expect(SAMPLE_ROWS.reduce((n, r) => n + r.slop, 0)).toBeCloseTo(SAMPLE_SCORE, 5);
   });
 
-  it("never shows a finding adding more than it is worth alone", () => {
-    // The dampers only ever reduce. A point value above its penalty would mean the numbers were typed
-    // rather than computed.
+  it("shows no finding adding more than it is worth alone, since nothing here is re-priced", () => {
+    // Not a law of the grader: four defense in depth probes (the CSP header among them) are re-priced
+    // UPWARD when a vulnerability they would have contained also fires, so a real report can show a
+    // row contributing more than its penalty. This sample fires no such vulnerability, so here the
+    // dampers can only reduce, and a point above its penalty would mean a number was typed rather than
+    // computed. Add an injection finding to the sample and this assertion has to go.
     for (const f of SAMPLE_FINDINGS) expect(f.points).toBeLessThanOrEqual(f.penalty);
   });
 

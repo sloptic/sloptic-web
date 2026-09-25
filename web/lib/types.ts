@@ -18,6 +18,9 @@ export interface Finding {
   probe_id: string;
   bundle: string;
   category: string;
+  /** Set by the report API when this finding's evidence was withheld from a viewer who is not a verified
+   *  owner of the app (lib/evidence.ts). Its reason, target and evidence are then absent on purpose. */
+  withheld?: boolean;
   /** What this fault is worth ON ITS OWN, before any damper. Prices, not addends: a list of these
    *  does not sum to the score, which is the bug that made `contribution` necessary. */
   penalty: number;
@@ -199,6 +202,10 @@ export interface GradeView {
   /** Whether this viewer holds a live grant for the graded origin, so the full battery is available
    *  to them. Present only on a finished passive grade, where it could change anything. */
   can_grade_actively?: boolean;
+  /** True when this response withheld where a secret, backend or exposed file lives, because the viewer
+   *  is not a verified owner of the app (see lib/evidence.ts). The page says so rather than showing a
+   *  finding with nothing under it. */
+  evidence_withheld?: boolean;
   /** When the report is deleted, or null once an account keeps it. */
   expires_at?: string | null;
   retain_days?: number;

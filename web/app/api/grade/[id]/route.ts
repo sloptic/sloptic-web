@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import type { GradeView, GradeResult, QueueInfo } from "@/lib/types";
 import { currentUser } from "@/lib/auth";
 import { ANON_REPORT_DAYS, reportExpiresAt } from "@/lib/retention";
+import { hasGatedFindings, withholdEvidence } from "@/lib/evidence";
 
 // A worker writes its heartbeat every poll (5s). Allow generous slack for a slow poll or a clock
 // skew before calling it dead: this only decides whether we EXPLAIN the wait, never whether we grade.
@@ -154,15 +155,20 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const owner = "account_id" in grade ? ((grade as { account_id?: string | null }).account_id ?? null) : null;
   const mine = owner === null ? false : (await currentUser())?.id === owner;
 
-  // Whether THIS viewer could run the full battery on this origin, asked only where the answer could
-  // change anything: a finished passive grade. Read here to draw a button and for nothing else. The
-  // submit route re-reads the grant, and the worker re-reads it plus both proofs at grade time.
-  let canGradeActively = false;
+  // ONE question asked once: does the viewer hold a live ownership grant for this origin? Two things
+  // hang off it, and they used to ask it separately, twice per report: whether to offer the full
+  // battery, and whether to show where a secret or an exposed file lives. Asked only when one of them
+  // could change something, so an ordinary report costs no lookup.
   const gradedOrigin = (grade as { origin?: string | null }).origin ?? null;
-  if (grade.status === "done" && result?.mode === "passive" && gradedOrigin) {
+  const offersActive = grade.status === "done" && result?.mode === "passive";
+  const hasGated = !!result && hasGatedFindings(result);
+  let ownsOrigin = false;
+  let viewerId: string | null = null;
+  if (gradedOrigin && (offersActive || hasGated)) {
     const viewer = await currentUser();
+    viewerId = viewer?.id ?? null;
     if (viewer) {
-      const { data: grant } = await db
+      const { data: grant, error: grantErr } = await db
         .from("grants")
         .select("scope")
         .eq("account_id", viewer.id)
@@ -171,21 +177,45 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         .is("revoked_at", null)
         .gt("expires_at", new Date().toISOString())
         .maybeSingle();
-      // The grant is necessary and not sufficient: the worker re-reads both proofs immediately
-      // before it sends anything, so offering the button while one is missing would offer a grade
-      // whose only outcome is a refusal. Verification is not revoked over a single bad look, which
-      // is exactly why "verified" and "gradeable right now" have to be asked separately.
-      if (grant) {
-        const { data: claim } = await db
-          .from("domain_claims")
-          .select("file_status, dns_status")
-          .eq("account_id", viewer.id)
-          .eq("origin", gradedOrigin)
-          .eq("status", "verified")
-          .maybeSingle();
-        canGradeActively = claim?.file_status === "ok" && claim?.dns_status === "ok";
-      }
+      // An unreadable grant is not ownership. That fails CLOSED for both uses: no button, and no
+      // location. An owner who hits a database blip reloads; the alternative is a stranger who reloads
+      // until the blip happens.
+      if (grantErr) console.error("grant unreadable:", grantErr.message);
+      ownsOrigin = !grantErr && !!grant;
     }
+  }
+
+  // Whether THIS viewer could run the full battery on this origin. Read here to draw a button and for
+  // nothing else: the submit route re-reads the grant, and the worker re-reads it plus both proofs at
+  // grade time.
+  //
+  // The grant is necessary and not sufficient: the worker re-reads both proofs immediately before it
+  // sends anything, so offering the button while one is missing would offer a grade whose only outcome
+  // is a refusal. Verification is not revoked over a single bad look, which is exactly why "verified"
+  // and "gradeable right now" have to be asked separately.
+  let canGradeActively = false;
+  if (offersActive && ownsOrigin && viewerId && gradedOrigin) {
+    const { data: claim } = await db
+      .from("domain_claims")
+      .select("file_status, dns_status")
+      .eq("account_id", viewerId)
+      .eq("origin", gradedOrigin)
+      .eq("status", "verified")
+      .maybeSingle();
+    canGradeActively = claim?.file_status === "ok" && claim?.dns_status === "ok";
+  }
+
+  // The evidence visibility rule: where a secret, an open backend or an exposed file lives, and how to
+  // reproduce it, is shown only to a VERIFIED OWNER of the app. Everyone else gets what the finding
+  // is, its category and what it cost. See lib/evidence.ts.
+  //
+  // Owning the REPORT is not owning the APP. Anyone can grade an app they do not own, and the account
+  // that submitted or claimed the report may be exactly the stranger this exists to keep the location
+  // from, so `mine` above is the wrong question. The right one is the grant the full battery needs.
+  let evidenceWithheld = false;
+  if (result && hasGated && !ownsOrigin) {
+    result = withholdEvidence(result);
+    evidenceWithheld = true;
   }
 
   const view: GradeView = {
@@ -212,6 +242,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     claimed_at: (grade as { claimed_at?: string | null }).claimed_at ?? null,
     mine,
     can_grade_actively: canGradeActively,
+    evidence_withheld: evidenceWithheld,
     retry_due_at: (grade as { retry_due_at?: string | null }).retry_due_at ?? null,
     retry_passes: (grade as { retry_passes?: number }).retry_passes ?? 0,
     event,
