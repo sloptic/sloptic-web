@@ -2207,6 +2207,84 @@ code {
   color: var(--muted);
 }
 
+/* Exploitable findings by class. Emphasis, not a hue per class: the classes the prose is about wear
+   --security and the rest recede. Rounded at the data end only, square where the bar meets its
+   baseline; the 2px gap between segments is surface, not a stroke. */
+.exploit-chart {
+  list-style: none;
+  margin: 1.5rem 0 0.75rem;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+}
+.exploit-row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 17rem) 1fr 3ch;
+  align-items: center;
+  gap: 0.2rem 0.9rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.exploit-row:last-child {
+  border-bottom: 0;
+}
+.exploit-name {
+  color: var(--ink);
+}
+.exploit-track {
+  display: block;
+  min-width: 0;
+}
+.exploit-bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  min-width: 3px;
+  border-radius: 0 4px 4px 0;
+  overflow: hidden;
+}
+.exploit-bar .seg {
+  flex-basis: 0;
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
+}
+.exploit-bar[data-hot="true"] .seg {
+  background: var(--security);
+}
+.exploit-bar[data-hot="true"] .seg.context {
+  background: color-mix(in srgb, var(--security) 42%, transparent);
+}
+.exploit-n {
+  text-align: right;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.exploit-note {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+.exploit-note .key {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--security);
+}
+@media (max-width: 42rem) {
+  .exploit-row {
+    grid-template-columns: 1fr 3ch;
+  }
+  .exploit-name {
+    grid-column: 1 / -1;
+  }
+  .exploit-note {
+    grid-column: 1 / -1;
+  }
+}
+
 .signin-terms {
   margin: 1.4rem 0 0;
   font-size: 0.82rem;

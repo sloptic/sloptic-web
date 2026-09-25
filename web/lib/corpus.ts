@@ -12,6 +12,7 @@
 
 import active from "./corpus/corpus-figures-active.json";
 import passive from "./corpus/corpus-figures-passive.json";
+import exploitableCsv from "./corpus/fig07_exploitable.csv?raw";
 
 export const ACTIVE = active;
 export const PASSIVE = passive;
@@ -81,3 +82,40 @@ export function fireRate(probeId: string, mode: "active" | "passive" = "active")
     .fire_frequency;
   return table?.find((r) => r.probe_id === probeId)?.pct ?? null;
 }
+
+/** How many graded apps a probe fired on, from the same fire_frequency table. */
+export function fireApps(probeId: string, mode: "active" | "passive" = "active"): number | null {
+  const table = ((mode === "active" ? ACTIVE : PASSIVE) as { fire_frequency?: { probe_id: string; apps: number }[] })
+    .fire_frequency;
+  return table?.find((r) => r.probe_id === probeId)?.apps ?? null;
+}
+
+/** The exploitable findings by class: CORPUS_REPORT 4.5, figure 7.
+ *
+ *  From docs/charts/fig07_exploitable.csv, vendored byte for byte, because the figures JSON does not
+ *  carry this breakdown and it cannot be rebuilt from per-probe fire counts: one app firing two backend
+ *  probes is ONE app with an open backend, and summing fires would count it twice. An app with two
+ *  classes does appear in both rows, which is why the rows add to more than `distinct`.
+ */
+export type ExploitClass = { cls: string; apps: number };
+
+function parseExploitable(csv: string): { classes: ExploitClass[]; distinct: number } {
+  const rows = csv.trim().split(/\r?\n/).slice(1).map((line) => {
+    const cut = line.lastIndexOf(",");
+    return { cls: line.slice(0, cut), apps: Number(line.slice(cut + 1)) };
+  });
+  const distinct = rows.find((r) => r.cls === "distinct_apps")?.apps ?? 0;
+  return { classes: rows.filter((r) => r.cls !== "distinct_apps"), distinct };
+}
+
+export const EXPLOITABLE = parseExploitable(exploitableCsv);
+
+/** The two classes the findings page's prose is about, spelled exactly as the CSV spells them. A
+ *  rename upstream makes these match nothing and the chart silently loses its emphasis, so the test
+ *  pins both to a row. */
+export const LIVE_CREDENTIAL = "Live credential in the bundle";
+export const OPEN_BACKEND = "Open managed backend";
+
+/** Apps shipping a Google key that can call the Gemini API, confirmed with Google (sec-secrets-003,
+ *  new in 3.0). A subset of the "live credential in the bundle" class. */
+export const GEMINI_LIVE_APPS = fireApps("sec-secrets-003") ?? 0;

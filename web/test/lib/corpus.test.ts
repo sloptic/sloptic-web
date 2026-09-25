@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { provisionalCleanerThan } from "@/lib/corpus";
+import {
+  ACTIVE,
+  EXPLOITABLE,
+  GEMINI_LIVE_APPS,
+  LIVE_CREDENTIAL,
+  OPEN_BACKEND,
+  provisionalCleanerThan,
+} from "@/lib/corpus";
 
 describe("provisionalCleanerThan", () => {
   it("places the corpus median at the middle", () => {
@@ -36,5 +43,42 @@ describe("provisionalCleanerThan", () => {
     // Two frozen curves that must never be mixed (CLAUDE.md). The medians differ, 39.0 and 50.0, so
     // the same score cannot place the same way in both.
     expect(provisionalCleanerThan(50, "passive")).not.toBe(provisionalCleanerThan(50, "active"));
+  });
+});
+
+describe("EXPLOITABLE", () => {
+  it("parses every class of the vendored chart data", () => {
+    expect(EXPLOITABLE.classes).toHaveLength(7);
+    for (const c of EXPLOITABLE.classes) {
+      expect(c.cls).not.toBe("");
+      expect(Number.isInteger(c.apps) && c.apps > 0).toBe(true);
+    }
+  });
+
+  it("agrees with the figures on how many apps are exploitable", () => {
+    // Two vendored files, one count. If a re-vendor moves one and not the other, the chart and the
+    // sentence above it would state different totals on the same screen.
+    expect(EXPLOITABLE.distinct).toBe(ACTIVE.severity.exploitable_apps);
+    // Rows overlap (an app with two classes counts in both), so they add to at least the total.
+    const rows = EXPLOITABLE.classes.reduce((a, c) => a + c.apps, 0);
+    expect(rows).toBeGreaterThanOrEqual(EXPLOITABLE.distinct);
+  });
+
+  it("names both highlighted classes exactly as the data does", () => {
+    const names = EXPLOITABLE.classes.map((c) => c.cls);
+    expect(names).toContain(LIVE_CREDENTIAL);
+    expect(names).toContain(OPEN_BACKEND);
+  });
+
+  it("counts the live Gemini keys as part of the credential class", () => {
+    const cred = EXPLOITABLE.classes.find((c) => c.cls === LIVE_CREDENTIAL)!;
+    expect(GEMINI_LIVE_APPS).toBeGreaterThan(0);
+    expect(GEMINI_LIVE_APPS).toBeLessThanOrEqual(cred.apps);
+  });
+
+  it("counts fewer open-RLS backends than open backends", () => {
+    // The prose quotes the row-level-security subset beside a chart row for the whole class.
+    const backend = EXPLOITABLE.classes.find((c) => c.cls === OPEN_BACKEND)!;
+    expect(ACTIVE.star_finding.apps).toBeLessThanOrEqual(backend.apps);
   });
 });

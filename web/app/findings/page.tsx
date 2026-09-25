@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { ACTIVE, comparableEvents, MIN_EVENT_N, fmt } from "@/lib/corpus";
+import { ACTIVE, GEMINI_LIVE_APPS, comparableEvents, MIN_EVENT_N, fmt } from "@/lib/corpus";
 import EventSpread from "./EventSpread";
+import Exploitable from "./Exploitable";
 
 export const metadata: Metadata = {
   title: "What do hackathon apps look like?",
@@ -300,21 +301,18 @@ export default function FindingsPage() {
       <section className="section">
         <h2 className="section-head">Yet exploits are rare...</h2>
         <p className="section-intro">
-          Only {fmt(SEV.exploitable_pct)}% of apps carry something an attacker could use today. The
-          largest single finding is an exposed backend, with {STAR.apps} apps serving a database that
-          anyone could read, {STAR.breakdown.supabase} of them on Supabase with row level security turned
-          off.
-          Of those, {STAR.breakdown.bulk_records} returned records in bulk and{" "}
-          {STAR.breakdown.with_pii_columns} held personal data in its columns.
+          Only {fmt(SEV.exploitable_pct)}% of apps carry an exploitable vulnerability. The largest class is
+          a live credential shipped to the browser, most often ({GEMINI_LIVE_APPS} apps) a Google API key
+          that can call the Gemini API. Next is an open Supabase or Firebase database: on {STAR.apps} apps,
+          row level security was off and an anonymous client could read or write rows, and on{" "}
+          {STAR.breakdown.bulk_records} of them it could read records in bulk.
         </p>
-        <div className="callout" data-tone="warn">
-          <p className="callout-label">what this needs</p>
-          <p>
-            Note that to find an exposed backend or other exploitable vulnerability, Sloptic must grade 
-            actively. Grading passively holds back active attacks, at the cost of missing exploitable findings.
-            To grade actively, verify your domain or event.
-          </p>
-        </div>
+        <Exploitable />
+        <p className="section-intro fineprint">
+          Apps with exploitable findings, from full grades. An app with two classes counts in both rows.
+          Most of these only turn up in a full grade, which needs you to{" "}
+          <a href="/verify">verify you own the app</a>.
+        </p>
       </section>
 
       <section className="section">

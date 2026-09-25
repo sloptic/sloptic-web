@@ -16,6 +16,15 @@ const nextConfig = {
   // choosing an exploit. Sloptic grades that (sec-headers-006) and we were serving it.
   poweredByHeader: false,
 
+  // `import text from "./file.csv?raw"` hands back the file as a string. For the corpus data the
+  // grader commits as CSV (docs/charts/*.csv), vendored byte for byte so scripts/check-corpus-drift.sh
+  // can compare it against the grader's own copy. Vitest resolves ?raw natively, so tests read the
+  // same file the page does.
+  webpack(config) {
+    config.module.rules.push({ resourceQuery: /raw/, type: "asset/source" });
+    return config;
+  },
+
   // The headers that are the same on every response, set HERE rather than in middleware because
   // middleware deliberately skips _next/static, and the static chunks are most of what a browser
   // actually loads. Grading ourselves found the missing nosniff on every one of them.

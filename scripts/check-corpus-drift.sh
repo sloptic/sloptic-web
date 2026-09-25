@@ -46,6 +46,8 @@ check() {  # check <path in sloptic-main> <vendored path>
 for f in corpus-figures-active.json corpus-figures-passive.json grade-timing.json; do
   check "validation/$f" "$HERE/web/lib/corpus/$f"
 done
+# The findings page's exploitable-class chart. Not in the figures JSON, so vendored from the chart data.
+check docs/charts/fig07_exploitable.csv       "$HERE/web/lib/corpus/fig07_exploitable.csv"
 check validation/benchmark-curve.json         "$HERE/worker/curves/benchmark-curve.json"
 check validation/benchmark-curve-passive.json "$HERE/worker/curves/benchmark-curve-passive.json"
 check scripts/benchmark.py                    "$HERE/worker/curves/benchmark.py"
