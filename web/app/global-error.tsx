@@ -26,7 +26,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
       </head>
       <body style={{ fontFamily: "system-ui, sans-serif", margin: 0, padding: "3rem 1.5rem", lineHeight: 1.5 }}>
         <main style={{ maxWidth: "34rem", margin: "0 auto" }}>
-          <h1 style={{ fontSize: "1.5rem", margin: "0 0 0.75rem" }}>Sloptic is having a problem</h1>
+          <h1 style={{ fontSize: "1.5rem", margin: "0 0 0.75rem" }}>Site error</h1>
           <p style={{ margin: "0 0 1rem" }}>
             The site failed to load. Try again in a moment.
           </p>

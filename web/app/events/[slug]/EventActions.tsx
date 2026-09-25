@@ -244,7 +244,7 @@ export default function EventActions({
     <>
       {(pending || gaveUp) && (
         <section className="section attached">
-          <h2 className="section-head">{gaveUp ? "We stopped checking" : "Verify this event"}</h2>
+          <h2 className="section-head">{gaveUp ? "Failed verification" : "Verify this event"}</h2>
           {gaveUp ? (
             // No token and no instructions here on purpose. Telling someone to publish a link on a
             // page that does not exist is busywork, and the only move left is to remove the event

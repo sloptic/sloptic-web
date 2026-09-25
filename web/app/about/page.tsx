@@ -142,7 +142,7 @@ export default function AboutPage() {
         </p>
         <div className="judge-grid">
           <div className="judge" data-kind="can">
-            <h3>It can judge</h3>
+            <h3>Judged</h3>
             <ul>
               <li>Whether a screen reader can operate the controls</li>
               <li>Whether the page loads fast enough on a phone</li>
@@ -153,7 +153,7 @@ export default function AboutPage() {
             </ul>
           </div>
           <div className="judge" data-kind="cannot">
-            <h3>It cannot judge</h3>
+            <h3>Not judged</h3>
             <ul>
               <li>Whether the idea is any good</li>
               <li>Whether a feature does what it claims</li>

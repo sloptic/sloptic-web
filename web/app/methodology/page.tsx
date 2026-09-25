@@ -19,7 +19,7 @@ export default function MethodologyPage() {
       </div>
 
       <section className="section">
-        <h2 className="section-head">It only looks from the outside</h2>
+        <h2 className="section-head">What Sloptic sees</h2>
         <p className="section-intro">
           Sloptic never sees your code. It checks the app the way a visitor would over the web. This method
           works on any app you give it, which is what makes two unrelated apps comparable at all.

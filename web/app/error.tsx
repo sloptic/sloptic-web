@@ -13,7 +13,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   return (
     <>
       <div className="page-head">
-        <h1>Something went wrong</h1>
+        <h1>Page error</h1>
         <p className="page-lead">This page did not load. Nothing you submitted was lost.</p>
       </div>
 

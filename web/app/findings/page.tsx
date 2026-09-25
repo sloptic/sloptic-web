@@ -169,7 +169,7 @@ export default function FindingsPage() {
       </div>
 
       <section className="section attached">
-        <h2 className="section-head">Almost nothing is clean</h2>
+        <h2 className="section-head">Are any apps clean?</h2>
         <p className="section-intro">
           The median is {fmt(D.median)}, and a
           quarter scored above {fmt(D.q3)}.{" "}
@@ -262,7 +262,7 @@ export default function FindingsPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">Fast != clean</h2>
+        <h2 className="section-head">Do faster apps have less slop?</h2>
         <p className="section-intro">
           Lighthouse performance barely predicts anything else. Measured against slop without the performance
           axis, the correlation is {RHO.perf_vs_nonperf_slop_rho} across{" "} the
@@ -289,7 +289,7 @@ export default function FindingsPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">Yet exploits are rare...</h2>
+        <h2 className="section-head">How many apps are exploitable?</h2>
         <p className="section-intro">
           Only {fmt(SEV.exploitable_pct)}% of apps carry an exploitable vulnerability. The largest class is
           a live credential shipped to the browser, most often ({GEMINI_LIVE_APPS} apps) a Google API key
