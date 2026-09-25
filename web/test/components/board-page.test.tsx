@@ -144,3 +144,40 @@ describe("the event board when nothing scored", () => {
     expect(html).toContain("Nothing has finished grading yet");
   });
 });
+
+describe("a board that straddles a ruler change", () => {
+  // Two done, measured grades. `measured` needs the probe loop to have been reached, which the grader
+  // marks by writing coverage.probes_total.
+  function twoGrades(rulerA: unknown, rulerB: unknown) {
+    seed({
+      entries: [
+        { project_url: "https://devpost.com/software/alpha", skip_reason: null, grade_id: "g1" },
+        { project_url: "https://devpost.com/software/beta", skip_reason: null, grade_id: "g2" },
+      ],
+      grades: [
+        { id: "g1", status: "done", retry_due_at: null, retry_passes: 0 },
+        { id: "g2", status: "done", retry_due_at: null, retry_passes: 0 },
+      ],
+      results: [
+        { grade_id: "g1", slop_score: 20, axis_slop: {}, coverage: { probes_total: 45 }, blocked_probes: [], ranking: {}, ruler: rulerA },
+        { grade_id: "g2", slop_score: 30, axis_slop: {}, coverage: { probes_total: 45 }, blocked_probes: [], ranking: {}, ruler: rulerB },
+      ],
+    });
+  }
+
+  it("says so when its scores come from two rulers", async () => {
+    // A 3.0 score does not compare to a 2.x one, and a run graded before the upgrade and partly
+    // regraded after holds both, ranked against each other with nothing in the table to say so.
+    twoGrades({ full: "2026.4", passive: "passive-2026.2" }, null);
+    const html = await markup();
+    expect(html).toContain("more than one version of Sloptic");
+    expect(html).toContain("passive-2026.2");
+    expect(html).toContain("before 3.0");
+  });
+
+  it("says nothing when every score is on one ruler", async () => {
+    const r3 = { full: "2026.4", passive: "passive-2026.2" };
+    twoGrades(r3, r3);
+    expect(await markup()).not.toContain("more than one version of Sloptic");
+  });
+});

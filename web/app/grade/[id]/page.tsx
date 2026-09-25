@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { track } from "@vercel/analytics";
 import type { GradeView, GradeResult, Finding, Coverage, GradeProgress, CardEntry, Outcome } from "@/lib/types";
-import { AREA_LABELS, AREA_ORDER, AREAS, PASSIVE_BY_AREA, TOTALS, categoryName, describeCategory, describeProbe, type Area } from "@/lib/checks";
+import { AREA_ORDER, TOTALS, categoryName, describeCategory, describeProbe, type Area } from "@/lib/checks";
+import { axisView } from "@/lib/axes";
 import { daysUntil } from "@/lib/retention";
 import { provisionalCleanerThan } from "@/lib/corpus";
 import { failureText, ordinal, recoveryMarks } from "@/lib/grades";
@@ -353,15 +354,6 @@ function GradeActively({ origin }: { origin: string }) {
   );
 }
 
-type AreaRow = {
-  id: Area;
-  label: string;
-  failed: number;
-  applied: number;
-  possible: number;
-  slop: number;
-  potential: number | null;
-};
 
 function Report({ view, now, onResume }: { view: GradeView; now: number; onResume: () => void }) {
   const r = view.result!;
@@ -385,40 +377,7 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
     const findings: Finding[] = r.findings ?? [];
     const appliedIds: string[] = (r.coverage?.applied as string[] | undefined) ?? [];
     const firedIds = new Set(findings.map((f) => f.probe_id));
-
-    // How many PROBES found something, not how many findings there were. One probe firing on eight
-    // paths is eight findings and one failed check, and counting findings made "failed" exceed
-    // "applied": a security axis read 51 of 15, and the passed segment took a negative width.
-    const failedProbes: Record<string, Set<string>> = {};
-    for (const f of findings) {
-      (failedProbes[f.bundle] ??= new Set()).add(f.probe_id);
-    }
-    const failedBy: Record<string, number> = {};
-    for (const [bundle, ids] of Object.entries(failedProbes)) failedBy[bundle] = ids.size;
-
-    const appliedBy: Record<string, number> = {};
-    for (const id of appliedIds) {
-      const d = describeProbe(id);
-      if (d) appliedBy[d.area] = (appliedBy[d.area] ?? 0) + 1;
-    }
-
-    const rows: AreaRow[] = AREA_ORDER.map((id) => ({
-      id,
-      label: AREA_LABELS[id],
-      failed: failedBy[id] ?? 0,
-      applied: appliedBy[id] ?? 0,
-      // The denominator is the battery that ran: the full per-axis counts for an active grade, the
-      // passive floor for a passive one. PASSIVE_BY_AREA alone made every active report claim a
-      // 44-check battery and show more applied than available.
-      possible:
-        (r.mode ?? "passive") === "active"
-          ? AREAS.find((a) => a.id === id)?.probes ?? 0
-          : PASSIVE_BY_AREA[id] ?? 0,
-      // an axis with nothing wrong is absent from axis_slop entirely, not zero
-      slop: r.axis_slop?.[id as keyof typeof r.axis_slop] ?? 0,
-      // what the axis would have cost if every applicable check had fired; the slop view's ceiling
-      potential: r.axis_potential?.[id as keyof typeof r.axis_potential] ?? null,
-    }));
+    const { rows, order, axisOf } = axisView(r);
 
     // Prefer the OUTCOMES for what passed: they record what each check actually measured, which is
     // the difference between "clean" as a bare label and "clean" as a claim with a reading behind
@@ -438,13 +397,19 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
       : appliedIds.filter((id) => !firedIds.has(id));
 
     const passed = passedIds
-      .map((id) => ({
-        id,
-        ...(describeCategory(id) ?? { area: "security" as Area, slug: id, name: id }),
-        evidence: cleanByProbe.get(id)?.evidence ?? {},
-        targets: cleanByProbe.get(id)?.targets ?? [],
-      }))
-      .sort((a, b) => AREA_ORDER.indexOf(a.area) - AREA_ORDER.indexOf(b.area) || a.name.localeCompare(b.name));
+      .map((id) => {
+        const c = describeCategory(id) ?? { area: "security" as Area, slug: id, name: id };
+        // Folded like the rows: an accessibility check that passed on a pre-3.0 grade passed under
+        // quality, which is the only accessibility-bearing axis that grade has.
+        return {
+          id,
+          ...c,
+          area: axisOf(c.area) as Area,
+          evidence: cleanByProbe.get(id)?.evidence ?? {},
+          targets: cleanByProbe.get(id)?.targets ?? [],
+        };
+      })
+      .sort((a, b) => order.indexOf(a.area) - order.indexOf(b.area) || a.name.localeCompare(b.name));
 
     return { rows, passed };
   }, [r]);
@@ -496,13 +461,40 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
         referenceMark={!!r.ranking?.reference}
         footer={
           <>
-            {r.ranking?.reference ? (
-              <p className="band-footnote">* compared against {r.ranking.reference}.</p>
+            {r.ranking?.reference || !r.ruler ? (
+              <div>
+                {r.ranking?.reference && (
+                  <p className="band-footnote">* compared against {r.ranking.reference}.</p>
+                )}
+                {/* The grader's own rule for a record with no stamp: it predates the stamp, so it is
+                    never shown as the current ruler. Its percentile was placed on the old curve too,
+                    which is the part a reader would otherwise compare against a fresh grade. */}
+                {!r.ruler && (
+                  <p className="band-footnote">
+                    Graded before Sloptic 3.0, so this score does not compare to a current one.
+                  </p>
+                )}
+              </div>
             ) : (
               <span />
             )}
             <div className="score-chips">
               <span className="tag">{r.mode ?? "passive"}</span>
+              {/* The ruler this grade was scored against, read from the stamp the grader wrote at grade
+                  time and never from the site's current curve, so a stored grade keeps saying what it
+                  was measured on after the ruler moves again. */}
+              <span
+                className="tag"
+                title={
+                  r.ruler
+                    ? "The frozen reference this grade was scored and ranked against."
+                    : "This grade predates ruler labelling and does not compare to a current score."
+                }
+              >
+                {r.ruler
+                  ? `ruler ${(r.mode ?? "passive") === "active" ? r.ruler.full : r.ruler.passive}`
+                  : "ruler unspecified"}
+              </span>
               {r.challenge_stage === "limited" && <span className="tag">limited</span>}
               <RecoverySup marks={bandMarks} />
               {/* Next to the tag naming the battery, because that tag is what it offers to change.
@@ -548,9 +540,16 @@ function Withheld({ view, blocked, now, onResume }: { view: GradeView; blocked: 
   const retry = retryStatus(view.retry_due_at, view.retry_passes, blocked.length, now);
   // How far the grade got before the challenge tripped. The grader withholds anything whose onset
   // landed before 60% of the battery, so "nothing ran" would be a lie for a grade cut down at, say,
-  // check 47 of 102. The mode decides which battery size is honest.
+  // check 47 of 106.
+  //
+  // The battery is the one THIS grade ran, recorded at grade time (passive_probe_count is len() of
+  // whichever catalog ran, active included, despite the name). Today's catalog is only the fallback:
+  // a 2.x grade ran 44 passive checks, and "stopped at check 30 of 45" would describe a battery it
+  // never had. coverage.probes_total cannot stand in here, since a withheld grade never writes it.
   const onset = view.result?.challenge_onset_index ?? null;
-  const battery = (view.result?.mode ?? "passive") === "active" ? TOTALS.total : TOTALS.passive;
+  const battery =
+    view.result?.passive_probe_count ??
+    ((view.result?.mode ?? "passive") === "active" ? TOTALS.total : TOTALS.passive);
   return (
     <section className="report">
       {view.event && <EventCrumb slug={view.event.slug} />}

@@ -75,6 +75,11 @@ export interface GradeResult {
   percentile?: number | null;
   percentile_band?: string | null;
   curve_version?: string | null;
+  /** The ruler the grader stamped at grade time: {full, passive} curve versions. NULL or absent for any
+   *  grade from before Sloptic 3.0, which must render as "ruler unspecified", never as current; a 3.0
+   *  score does not compare to a 2.x one. It is also what tells the report which AXES the grade was
+   *  scored on, since accessibility only became its own axis at 3.0. */
+  ruler?: { full?: string; passive?: string } | null;
   ranking?: {
     percentile?: number;
     band?: string;

@@ -60,11 +60,13 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       "mode, catalog_version, passive_probe_count, slop_score, axis_slop, axis_potential, coverage, platform, surface, findings, card, outcomes, percentile, percentile_band, curve_version, ranking, blocked_probes, incomplete_axes";
     let { data: r, error: rErr } = await db
       .from("results")
-      .select(`${RESULT_COLS}, bot_challenge, challenge_stage, retry_blocked_initial, challenge_onset_index`)
+      .select(`${RESULT_COLS}, bot_challenge, challenge_stage, retry_blocked_initial, challenge_onset_index, ruler`)
       .eq("grade_id", params.id)
       .maybeSingle();
     if (rErr?.code === "42703") {
-      console.warn("results challenge/retry columns missing; falling back (apply migrations 0020, 0021, 0022)");
+      // `ruler` (0037) is in this optional set too, and a missing one is the SAFE failure: with no
+      // stamp the report renders the grade as pre-3.0, "ruler unspecified", never as current.
+      console.warn("results challenge/retry/ruler columns missing; falling back (apply migrations 0020, 0021, 0022, 0037)");
       const fb = await db.from("results").select(RESULT_COLS).eq("grade_id", params.id).maybeSingle();
       r = fb.data as typeof r;
       rErr = fb.error;

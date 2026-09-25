@@ -80,8 +80,8 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
       ? db.from("grades").select("id, status, retry_due_at, retry_passes").in("id", ids)
       : Promise.resolve({ data: [] as { id: string; status: string; retry_due_at: string | null; retry_passes?: number | null }[] }),
     ids.length
-      ? db.from("results").select("grade_id, slop_score, axis_slop, coverage, blocked_probes, retry_blocked_initial, challenge_onset_index, challenge_stage, bot_challenge, ranking, lighthouse_score").in("grade_id", ids)
-      : Promise.resolve({ data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; coverage: Record<string, unknown> | null; blocked_probes: string[] | null; retry_blocked_initial?: number | null; challenge_onset_index: number | null; challenge_stage: string | null; bot_challenge?: boolean | null; ranking: Record<string, unknown>; lighthouse_score: number | null }[] }),
+      ? db.from("results").select("grade_id, slop_score, axis_slop, coverage, blocked_probes, retry_blocked_initial, challenge_onset_index, challenge_stage, bot_challenge, ranking, lighthouse_score, ruler").in("grade_id", ids)
+      : Promise.resolve({ data: [] as { grade_id: string; slop_score: number; axis_slop: Record<string, number>; coverage: Record<string, unknown> | null; blocked_probes: string[] | null; retry_blocked_initial?: number | null; challenge_onset_index: number | null; challenge_stage: string | null; bot_challenge?: boolean | null; ranking: Record<string, unknown>; lighthouse_score: number | null; ruler?: { full?: string; passive?: string } | null }[] }),
   ]);
   const grades = gradesRes.data;
   const results = resultsRes.data;
@@ -163,6 +163,21 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         (b.potential ?? 0) - (a.potential ?? 0) ||
         (b.categories ?? 0) - (a.categories ?? 0)
     );
+  // Scores from two rulers ranked against each other. A 3.0 score does not compare to a 2.x one, and a
+  // board that straddles the upgrade would order them as if it did: a run graded under 2.x and then
+  // partly regraded after 3.0 shipped holds both, and nothing about the table would say so. Ranking
+  // only one ruler would drop teams off the board, which is worse; saying it plainly is the fix.
+  const rulerOf = new Map(
+    (results ?? []).map((x) => [x.grade_id, (x as { ruler?: { full?: string; passive?: string } | null }).ruler]),
+  );
+  const rulersOnBoard = new Set(
+    ranked.map((r) => {
+      const stamp = rulerOf.get(r.grade_id as string);
+      return (run.mode === "active" ? stamp?.full : stamp?.passive) ?? "before 3.0";
+    }),
+  );
+  const mixedRulers = rulersOnBoard.size > 1;
+
   const gated = rows.filter((r) => r.gated);
   // Reached and answered, but NOTHING was measured: a challenge blocked the whole battery. Not a
   // DNF -- the app was up -- and there is no score to rank, so the reason is stated instead.
@@ -306,6 +321,12 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
 
       <section className="section attached">
         <h2 className="section-head">The board</h2>
+        {mixedRulers && (
+          <p className="section-intro closed-note">
+            This board holds scores from more than one version of Sloptic ({[...rulersOnBoard].join(", ")}),
+            and those do not compare. Grade the event again for a board on one ruler.
+          </p>
+        )}
         <p className="section-intro">
           Default is sorted by lowest slop score. Lower is better. 
         </p>
