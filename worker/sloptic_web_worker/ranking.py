@@ -4,9 +4,12 @@ The ranking logic is the GRADER's (`scripts/benchmark.py:rank`), not ours: it ow
 the catastrophe gate, the band names and, importantly, `_guard_mode`, which REFUSES to rank a grade
 against a curve built from a different battery. That guard is the CLAUDE.md rule ("a passive grade is
 a different measurement, never mix it onto the full-grade percentile") expressed as code, and it
-works on our records because the grader's coverage block carries `probes_total` (44 for the passive
-battery), which is what it keys on. Verified against a real stored record: the 2026.3 full curve
-rejects our passive grades outright.
+works on our records because the grader's coverage block carries `probes_total` (45 for the 3.0
+passive battery), which is what it keys on.
+
+Since 3.0 there is a stronger check than any of those: every record is stamped with the ruler it was
+scored against (`record["ruler"]`, from sloptic.ruler), and a curve is only used when its version
+matches that stamp. See `_ruler_matches`.
 
 This module is therefore only plumbing: find the curve, call rank(), and fail SOFT. A missing or
 unreadable curve means no percentile, exactly as today. It must never cost a grade: the score is the
@@ -20,9 +23,10 @@ from pathlib import Path
 
 from . import config
 
-# The passive battery the frozen curve measured. A grade that ran a different count is not
-# comparable to it, whatever the catalog happens to hold today.
-PASSIVE_BATTERY = 44
+# The passive battery the frozen curve measured (passive-2026.2). A grade that ran a different count is
+# not comparable to it, whatever the catalog happens to hold today. Defense in depth now, behind the
+# ruler check, which catches the same mismatch from the grader's own statement rather than a count.
+PASSIVE_BATTERY = 45
 
 _curve_cache: dict[str, dict | None] = {}
 
@@ -71,15 +75,39 @@ def load_curve(battery: str = "passive") -> dict | None:
     return curve
 
 
+def _ruler_matches(record: dict, curve: dict, battery: str) -> bool:
+    """Was this grade scored against the ruler this curve IS?
+
+    The grader stamps every 3.0 record with `ruler: {full, passive}`, the curve versions it interprets
+    scores against, and each curve carries its own `version`. Ranking is only meaningful when they are
+    the same ruler: a 3.0 score placed on a 2.x curve is misranked with no error anywhere, because the
+    scoring model moved with the curve. That is the failure a stale PASSIVE_CURVE_PATH on the box would
+    produce, pointing at a sloptic-main checkout from before the release.
+
+    A record with no stamp predates it, so it came from a grader older than any curve this build ships,
+    and it is refused rather than guessed at. That is the grader's own rule for a legacy card ("renders
+    with no ruler, not silently as the current one") applied to the percentile.
+    """
+    stamped = (record.get("ruler") or {}).get(battery)
+    have = curve.get("version")
+    if stamped and stamped == have:
+        return True
+    print(f"[rank]  not ranked: grade was scored against {stamped or 'no stamped ruler'}, "
+          f"this curve is {have}", flush=True)
+    return False
+
+
 def _rank(record: dict, score, battery: str, expect_probes: int | None) -> dict | None:
     """Rank one grade against the curve for `battery`, or None if it cannot be ranked. Never raises."""
     curve = load_curve(battery)
     if curve is None:
         return None
+    if not _ruler_matches(record, curve, battery):
+        return None
 
     # The grader's rank() already refuses a cross-mode placement, and load_curve already refuses a
     # curve that is not tagged passive. This is the third check on the same rule, deliberately: the
-    # curve measured EXACTLY the 44-probe battery, so a record that ran a different number of probes
+    # curve measured EXACTLY the 45-probe battery, so a record that ran a different number of probes
     # is a different measurement no matter how close the number looks.
     total = (record.get("coverage") or {}).get("probes_total")
     if expect_probes is not None and total is not None and total != expect_probes:
@@ -125,15 +153,17 @@ def _rank(record: dict, score, battery: str, expect_probes: int | None) -> dict 
 
 
 def rank_passive(record: dict, score: float) -> dict | None:
-    """Place a passive grade on passive-2026.1."""
+    """Place a passive grade on passive-2026.2."""
     return _rank(record, score, "passive", PASSIVE_BATTERY)
 
 
 def rank_full(record: dict, score: float) -> dict | None:
-    """Place a full grade on 2026.3.
+    """Place a full grade on 2026.4. The curve carries a performance normalization, which
+    benchmark.rank applies itself as long as it is handed the whole record (it reads the host speed
+    Lighthouse measured from observed_surface); that is one more reason never to pass it a bare score.
 
     No probe-count guard, unlike the passive side. The full battery's applicable count varies with
-    what the app exposes, which is the whole point of coverage; the passive battery is a fixed 44, so
+    what the app exposes, which is the whole point of coverage; the passive battery is a fixed 45, so
     a different number there means a different measurement. The grader's own `_guard_mode` still
     refuses a cross-mode placement either way.
     """

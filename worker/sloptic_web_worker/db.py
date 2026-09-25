@@ -285,13 +285,13 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
                                  card, outcomes, axis_potential, lighthouse_score,
                                  blocked_probes, incomplete_axes, bot_challenge, challenge_stage,
                                  retry_blocked_initial, challenge_onset_index,
-                                 percentile, percentile_band, curve_version, ranking)
+                                 percentile, percentile_band, curve_version, ranking, ruler)
             VALUES (%(grade_id)s, %(mode)s, %(catalog_version)s, %(passive_probe_count)s, %(slop_score)s,
                     %(axis_slop)s, %(coverage)s, %(platform)s, %(surface)s, %(findings)s,
                     %(card)s, %(outcomes)s, %(axis_potential)s, %(lighthouse_score)s,
                     %(blocked_probes)s, %(incomplete_axes)s, %(bot_challenge)s, %(challenge_stage)s,
                     %(retry_blocked_initial)s, %(challenge_onset_index)s,
-                    %(percentile)s, %(percentile_band)s, %(curve_version)s, %(ranking)s)
+                    %(percentile)s, %(percentile_band)s, %(curve_version)s, %(ranking)s, %(ruler)s)
             ON CONFLICT (grade_id) DO UPDATE SET
                 slop_score = EXCLUDED.slop_score, axis_slop = EXCLUDED.axis_slop,
                 coverage = EXCLUDED.coverage, platform = EXCLUDED.platform,
@@ -306,7 +306,8 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
                 retry_blocked_initial = EXCLUDED.retry_blocked_initial,
                 challenge_onset_index = EXCLUDED.challenge_onset_index,
                 percentile = EXCLUDED.percentile, percentile_band = EXCLUDED.percentile_band,
-                curve_version = EXCLUDED.curve_version, ranking = EXCLUDED.ranking;
+                curve_version = EXCLUDED.curve_version, ranking = EXCLUDED.ranking,
+                ruler = EXCLUDED.ruler;
             """,
             {
                 "grade_id": job_id,
@@ -338,6 +339,8 @@ def save_result(conn: psycopg.Connection, job_id: str, result: dict) -> None:
                 "percentile_band": (result.get("ranking") or {}).get("band"),
                 "curve_version": (result.get("ranking") or {}).get("curve_version"),
                 "ranking": json.dumps(result["ranking"]) if result.get("ranking") else None,
+                # NULL, never a guess, when the grader did not stamp one: see migration 0037.
+                "ruler": json.dumps(result["ruler"]) if result.get("ruler") else None,
             },
         )
         conn.execute(
@@ -1270,7 +1273,8 @@ def load_result(conn: psycopg.Connection, grade_id: str) -> dict | None:
         """SELECT mode, catalog_version, passive_probe_count, slop_score, axis_slop, coverage,
                   platform, surface, findings, card, outcomes, axis_potential, lighthouse_score,
                   blocked_probes, incomplete_axes, percentile, percentile_band, curve_version, ranking,
-                  bot_challenge, challenge_stage, retry_blocked_initial, challenge_onset_index
+                  bot_challenge, challenge_stage, retry_blocked_initial, challenge_onset_index,
+                  ruler
              FROM results WHERE grade_id = %s;""",
         (grade_id,),
     ).fetchone()

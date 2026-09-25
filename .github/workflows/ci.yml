@@ -130,9 +130,10 @@ jobs:
         run: python -m compileall -q worker/sloptic_web_worker
 
       # The GRADER first. It is a dependency, not a copy (CLAUDE.md), the worker imports it, and
-      # several suites reach it transitively through __main__ and grader.py. No PUBLISHED version
-      # The grader arrives with the worker now: 2.2.0 is on PyPI and worker/pyproject.toml pins it
-      # exactly, so there is no clone to keep in step with anything.
+      # several suites reach it transitively through __main__ and grader.py. It arrives with the
+      # worker: worker/pyproject.toml pins the exact release and PyPI has it, so there is no clone to
+      # keep in step with anything. The curves and ranker it is judged against are vendored in
+      # worker/curves from that same release, and tests/test_ranking.py fails if they part ways.
       # From pyproject, not a hand-written list. The list was the bug: it predated dnspython and
       # httpx, so CI kept installing a subset that no longer matched what the code imports, and the
       # failure surfaced as a missing module rather than as a missing declaration.

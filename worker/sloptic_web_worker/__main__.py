@@ -173,6 +173,50 @@ class _Reputation:
         return out
 
 
+
+def _announce_ruler() -> None:
+    """Say, once at startup, exactly which grader, battery and curves this worker is about to use.
+
+    Three things decide what a score means and each can be overridden from .env: the grader (the
+    pinned wheel), the battery (CATALOG_DIR), and the curves (PASSIVE_CURVE_PATH / FULL_CURVE_PATH).
+    Before 3.0 all three pointed into a sloptic-main checkout on the box, and a checkout at the wrong
+    commit changes every score with no error anywhere. ranking.py refuses a curve that does not match
+    the ruler stamped on the grade, but nothing can catch a CATALOG_DIR from another release: the
+    wheel stamps its own ruler whatever battery ran, so the stamp would look right while the probes
+    were wrong. So this does not try to be clever. It prints the facts where journalctl shows them on
+    every start, and shouts when a battery came from somewhere other than the grader itself.
+    """
+    try:
+        import importlib.metadata as md
+        from sloptic import ruler as sruler
+        from sloptic.catalog import default_catalog_dir
+        from . import grader, ranking
+
+        full = ranking.load_curve("full")
+        passive = ranking.load_curve("passive")
+        stamp = sruler.ruler()
+        probes = len(grader._catalog())
+        print(f"[ruler] sloptic {md.version('sloptic')}: stamps full={stamp['full']} "
+              f"passive={stamp['passive']}; battery {probes} probes, "
+              f"{len(grader.passive_catalog())} passive; curves full="
+              f"{(full or {}).get('version', 'NONE')} passive={(passive or {}).get('version', 'NONE')}",
+              flush=True)
+        if str(default_catalog_dir()) != str(config.CATALOG_DIR):
+            print(f"[ruler] WARNING: grading with CATALOG_DIR={config.CATALOG_DIR}, not the battery "
+                  f"the installed grader ships. Scores are only comparable to the curve if that "
+                  f"directory is the same release. Remove CATALOG_DIR from .env unless you are "
+                  f"developing the grader.", flush=True)
+        for name, curve in (("full", full), ("passive", passive)):
+            if curve is None:
+                print(f"[ruler] WARNING: no {name} curve loaded, so {name} grades get no percentile",
+                      flush=True)
+            elif curve.get("version") != stamp[name]:
+                print(f"[ruler] WARNING: the {name} curve is {curve.get('version')} but this grader "
+                      f"scores against {stamp[name]}. Every {name} grade will go unranked until "
+                      f"they agree. Check {name.upper()}_CURVE_PATH in .env.", flush=True)
+    except Exception as e:  # noqa: BLE001 - an announcement is never worth refusing to start over
+        print(f"[ruler] could not describe the ruler: {type(e).__name__}: {e}", flush=True)
+
 @dataclass
 class _Running:
     job: db.Job
@@ -393,6 +437,26 @@ def process_retries(conn) -> int:
             print(f"[deny]  {r.grade_id}: retry pass not authorized: {deny}", flush=True)
             return 1
 
+    stored = db.load_result(conn, r.grade_id)
+    if stored is None:
+        db.clear_retry(conn, r.grade_id)
+        return 1
+
+    # Same ruler, or no pass at all. A retry re-runs the blocked tail with THIS grader and merges the
+    # outcomes into the stored score. If the stored grade was scored under a different ruler, the
+    # merge is a number from two rulers at once, comparable to neither curve, and it would be saved
+    # as if it were a real grade. That is exactly the state every 2.x grade with a pass still booked
+    # is in the moment the worker restarts on 3.0. A grade with no stamp predates it, so it cannot be
+    # the current ruler. Checked before the pass rather than after the merge, because a pass is close
+    # to a full battery, and sending it only to throw the result away is traffic for nothing.
+    from sloptic import ruler as sruler
+    if stored.get("ruler") != sruler.ruler():
+        db.clear_retry(conn, r.grade_id)
+        print(f"[retry] {r.grade_id}: not retried, it was scored under "
+              f"{stored.get('ruler') or 'a ruler older than the stamp'} and this grader scores "
+              f"under {sruler.ruler()}; merging would mix the two", flush=True)
+        return 1
+
     pad = grader.benign_pad(set(r.blocked)) if (r.mode == "active" and config.RETRY_PAD_BENIGN) else []
     print(f"[retry] {r.grade_id}: pass {r.passes} over {len(r.blocked)} blocked probe(s)"
           f"{f' +{len(pad)} benign pad' if pad else ''}, serial injection", flush=True)
@@ -412,10 +476,6 @@ def process_retries(conn) -> int:
                               config.RETRY_BLOCKED_NEXT_DELAY_SECONDS, config.RETRY_BLOCKED_MAX_PASSES)
         return 1
 
-    stored = db.load_result(conn, r.grade_id)
-    if stored is None:
-        db.clear_retry(conn, r.grade_id)
-        return 1
     try:
         overlay = set(r.blocked) if r.mode == "active" else None
         merged = grader.merge_retry(stored, again, r.blocked, overlay_ids=overlay)
@@ -663,6 +723,7 @@ def main() -> None:
           f"concurrency={config.MAX_CONCURRENT_GRADES}, "
           f"deadline={config.GRADE_TIMEOUT_SECONDS / 60:.0f}min, "
           f"lighthouse_slots={config.LIGHTHOUSE_SLOTS})", flush=True)
+    _announce_ruler()
     conn = db.connect()
     beat = _Heartbeat()
     beat.start()

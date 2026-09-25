@@ -270,6 +270,9 @@ def _run_grade(origin: str, catalog, mode: str, progress_cb=None, only_probes=No
         "axis_potential": axis_potential,
         "ranking": rank,
         "mode": mode,
+        # What this score means. Stamped by the grader, not decided here, and never inferred from
+        # curve_version, which only exists when ranking succeeded.
+        "ruler": record.get("ruler"),
         "catalog_version": _catalog_version(),
         "passive_probe_count": len(catalog),
         "slop_score": record["slop_score"],

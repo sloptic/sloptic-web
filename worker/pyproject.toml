@@ -14,13 +14,17 @@ dependencies = [
     # it or pins it differently, an undeclared import becomes a crash at boot.
     "httpx>=0.27",
     # The GRADER, consumed not forked, and pinned EXACTLY rather than with a floor. A grader that
-    # moves changes what a score means, and both frozen curves (2026.3 and passive-2026.1) were
-    # built from a 1,625-app corpus with a specific battery. A minor version bump that added one
-    # probe would silently make every new grade incomparable to the curve it is ranked against.
+    # moves changes what a score means: 3.0.0 is a new ruler (full curve 2026.4, passive curve
+    # passive-2026.2), and a 3.0 score does not compare to a 2.x one. Both curves are vendored in
+    # worker/curves/ from the v3.0.0 tag, together with the benchmark.py that ranks against them, and
+    # ranking.py refuses any curve whose version does not match the ruler stamped on the grade.
+    #
+    # 3.x releases do not move the ruler (only 4.0 does), so a 3.x bump needs no new curve files. The
+    # pin stays exact anyway: a release that changed a probe would change what a score means.
     #
     # This is also the single source of truth for the pin: scripts/generate-checks.py reads it and
     # refuses to generate against a different installed version.
-    "sloptic==2.2.0",
+    "sloptic==3.0.0",
     # Its browser deps for the a11y and CWV probes are not declared here, because they are a system
     # install rather than a wheel: pip install playwright && playwright install chromium
 ]

@@ -162,17 +162,27 @@ LIGHTHOUSE_LOCK_PATH = os.environ.get("SLOPTIC_LIGHTHOUSE_LOCK", "/tmp/sloptic-l
 LIGHTHOUSE_SLOTS = os.environ.get("SLOPTIC_LIGHTHOUSE_SLOTS", "3")
 
 
-# --- reference curve (percentile for anonymous passive grades) ---------------------------------
-# Empty until the passive-only corpus run produces one. A passive grade may ONLY rank on a curve
-# tagged `probe_set: "passive"`; the grader's benchmark.rank refuses anything else, and
-# ranking.load_curve refuses it a second time here. No curve simply means no percentile.
-PASSIVE_CURVE_PATH = os.environ.get("PASSIVE_CURVE_PATH", "")
+# --- reference curves (the percentile) -------------------------------------------------------------
+# VENDORED, in worker/curves/, copied verbatim from the grader's release tag: both frozen curves and
+# the benchmark.py that ranks against them. The wheel ships neither (the curves live in validation/,
+# rank() lives in scripts/), so before this they were read out of a sloptic-main checkout on the box,
+# which could sit at any commit while the grader was pinned to another. A ranker and a curve from
+# different releases misrank every grade without raising anything. Vendored from one tag, the two
+# cannot disagree, and a `git pull` + `uv sync` on the box is the whole upgrade.
+#
+# The env vars still override, for tests and for trying a candidate curve. They are also the one way
+# to reintroduce the old failure, which is why ranking.py refuses any curve whose version does not
+# match the ruler the grade was stamped with. The stamp is the grader's own statement of which ruler
+# it scored against, so checking against it catches a stale override however it got there.
+_CURVES = _ROOT / "worker" / "curves"
 
-# The full battery's curve, 2026.3. Separate variable rather than one path chosen at runtime: the two
-# must never be swapped by accident, and the loader checks the tag on whichever it opens.
-FULL_CURVE_PATH = os.environ.get("FULL_CURVE_PATH", "")
-# Where the grader's scripts/ live, for benchmark.rank (it sits outside the importable package).
-CURVE_SCRIPTS_DIR = os.environ.get("CURVE_SCRIPTS_DIR", "../sloptic-main/scripts")
+# A passive grade ranks ONLY on the curve tagged `probe_set: "passive"`, and the reverse. Separate
+# variables rather than one path picked at runtime, so the two can never be swapped by accident; the
+# loader checks the tag on whichever it opens, and benchmark.rank refuses a cross-mode placement too.
+PASSIVE_CURVE_PATH = os.environ.get("PASSIVE_CURVE_PATH") or str(_CURVES / "benchmark-curve-passive.json")
+FULL_CURVE_PATH = os.environ.get("FULL_CURVE_PATH") or str(_CURVES / "benchmark-curve.json")
+# Where benchmark.py lives. Defaults to the vendored copy beside the curves it was released with.
+CURVE_SCRIPTS_DIR = os.environ.get("CURVE_SCRIPTS_DIR") or str(_CURVES)
 
 
 # --- organizer event verification -----------------------------------------------------------------

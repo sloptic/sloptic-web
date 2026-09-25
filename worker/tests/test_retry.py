@@ -14,6 +14,8 @@ aimed at somebody's app.
 """
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from sloptic_web_worker import config, db, grader
@@ -34,14 +36,24 @@ def _grade(conn, *, origin="https://a.example.com", status="done", run=None, acc
     return str(row["id"])
 
 
-def _result(conn, grade, *, blocked=(), mode="passive", slop=0, initial=None, stage=None):
+def _result(conn, grade, *, blocked=(), mode="passive", slop=0, initial=None, stage=None,
+            ruler="current"):
     """A stored grade record. claim_retry only looks at a grade that HAS one, since a pass with no
-    result to fold into would have nowhere to put what it recovered."""
+    result to fold into would have nowhere to put what it recovered.
+
+    Stamped with THIS grader's ruler by default, because that is what a grade the current worker
+    wrote carries, and a retry is refused outright for any other. `ruler=None` seeds a grade that
+    predates the stamp (every 2.x grade), and any dict seeds a grade from some other release.
+    """
+    from sloptic import ruler as sruler
+    stamp = sruler.ruler() if ruler == "current" else ruler
     conn.execute(
         """INSERT INTO results (grade_id, mode, catalog_version, slop_score, axis_slop, coverage,
-                                blocked_probes, bot_challenge, challenge_stage, retry_blocked_initial)
-           VALUES (%s, %s, 'sloptic-test', %s, '{}'::jsonb, '{}'::jsonb, %s, %s, %s, %s)""",
-        (grade, mode, slop, list(blocked), bool(blocked), stage, initial),
+                                blocked_probes, bot_challenge, challenge_stage, retry_blocked_initial,
+                                ruler)
+           VALUES (%s, %s, 'sloptic-test', %s, '{}'::jsonb, '{}'::jsonb, %s, %s, %s, %s, %s)""",
+        (grade, mode, slop, list(blocked), bool(blocked), stage, initial,
+         json.dumps(stamp) if stamp is not None else None),
     )
 
 
@@ -874,3 +886,56 @@ class TestTheRetryLaneIsAuthorizedLikeTheGradeItContinues:
         main.process_retries(conn)
 
         assert sent == ["https://a.example.com"]
+
+
+class TestARetryNeverMixesRulers:
+    """3.0.0 is a new ruler, and a 3.0 score does not compare to a 2.x one.
+
+    A retry re-runs a grade's blocked tail with the CURRENT grader and merges the outcomes into the
+    stored score. Done across a ruler change, that is one number built from two scoring models,
+    comparable to neither curve, saved as if it were a grade. Every 2.x grade with a pass booked
+    would do exactly that the moment the worker restarted on 3.0.
+    """
+
+    def _book_passive(self, conn, ruler):
+        g = _grade(conn, mode="passive")
+        _result(conn, g, blocked=["hdr-001"], mode="passive", ruler=ruler)
+        db.schedule_retry(conn, g, ["hdr-001"], 0, config.RETRY_BLOCKED_MAX_PASSES)
+        return g
+
+    def _sent(self, conn, monkeypatch):
+        from sloptic_web_worker import __main__ as main
+        sent: list = []
+        monkeypatch.setattr(main, "_retry_pass",
+                            lambda origin, mode, only: sent.append(origin) or {"slop_score": 0})
+        main.process_retries(conn)
+        return sent
+
+    def test_a_grade_from_before_the_stamp_is_not_retried(self, conn, monkeypatch):
+        g = self._book_passive(conn, ruler=None)
+        assert self._sent(conn, monkeypatch) == []
+        # And its booking is cleared rather than left to come due again for ever.
+        row = conn.execute("SELECT retry_due_at FROM grades WHERE id = %s", (g,)).fetchone()
+        assert row["retry_due_at"] is None
+
+    def test_a_grade_from_another_ruler_is_not_retried(self, conn, monkeypatch):
+        self._book_passive(conn, ruler={"full": "2026.3", "passive": "passive-2026.1"})
+        assert self._sent(conn, monkeypatch) == []
+
+    def test_the_refusal_costs_no_traffic(self, conn, monkeypatch):
+        # Checked BEFORE the pass, not after the merge. A pass is close to a full battery, and
+        # sending one only to throw the result away is outbound traffic spent for nothing.
+        self._book_passive(conn, ruler=None)
+        assert self._sent(conn, monkeypatch) == []
+
+    def test_a_grade_on_the_current_ruler_is_retried_as_before(self, conn, monkeypatch):
+        self._book_passive(conn, ruler="current")
+        assert self._sent(conn, monkeypatch) == ["https://a.example.com"]
+
+    def test_the_merged_record_keeps_its_ruler(self, conn):
+        # load_result has to hand the stamp back, or the merge saves a 3.0 grade with a NULL ruler
+        # and the site renders it as legacy, and the re-rank refuses it its percentile.
+        from sloptic import ruler as sruler
+        g = self._book_passive(conn, ruler="current")
+        stored = db.load_result(conn, g)
+        assert stored["ruler"] == sruler.ruler()
