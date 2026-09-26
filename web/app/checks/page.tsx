@@ -1,6 +1,17 @@
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/meta";
-import { AREAS, CATALOG_URL, TOTALS, categoriesFor } from "@/lib/checks";
+import {
+  AREAS,
+  CATALOG_URL,
+  TOTALS,
+  categoryName,
+  groupSiblings,
+  measuredText,
+  priceLabel,
+  probesFor,
+  rungSentence,
+  type ProbeFact,
+} from "@/lib/checks";
 
 export const metadata: Metadata = pageMeta(
   "Sloptic's checks",
@@ -8,11 +19,42 @@ export const metadata: Metadata = pageMeta(
   "/checks",
 );
 
-const ACCESS_TEXT: Record<string, string> = {
-  open: "any URL",
-  gated: "verified only",
-  mixed: "part verified",
-};
+/** The grader's report-card copy marks code with backticks. */
+function Expected({ text }: { text: string }) {
+  return (
+    <>
+      {text.split("`").map((part, i) => (i % 2 ? <code key={i}>{part}</code> : part))}
+    </>
+  );
+}
+
+/** Everything about a check's price that the number alone does not say, one line each. */
+function PriceNotes({ f }: { f: ProbeFact }) {
+  const notes: string[] = [];
+  const rungs = rungSentence(f);
+  if (rungs) notes.push(rungs);
+  const measured = measuredText(f);
+  if (measured) notes.push(measured);
+  if (f.pricing.kind === "off") notes.push("Shown on the report, but adds nothing to the score.");
+  if (f.raised) {
+    const when = f.raised.when.map(categoryName).sort().join(" or ");
+    notes.push(`Raised to ${f.raised.to} in a grade that also finds ${when}.`);
+  }
+  const siblings = groupSiblings(f);
+  if (siblings.length) {
+    notes.push(
+      `The same flaw as ${siblings.join(", ")}, found a different way. Only the highest priced of them counts.`,
+    );
+  }
+  if (!notes.length) return null;
+  return (
+    <ul className="probe-notes">
+      {notes.map((n) => (
+        <li key={n}>{n}</li>
+      ))}
+    </ul>
+  );
+}
 
 export default function ChecksPage() {
   return (
@@ -71,44 +113,68 @@ export default function ChecksPage() {
         </div>
       </section>
 
+      {/* Every number in the tables below is generated from the pinned grader
+          (scripts/generate-checks.py); only the words around them are written here. */}
+      <section className="section" id="points">
+        <h2 className="section-head">What each check costs</h2>
+        <p className="section-intro">
+          Every check below has a price in points, which is what it adds to the score when it finds slop.
+          Most have one price. Some start low and rise when the check proves worse harm, some are priced
+          by what they measure, and a few are shown on the report without counting. Repeats are damped
+          before they reach the score, which{" "}
+          <a href="/methodology#scoring">How Sloptic finds slop</a> explains.
+        </p>
+      </section>
+
       {AREAS.map((area) => (
         <section className="section" key={area.id} id={area.id}>
           <h2 className="section-head">
             <span className="measure-swatch" data-axis={area.id} aria-hidden /> {area.label}
           </h2>
           <p className="section-intro">
-            {area.categories} different faults, {area.probes} checks between them. Click on a link to learn more about it.
+            {area.categories} different faults, {area.probes} checks between them.
           </p>
-          <div className="table-scroll">
-            <table className="cat-table">
+          <div className="probe-wrap">
+            <table className="probe-table">
               <thead>
                 <tr>
-                  <th>category</th>
-                  <th>checks</th>
+                  <th>check</th>
                   <th>runs on</th>
+                  <th>points</th>
                 </tr>
               </thead>
-              <tbody>
-                {categoriesFor(area.id).map((c) => (
-                  <tr key={c.slug} data-access={c.access}>
-                    <th scope="row">
-                      {c.href ? (
-                        <a href={c.href} target="_blank" rel="noopener noreferrer" className="probe-link">
-                          {c.name}
+              {probesFor(area.id).map(({ category, probes }) => (
+                <tbody key={category.slug}>
+                  <tr className="probe-cat">
+                    <th colSpan={3} scope="colgroup">
+                      {category.href ? (
+                        <a href={category.href} target="_blank" rel="noopener noreferrer" className="probe-link">
+                          {category.name}
                         </a>
                       ) : (
-                        c.name
+                        category.name
                       )}
                     </th>
-                    <td>{c.probes}</td>
-                    <td className="access">
-                      {c.access === "mixed"
-                        ? `${c.passive} of ${c.probes} on any URL`
-                        : ACCESS_TEXT[c.access]}
-                    </td>
                   </tr>
-                ))}
-              </tbody>
+                  {probes.map((f) => (
+                    <tr key={f.id} id={f.id} data-kind={f.pricing.kind}>
+                      <td className="probe-what">
+                        <span className="probe-expected">
+                          {f.expected ? <Expected text={f.expected} /> : category.name}
+                        </span>
+                        <span className="probe-id">{f.id}</span>
+                        <PriceNotes f={f} />
+                      </td>
+                      <td className="probe-runs" data-label="runs on">
+                        {f.passive ? "any URL" : "verified only"}
+                      </td>
+                      <td className="probe-points" data-label="points">
+                        {priceLabel(f.pricing)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              ))}
             </table>
           </div>
         </section>

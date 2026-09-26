@@ -1592,47 +1592,116 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
-/* Category table on /checks: the full catalog, one row per kind of fault ---- */
-.cat-table {
+/* Price table on /checks: every check, grouped by category, with what it costs ---- */
+.probe-wrap {
+  margin: 1rem 0 0;
+}
+.probe-table {
   border-collapse: collapse;
   width: 100%;
-  min-width: 30rem;
   font-size: 0.94rem;
 }
-.cat-table th,
-.cat-table td {
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--line);
+.probe-table thead th {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
   font-weight: 400;
-  text-align: right;
-}
-.cat-table th:first-child,
-.cat-table thead th:first-child {
+  color: var(--muted);
   text-align: left;
+  padding: 0 0.75rem 0.45rem 0;
+  border-bottom: 1px solid var(--line-strong);
 }
-.cat-table thead th {
+.probe-table thead th:last-child {
+  text-align: right;
+  padding-right: 0;
+}
+.probe-table td {
+  padding: 0.6rem 0.75rem 0.6rem 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.probe-table .probe-cat th {
+  padding: 1.1rem 0 0.4rem;
+  border-bottom: 1px solid var(--line-strong);
+  text-align: left;
+  font-weight: 600;
+  color: var(--ink);
+}
+.probe-what {
+  color: var(--ink);
+}
+.probe-expected {
+  display: block;
+}
+.probe-id {
+  display: block;
+  margin-top: 0.15rem;
   font-family: var(--font-mono);
   font-size: 0.74rem;
   color: var(--muted);
-  border-bottom: 1px solid var(--line-strong);
 }
-.cat-table tbody th {
-  color: var(--ink);
-}
-.cat-table td {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
+.probe-notes {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
   color: var(--ink-soft);
+}
+.probe-notes li + li {
+  margin-top: 0.2rem;
+}
+.probe-runs,
+.probe-points {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
   white-space: nowrap;
 }
-.cat-table .access {
-  font-size: 0.78rem;
+.probe-runs {
   color: var(--muted);
 }
-/* a kind that needs verification reads quieter than one anyone can run */
-.cat-table tr[data-access="gated"] th,
-.cat-table tr[data-access="gated"] td {
+.probe-table td.probe-points {
+  text-align: right;
+  padding-right: 0;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+/* an off-score check reads quieter than one that counts */
+.probe-table tr[data-kind="off"] .probe-points,
+.probe-table tr[data-kind="measured"] .probe-points {
   color: var(--muted);
+}
+/* Anchors land a reader on one check from the methodology page or a report. */
+.probe-table tr:target td {
+  background: var(--surface);
+}
+@media (max-width: 42rem) {
+  .probe-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .probe-table tbody tr:not(.probe-cat) {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 1rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .probe-table tbody tr:not(.probe-cat) td {
+    padding: 0;
+    border-bottom: 0;
+  }
+  .probe-what {
+    grid-column: 1 / -1;
+    margin-bottom: 0.35rem;
+  }
+  .probe-runs::before,
+  .probe-points::before {
+    content: attr(data-label) " ";
+    color: var(--muted);
+  }
 }
 .channel-more {
   margin: 1rem 0 0;

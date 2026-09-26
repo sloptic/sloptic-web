@@ -2,12 +2,32 @@ import type { Metadata } from "next";
 import { pageMeta } from "@/lib/meta";
 import { ACTIVE, fireRate, fmt } from "@/lib/corpus";
 import { LIGHTHOUSE_PROFILE as LH, SEAT_ROWS } from "@/lib/seat";
+import { PROBE_FACTS, SCORING, categoryName, dampedTotal, type ProbeFact } from "@/lib/checks";
 
 export const metadata: Metadata = pageMeta(
   "How Sloptic finds slop",
   "Sloptic checks what any visitor sees and grades on what is wrong no matter what the app is for. What counts as slop, how Sloptic scores it, and what it can't say.",
   "/methodology",
 );
+
+// The worked examples below are computed from the grader's own prices and decay, so they stay true
+// when the catalog moves. Each one names the check it reads.
+const probe = (id: string): ProbeFact => {
+  const f = PROBE_FACTS.find((p) => p.id === id);
+  if (!f) throw new Error(`methodology example names ${id}, which is not in the catalog`);
+  return f;
+};
+const price = (f: ProbeFact) => (f.pricing.kind === "fixed" ? f.pricing.points : NaN);
+const one = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+const DECAY = SCORING.categoryDecay;
+
+const IDOR = probe("sec-idor-001");
+const idorRung = (evidence: string) =>
+  IDOR.pricing.kind === "ladder" ? IDOR.pricing.rungs.find((r) => r.evidence === evidence)?.points : undefined;
+const HEADERS = ["sec-headers-002", "sec-headers-003", "sec-headers-004"].map(probe);
+const HEADER_PRICES = HEADERS.map(price);
+const CSP = probe("sec-headers-002");
+const SQLI_GROUP = PROBE_FACTS.filter((f) => f.group === probe("sec-sqli-001").group).length;
 
 export default function MethodologyPage() {
   return (
@@ -93,7 +113,9 @@ export default function MethodologyPage() {
         </p>
       </section>
 
-      <section className="section">
+      {/* Every number in this section is read from the pinned grader (lib/checks.generated.ts), so the
+          examples cannot drift from the prices on /checks. */}
+      <section className="section" id="scoring">
         <h2 className="section-head">How Sloptic scores</h2>
         <ul className="stat-list">
           <li>
@@ -111,10 +133,47 @@ export default function MethodologyPage() {
             </span>
           </li>
           <li>
+            <span className="k">lowest price first</span>
+            <span className="v">
+              A check charges the bottom of its range unless it proves worse harm. For example, an access
+              control flaw costs {IDOR.pricing.kind === "ladder" ? IDOR.pricing.from : ""} as found,{" "}
+              {idorRung("cross_user_read")} if it read another user&apos;s record, and{" "}
+              {idorRung("cross_user_write")} if it changed one. Only the highest proven price counts; they
+              never add up.
+            </span>
+          </li>
+          <li>
             <span className="k">damped</span>
             <span className="v">
-              One kind of slop counts once. If, for example, there are 20 instances of missing headers, Sloptic 
-              will not charge 20 times, but only once. This prevents a single kind of slop from dominating the score.
+              Repeats of one kind of slop count for less. The worst finding of a kind counts in full, the
+              next at {one(DECAY * 100)}%, the one after at {one(DECAY ** 2 * 100)}%, and so on, so one
+              kind of slop can never cost more than {one(1 / (1 - DECAY))} times its worst finding. For
+              example, an app with no CSP, no HSTS and no clickjacking protection loses{" "}
+              {one(dampedTotal(HEADER_PRICES))} rather than {one(HEADER_PRICES.reduce((a, b) => a + b, 0))}.
+            </span>
+          </li>
+          <li>
+            <span className="k">one flaw, one charge</span>
+            <span className="v">
+              Checks that look for the same flaw in different ways count once, at the highest price
+              between them. The {SQLI_GROUP} checks that try SQL injection on a login form are one finding
+              however many of them get in.
+            </span>
+          </li>
+          <li>
+            <span className="k">raised when it matters</span>
+            <span className="v">
+              Some defenses only matter once something gets past them, so they are cheap alone and cost
+              more when that happens. A missing CSP costs {price(CSP)} by itself and {CSP.raised?.to} in a
+              grade that also finds {CSP.raised?.when.map(categoryName).sort().join(" or ")}.
+            </span>
+          </li>
+          <li>
+            <span className="k">measured</span>
+            <span className="v">
+              A few checks are priced by how much they measured. Lighthouse charges how far the app falls
+              below {Math.round(SCORING.lighthouse.greenFloor * 100)}, accessibility charges each barrier
+              axe finds by its impact, and dead links by how many of the homepage&apos;s links are dead.
             </span>
           </li>
           <li>
@@ -125,6 +184,10 @@ export default function MethodologyPage() {
             </span>
           </li>
         </ul>
+        <p className="section-intro">
+          A report lists what each finding added after all of this, so its numbers add up to the score.
+          The price of every check is on <a href="/checks#points">Sloptic&apos;s checks</a>.
+        </p>
       </section>
 
       <section className="section">

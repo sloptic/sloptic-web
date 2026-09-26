@@ -15,6 +15,8 @@ and drift shows up as a diff instead of silently going stale:
 from __future__ import annotations
 
 import argparse
+import inspect
+import json
 import pathlib
 import sys
 from collections import defaultdict
@@ -53,6 +55,63 @@ def installed_version(checkout: str | None) -> str | None:
         return None
 
 
+def pricing_of(p, predicates) -> dict:
+    """How the grader prices this probe when it fires, in the order sloptic.pipeline._run_probe resolves
+    it: an off-score diagnostic first, then the severity block, then a measured override, then the
+    nominal penalty."""
+    spec = p.probe or {}
+    if spec.get("report_only"):
+        return {"kind": "off"}
+    sev = p.severity
+    if sev is not None:
+        lo, hi = sev.range
+        # _severity_penalty clamps a rung into the range and takes only the highest one matched.
+        rungs = sorted({(min(hi, max(lo, e.point)), e.evidence) for e in sev.escalators})
+        rungs = [(pt, ev) for pt, ev in rungs if pt > sev.default]
+        if not rungs:
+            return {"kind": "fixed", "points": sev.default}
+        return {"kind": "ladder", "from": sev.default, "to": max(pt for pt, _ in rungs),
+                "rungs": [{"evidence": ev, "points": pt} for pt, ev in rungs]}
+    pred = spec.get("predicate")
+    if pred and "penalty_override" in inspect.getsource(predicates.PREDICATES[pred]):
+        return {"kind": "measured", "nominal": p.penalty}
+    return {"kind": "fixed", "points": p.penalty}
+
+
+def probe_fact(p, safety, reportcard, predicates, aggregate) -> dict:
+    sev = p.severity
+    raised = aggregate._CORROBORATION.get(p.id)
+    copy = reportcard._CONTENT.get(p.id)
+    return {
+        "id": p.id,
+        "area": p.bundle,
+        "category": p.category,
+        "passive": safety.is_passive(p.id),
+        "expected": copy[0] if copy else None,
+        "pricing": pricing_of(p, predicates),
+        "group": p.variant_group_id,
+        "raised": {"to": raised[0], "when": sorted(raised[1])} if raised else None,
+        "authority": {
+            "cvss": sev.cvss_score if sev else None,
+            "vrt": (sev.vrt or None) if sev else None,
+            "iso": (sev.iso_25010 or None) if sev else None,
+            "nielsen": (sev.nielsen or None) if sev else None,
+        },
+    }
+
+
+def scoring_facts(probes, predicates, aggregate) -> dict:
+    """The constants the methodology page explains, read from the grader rather than restated."""
+    lh = next(p for p in probes if (p.probe or {}).get("predicate") == "lighthouse_perf_score")
+    return {
+        "categoryDecay": aggregate.CATEGORY_DECAY,
+        "a11yTiers": dict(predicates._A11Y_TIER),
+        "a11yDecay": predicates._A11Y_DECAY,
+        "lighthouse": {"id": lh.id, "greenFloor": lh.probe.get("green_floor", 0.90),
+                       "scale": lh.probe.get("scale", 1.0)},
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--grader", default=None,
@@ -73,7 +132,8 @@ def main() -> int:
         sys.path.insert(0, str(grader))
 
     try:
-        from sloptic import safety                                        # noqa: E402
+        from sloptic import aggregate, reportcard, safety                 # noqa: E402
+        from sloptic import probes as predicates                          # noqa: E402
         from sloptic.catalog import default_catalog_dir, load_catalog     # noqa: E402
     except ModuleNotFoundError:
         print(f"sloptic is not importable. `pip install sloptic=={pinned_version()}`, "
@@ -127,6 +187,19 @@ def main() -> int:
         return 1
     areas = [a for a in known if a in bundles]
 
+    # The hidden pool is the anti-gaming set: checks a team cannot see, so it cannot teach to them. It is
+    # never committed to the grader and so never ships in the wheel, but this file publishes every probe
+    # it is handed, so it refuses one rather than trusting that.
+    hidden = sorted(p.id for p in probes if p.pool != "public")
+    if hidden:
+        print(f"refusing to publish hidden-pool probes: {hidden}", file=sys.stderr)
+        return 1
+
+    # Sorted by id: CI regenerates this file and fails on any diff, and the catalog's load order is
+    # whatever the filesystem walk returns.
+    facts = [probe_fact(p, safety, reportcard, predicates, aggregate) for p in sorted(probes, key=lambda x: x.id)]
+    scoring = scoring_facts(probes, predicates, aggregate)
+
     cats: dict[tuple[str, str], list] = defaultdict(list)
     for p in probes:
         cats[(p.bundle, p.category)].append(p.id)
@@ -149,6 +222,8 @@ def main() -> int:
     )
 
     passive = len(safety.PASSIVE_PROBES)
+    probe_rows = ",\n".join("  " + json.dumps(f, separators=(", ", ": ")) for f in facts)
+    scoring_json = json.dumps(scoring, separators=(", ", ": "))
     body = ",\n".join(
         f'  {{ slug: "{r["slug"]}", area: "{r["area"]}", probes: {r["probes"]}, '
         f'passive: {r["passive"]}, access: "{r["access"]}" }}'
@@ -179,6 +254,41 @@ export const CATEGORY_FACTS: CategoryFact[] = [
 
 export const TOTALS = {{ total: {len(probes)}, passive: {passive}, active: {len(probes) - passive} }};
 
+/** How a check is priced, read from its catalog entry the way the grader resolves it at grade time.
+ *  off: a diagnostic shown on the report that adds nothing to the score.
+ *  fixed: one price whenever it fires.
+ *  ladder: charged `from` unless the check proves worse harm, which lifts it to the highest rung whose
+ *    evidence it set (rungs never add up), at most `to`.
+ *  measured: priced from what was measured (Lighthouse's shortfall, the accessibility rule sum, the share
+ *    of dead links, a CVE's own score); `nominal` is the catalog's reference value, not a price. */
+export type Pricing =
+  | {{ kind: "off" }}
+  | {{ kind: "fixed"; points: number }}
+  | {{ kind: "ladder"; from: number; to: number; rungs: {{ evidence: string; points: number }}[] }}
+  | {{ kind: "measured"; nominal: number }};
+
+export type ProbeFact = {{
+  id: string;
+  area: Area;
+  category: string;
+  passive: boolean;
+  /** What a clean app does, in the grader's own report-card copy. Null where the grader has none. */
+  expected: string | null;
+  pricing: Pricing;
+  /** Checks sharing a group are one flaw found different ways: only the highest-priced one counts. */
+  group: string | null;
+  /** A defense-in-depth check re-priced up when a flaw it would have contained fires in the same grade. */
+  raised: {{ to: number; when: string[] }} | null;
+  authority: {{ cvss: number | null; vrt: string | null; iso: string | null; nielsen: string | null }};
+}};
+
+export const PROBE_FACTS: ProbeFact[] = [
+{probe_rows},
+];
+
+/** The grader's scoring constants. */
+export const SCORING = {scoring_json} as const;
+
 /** Probe id -> [area, kind], for every probe in the catalog. Lets a report name the checks that
  *  passed (the grade record lists them by id only) and the live progress line name the check it is
  *  running, active probes included. */
@@ -192,6 +302,10 @@ export const PROBE_INDEX: Record<string, [Area, string]> = {{
     for area in areas:
         n = [r for r in rows if r["area"] == area]
         print(f"  {area}: {len(n)} categories, {sum(r['probes'] for r in n)} checks")
+    kinds = defaultdict(int)
+    for f in facts:
+        kinds[f["pricing"]["kind"]] += 1
+    print("  pricing: " + ", ".join(f"{k} {n}" for k, n in sorted(kinds.items())))
     mixed = [r["slug"] for r in rows if r["access"] == "mixed"]
     if mixed:
         print(f"  mixed access: {', '.join(mixed)}")

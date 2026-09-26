@@ -279,3 +279,112 @@ describe("the editorial copy", () => {
     }
   });
 });
+
+// ---- prices ----------------------------------------------------------------------------------------
+
+import {
+  PROBE_FACTS,
+  SCORING,
+  dampedTotal,
+  groupSiblings,
+  measuredText,
+  priceLabel,
+  rungSentence,
+} from "@/lib/checks";
+import { RUNG_TEXT } from "@/lib/check-labels";
+
+describe("the price list", () => {
+  it("prices every probe the index knows, and no other", () => {
+    expect(PROBE_FACTS.map((f) => f.id).sort()).toEqual(Object.keys(PROBE_INDEX).sort());
+  });
+
+  it("agrees with the index about each probe's area and category", () => {
+    for (const f of PROBE_FACTS) expect([f.id, f.area, f.category]).toEqual([f.id, ...PROBE_INDEX[f.id]]);
+  });
+
+  it("names every rung in words", () => {
+    // A rung without a label would render its raw evidence flag ("cross_user_read") on a public page.
+    const missing = PROBE_FACTS.flatMap((f) =>
+      f.pricing.kind === "ladder"
+        ? f.pricing.rungs.map((r) => `${f.category}:${r.evidence}`).filter((k) => !Object.hasOwn(RUNG_TEXT, k))
+        : [],
+    );
+    expect(missing).toEqual([]);
+  });
+
+  it("keeps no label for a rung the catalog no longer has", () => {
+    const used = new Set(
+      PROBE_FACTS.flatMap((f) =>
+        f.pricing.kind === "ladder" ? f.pricing.rungs.map((r) => `${f.category}:${r.evidence}`) : [],
+      ),
+    );
+    expect(Object.keys(RUNG_TEXT).filter((k) => !used.has(k))).toEqual([]);
+  });
+
+  it("explains every measured price", () => {
+    // Each measured check is priced by its own formula, written by hand; a new one needs its own line.
+    const unexplained = PROBE_FACTS.filter((f) => f.pricing.kind === "measured" && !measuredText(f));
+    expect(unexplained.map((f) => f.id)).toEqual([]);
+  });
+
+  it("orders every ladder upward, inside its range", () => {
+    for (const f of PROBE_FACTS) {
+      if (f.pricing.kind !== "ladder") continue;
+      const pts = f.pricing.rungs.map((r) => r.points);
+      expect([f.id, pts]).toEqual([f.id, [...pts].sort((a, b) => a - b)]);
+      expect(pts[0]).toBeGreaterThan(f.pricing.from);
+      expect(pts[pts.length - 1]).toBe(f.pricing.to);
+    }
+  });
+
+  it("reads each kind of price the way the table shows it", () => {
+    expect(priceLabel({ kind: "fixed", points: 8 })).toBe("8");
+    expect(priceLabel({ kind: "ladder", from: 30, to: 85, rungs: [] })).toBe("30 to 85");
+    expect(priceLabel({ kind: "measured", nominal: 20 })).toBe("measured");
+    expect(priceLabel({ kind: "off" })).toBe("off-score");
+  });
+
+  it("says what lifts a price, in the rung's own words", () => {
+    const idor = PROBE_FACTS.find((f) => f.id === "sec-idor-001")!;
+    expect(rungSentence(idor)).toMatch(/^Starts at 30; 55 if it read another user's record;/);
+  });
+
+  it("reads a zero floor as not counting until proven", () => {
+    const deploy = PROBE_FACTS.find((f) => f.id === "qa-deploy-001")!;
+    expect(rungSentence(deploy)).toMatch(/^Counts nothing unless /);
+  });
+
+  it("works the Lighthouse example the way the grader prices it", () => {
+    const lh = PROBE_FACTS.find((f) => f.id === SCORING.lighthouse.id)!;
+    expect(measuredText(lh)).toContain("a score of 84 costs 6 and a 25 costs 65");
+  });
+
+  it("finds the other checks that share a flaw", () => {
+    const sqli = PROBE_FACTS.find((f) => f.id === "sec-sqli-001")!;
+    expect(groupSiblings(sqli).sort()).toEqual(["sec-sqli-002", "sec-sqli-003", "sec-sqli-005"]);
+    expect(groupSiblings(PROBE_FACTS.find((f) => f.id === "sec-headers-002")!)).toEqual([]);
+  });
+
+  it("writes the published copy without em dashes", () => {
+    const copy = [
+      ...PROBE_FACTS.map((f) => f.expected ?? ""),
+      ...Object.values(RUNG_TEXT),
+      ...PROBE_FACTS.map((f) => measuredText(f) ?? ""),
+    ];
+    for (const line of copy) expect(line).not.toContain("—");
+  });
+});
+
+describe("dampedTotal", () => {
+  it("counts the worst in full and each further one at the decay of the one before", () => {
+    // The grader's CATEGORY_DECAY is 0.6: 8 + 5 x 0.6 + 5 x 0.36.
+    expect(SCORING.categoryDecay).toBe(0.6);
+    expect(dampedTotal([5, 8, 5])).toBe(12.8);
+  });
+
+  it("never lets a category cost more than 2.5 times its worst finding", () => {
+    // 1 / (1 - 0.6): the geometric series only approaches it, so at one decimal fifty repeats reach it.
+    expect(dampedTotal(Array(10).fill(10))).toBeLessThan(25);
+    expect(dampedTotal(Array(50).fill(10))).toBeLessThanOrEqual(25);
+  });
+});
