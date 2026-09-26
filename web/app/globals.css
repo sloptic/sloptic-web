@@ -1594,26 +1594,26 @@ code {
 
 /* Price list on /checks: one collapsible row per kind of slop, one open at a time, and inside it every
    check with where it runs and what it costs. Reuses the report's .cat-group arrow so a category
-   collapses the same way on both pages; the selectors carry .probe-cats to outrank those rules,
+   collapses the same way on both pages; the selectors carry .price-cats to outrank those rules,
    which sit later in this file. */
-.probe-cats {
+.price-cats {
   margin: 1rem 0 0;
   border-top: 1px solid var(--line);
 }
-.probe-cats .cat-group {
+.price-cats .cat-group {
   margin: 0;
   border-bottom: 1px solid var(--line);
 }
-.probe-cats .cat-group > summary.cat-head {
+.price-cats .cat-group > summary.cat-head {
   margin: 0;
   padding: 0.7rem 0;
   font-size: 1rem;
   color: var(--ink);
 }
-.probe-cats .cat-arrow {
+.price-cats .cat-arrow {
   width: 0.7rem;
 }
-.probe-cat-span {
+.price-cat-span {
   margin-left: auto;
   font-family: var(--font-mono);
   font-size: 0.82rem;
@@ -1622,96 +1622,96 @@ code {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.probe-cat-body {
+.price-cat-body {
   padding: 0 0 1rem 1.15rem;
 }
-.probe-cols,
-.probe-row {
+.price-cols,
+.price-row {
   display: grid;
   grid-template-columns: 1fr 5.5rem 5.5rem;
   column-gap: 1rem;
 }
-.probe-cols {
+.price-cols {
   padding-bottom: 0.35rem;
   border-bottom: 1px solid var(--line-strong);
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--muted);
 }
-.probe-cols span:last-child,
-.probe-points {
+.price-cols span:last-child,
+.price-points {
   text-align: right;
 }
-.probe-list {
+.price-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
-.probe-row {
+.price-row {
   padding: 0.65rem 0;
   border-bottom: 1px solid var(--line);
 }
-.probe-row:last-child {
+.price-row:last-child {
   border-bottom: 0;
 }
 /* Anchors land a reader on one check from the methodology page or a report. */
-.probe-row:target {
+.price-row:target {
   background: var(--surface);
 }
-.probe-name {
+.price-name {
   color: var(--ink);
 }
-.probe-runs,
-.probe-points {
+.price-runs,
+.price-points {
   font-family: var(--font-mono);
   font-size: 0.82rem;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.probe-runs {
+.price-runs {
   color: var(--muted);
 }
-.probe-points {
+.price-points {
   color: var(--ink);
 }
 /* a measured or off-score check reads quieter than one with a price */
-.probe-row[data-kind="off"] .probe-points,
-.probe-row[data-kind="measured"] .probe-points {
+.price-row[data-kind="off"] .price-points,
+.price-row[data-kind="measured"] .price-points {
   color: var(--muted);
 }
-.probe-id,
-.probe-rungs,
-.probe-notes {
+.price-id,
+.price-rungs,
+.price-notes {
   grid-column: 1 / -1;
 }
-.probe-id {
+.price-id {
   margin-top: 0.1rem;
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--muted);
 }
 /* The rungs a price climbs to: points in a column, what it takes beside them. */
-.probe-rungs {
+.price-rungs {
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: 0.1rem 0.7rem;
   margin: 0.4rem 0 0;
   font-size: 0.84rem;
 }
-.probe-rungs > div {
+.price-rungs > div {
   display: contents;
 }
-.probe-rungs dt {
+.price-rungs dt {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   text-align: right;
   color: var(--ink);
 }
-.probe-rungs dd {
+.price-rungs dd {
   margin: 0;
   color: var(--ink-soft);
 }
-.probe-notes {
+.price-notes {
   list-style: none;
   margin: 0.35rem 0 0;
   padding: 0;
@@ -1720,35 +1720,35 @@ code {
   color: var(--ink-soft);
 }
 /* A ladder the whole category shares, shown once under its checks. */
-.probe-shared {
+.price-shared {
   margin: 0.7rem 0 0;
   padding: 0.6rem 0.75rem;
   background: var(--surface);
   border-radius: var(--radius);
   font-size: 0.84rem;
 }
-.probe-shared p {
+.price-shared p {
   margin: 0;
   color: var(--muted);
 }
-.probe-cat-more {
+.price-cat-more {
   margin: 0.7rem 0 0;
   font-size: 0.85rem;
 }
 @media (max-width: 42rem) {
-  .probe-cat-body {
+  .price-cat-body {
     padding-left: 0;
   }
-  .probe-cols {
+  .price-cols {
     display: none;
   }
-  .probe-row {
+  .price-row {
     grid-template-columns: 1fr auto;
   }
-  .probe-name {
+  .price-name {
     grid-column: 1 / -1;
   }
-  .probe-runs::before {
+  .price-runs::before {
     content: "runs on ";
   }
 }

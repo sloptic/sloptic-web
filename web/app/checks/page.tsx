@@ -28,7 +28,7 @@ function Code({ text }: { text: string }) {
 /** A ladder's rungs: points in a column, what it takes beside them. */
 function Rungs({ rungs }: { rungs: { points: number; text: string }[] }) {
   return (
-    <dl className="probe-rungs">
+    <dl className="price-rungs">
       {rungs.map((r) => (
         <div key={r.points}>
           <dt>{r.points}</dt>
@@ -45,16 +45,16 @@ function ProbeRow({ f, shared }: { f: ProbeFact; shared: boolean }) {
   const rungs = shared ? [] : rungsFor(f);
   const notes = priceNotes(f);
   return (
-    <li className="probe-row" id={f.id} data-kind={f.pricing.kind}>
-      <span className="probe-name">
+    <li className="price-row" id={f.id} data-kind={f.pricing.kind}>
+      <span className="price-name">
         <Code text={probeName(f)} />
       </span>
-      <span className="probe-runs">{f.passive ? "any URL" : "verified"}</span>
-      <span className="probe-points">{priceLabel(f.pricing)}</span>
-      <span className="probe-id">{f.id}</span>
+      <span className="price-runs">{f.passive ? "any URL" : "verified"}</span>
+      <span className="price-points">{priceLabel(f.pricing)}</span>
+      <span className="price-id">{f.id}</span>
       {rungs.length > 0 && <Rungs rungs={rungs} />}
       {notes.length > 0 && (
-        <ul className="probe-notes">
+        <ul className="price-notes">
           {notes.map((n) => (
             <li key={n}>{n}</li>
           ))}
@@ -142,12 +142,12 @@ export default function ChecksPage() {
           <p className="section-intro">
             {area.categories} kinds of slop, {area.probes} checks. Open a kind to see its checks.
           </p>
-          <div className="probe-cats">
+          <div className="price-cats">
             {probesFor(area.id).map(({ category, probes }) => {
               const shared = sharedRungs(probes);
               return (
                 <details
-                  className="cat-group probe-cat"
+                  className="cat-group price-cat"
                   name="checks"
                   key={category.slug}
                   id={`kind-${category.slug}`}
@@ -159,27 +159,27 @@ export default function ChecksPage() {
                     <span className="cat-title">
                       {category.name} <span className="cat-count">{probes.length}</span>
                     </span>
-                    <span className="probe-cat-span">{categorySpan(probes)}</span>
+                    <span className="price-cat-span">{categorySpan(probes)}</span>
                   </summary>
-                  <div className="probe-cat-body">
-                    <div className="probe-cols" aria-hidden>
+                  <div className="price-cat-body">
+                    <div className="price-cols" aria-hidden>
                       <span>check</span>
                       <span>runs on</span>
                       <span>points</span>
                     </div>
-                    <ul className="probe-list">
+                    <ul className="price-list">
                       {probes.map((f) => (
                         <ProbeRow f={f} shared={shared !== null} key={f.id} />
                       ))}
                     </ul>
                     {shared && (
-                      <div className="probe-shared">
+                      <div className="price-shared">
                         <p>Proof raises the price:</p>
                         <Rungs rungs={shared} />
                       </div>
                     )}
                     {category.href && (
-                      <p className="probe-cat-more">
+                      <p className="price-cat-more">
                         <a href={category.href} target="_blank" rel="noopener noreferrer">
                           About {category.name}
                         </a>
