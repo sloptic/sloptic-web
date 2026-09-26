@@ -169,7 +169,7 @@ export default function FindingsPage() {
       </div>
 
       <section className="section attached">
-        <h2 className="section-head">Are any apps clean?</h2>
+        <h2 className="section-head">Nothing is clean</h2>
         <p className="section-intro">
           The median is {fmt(D.median)}, and a
           quarter scored above {fmt(D.q3)}.{" "}
@@ -201,18 +201,16 @@ export default function FindingsPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">What kinds of slop did apps have?</h2>
+        <h2 className="section-head">What was the slop like?</h2>
         <p className="section-intro">
-          Different kinds of slop have different severities. While most are chronic, quite a few 
-          apps have serious or even critical problems. The table below shows the 
-          number of instances of slop of each kind and how many apps have each.
+          Different slop have different severities. While most are chronic and indicative of hygiene, 
+          quite a few apps have serious or even critical problems. The table below shows the 
+          number of instances of slop of each kind and how many apps have what:
         </p>
         <Bands />
         <br />
         <p className="section-intro">
-          Grading an app by its single worst slop instance gives the stats below. Each one contains the
-          ones under it, so almost 3 in 5 projects carry a significant problem and virtually every app
-          overlooks some hygiene. 
+          When evaluated on its single worst slop instance, this is what apps had:
         </p>
         <Levels />
       </section>
@@ -225,10 +223,10 @@ export default function FindingsPage() {
             3.0 corpus measures their observed surface as the same size (p = 0.70).
             Source: sloptic-main CORPUS_REPORT.md 4.7. The p values are transcribed from there because
             the figures file does not carry them; every other number here is read from the file. */}
-        <h2 className="section-head">Do winners ship less slop?</h2>
+        <h2 className="section-head">Are winners cleaner?</h2>
         <p className="section-intro">
-          No, but not more either. Winning apps carry a median slop of {fmt(W.winner.median)} against{" "}
-          {fmt(W.non_winner.median)} for everyone else, which is a gap small enough to be chance (p = 0.22). Winners' apps
+          No, but not dirtier either. Winning apps carry a median slop of {fmt(W.winner.median)} against{" "}
+          {fmt(W.non_winner.median)} for everyone else, which can be chalked up to chance (p = 0.22). Winners' apps
           crash, leak secrets and have nonfunctioning buttons at the same rates as everyone else.
         </p>
         <div className="versus">
@@ -262,9 +260,9 @@ export default function FindingsPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">Do faster apps have less slop?</h2>
+        <h2 className="section-head">Are faster apps cleaner?</h2>
         <p className="section-intro">
-          Lighthouse performance barely predicts anything else. Measured against slop without the performance
+          Not exactly. When we measured performance (via Lighthouse) against the slop without the performance
           axis, the correlation is {RHO.perf_vs_nonperf_slop_rho} across{" "} the
           {RHO.n.toLocaleString()} apps, which is close enough to zero to call the two independent.
         </p>
@@ -272,7 +270,7 @@ export default function FindingsPage() {
           <li>
             <span className="k"><b>{RHO.perf_vs_nonperf_slop_rho}</b></span>
             <span className="v">
-              Spearman correlation between Lighthouse performance and the rest of the slop (without the performance component).
+              Spearman correlation between Lighthouse performance and the rest of the slop
             </span>
           </li>
         </ul>
@@ -289,20 +287,15 @@ export default function FindingsPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">How many apps are exploitable?</h2>
+        <h2 className="section-head">How many are exploitable?</h2>
         <p className="section-intro">
-          Only {fmt(SEV.exploitable_pct)}% of apps carry an exploitable vulnerability. The largest class is
-          a live credential shipped to the browser, most often ({GEMINI_LIVE_APPS} apps) a Google API key
-          that can call the Gemini API. Next is an open Supabase or Firebase database: on {STAR.apps} apps,
-          row level security was off and an anonymous client could read or write rows, and on{" "}
-          {STAR.breakdown.bulk_records} of them it could read records in bulk.
+          Yet only {fmt(SEV.exploitable_pct)}% of apps had an exploitable vulnerability. The largest class is
+          a credential in the bundle, most often ({GEMINI_LIVE_APPS} apps) a Google API key
+          that can call the Gemini API. Next is an open Supabase or Firebase database, as {STAR.apps} apps
+          lacked row level security which allowed an anonymous client to read or write rows. See the table below
+          for details:
         </p>
         <Exploitable />
-        <p className="section-intro fineprint">
-          Apps with exploitable findings, from full grades. An app with two classes counts in both rows.
-          Most of these only turn up in a full grade, which needs you to{" "}
-          <a href="/verify">verify you own the app</a>.
-        </p>
       </section>
 
       <section className="section">
@@ -339,27 +332,6 @@ export default function FindingsPage() {
           Sloptic is currently unable to properly separate what the teams built from these platforms.
         </p>
       </section>
-
-      <div className="method" data-tone="limits">
-        <h2>How to read this</h2>
-        <p>
-          Every figure here is an aggregate. 
-          No apps were named to protect the privacy of individual teams that built them.
-          The apps in this study were graded as a calibration to build Sloptic itself.
-        </p>
-        <p>
-          These are the full grade numbers that comprise the population used for percentile ranking on 
-          active grades. A separate curve exists for passive grading.
-        </p>
-        <div className="cta-row">
-          <a className="button" href="/organizers">
-            Sloptic for organizers
-          </a>
-          <a className="button secondary" href="https://github.com/sloptic/sloptic-main/blob/main/CORPUS_REPORT.md">
-            The full study
-          </a>
-        </div>
-      </div>
     </>
   );
 }
