@@ -285,13 +285,17 @@ describe("the editorial copy", () => {
 import {
   PROBE_FACTS,
   SCORING,
+  categorySpan,
   dampedTotal,
   groupSiblings,
   measuredText,
   priceLabel,
-  rungSentence,
+  priceNotes,
+  probeName,
+  rungsFor,
+  sharedRungs,
 } from "@/lib/checks";
-import { RUNG_TEXT } from "@/lib/check-labels";
+import { PROBE_NAMES, RUNG_TEXT } from "@/lib/check-labels";
 
 describe("the price list", () => {
   it("prices every probe the index knows, and no other", () => {
@@ -300,6 +304,15 @@ describe("the price list", () => {
 
   it("agrees with the index about each probe's area and category", () => {
     for (const f of PROBE_FACTS) expect([f.id, f.area, f.category]).toEqual([f.id, ...PROBE_INDEX[f.id]]);
+  });
+
+  it("names every check", () => {
+    expect(PROBE_FACTS.filter((f) => !Object.hasOwn(PROBE_NAMES, f.id)).map((f) => f.id)).toEqual([]);
+  });
+
+  it("keeps no name for a check the catalog no longer has", () => {
+    const ids = new Set(PROBE_FACTS.map((f) => f.id));
+    expect(Object.keys(PROBE_NAMES).filter((id) => !ids.has(id))).toEqual([]);
   });
 
   it("names every rung in words", () => {
@@ -344,19 +357,44 @@ describe("the price list", () => {
     expect(priceLabel({ kind: "off" })).toBe("off-score");
   });
 
-  it("says what lifts a price, in the rung's own words", () => {
+  it("lists what lifts a price, in the rung's own words", () => {
     const idor = PROBE_FACTS.find((f) => f.id === "sec-idor-001")!;
-    expect(rungSentence(idor)).toMatch(/^Starts at 30; 55 if it read another user's record;/);
+    expect(rungsFor(idor)[0]).toEqual({ points: 55, text: "reads another user's record" });
+    expect(rungsFor(PROBE_FACTS.find((f) => f.id === "sec-headers-002")!)).toEqual([]);
   });
 
-  it("reads a zero floor as not counting until proven", () => {
+  it("says a zero floor costs nothing until proven", () => {
     const deploy = PROBE_FACTS.find((f) => f.id === "qa-deploy-001")!;
-    expect(rungSentence(deploy)).toMatch(/^Counts nothing unless /);
+    expect(priceNotes(deploy)).toContain("Free until proven.");
+  });
+
+  it("notes the re-pricing and the shared flaws", () => {
+    const csp = PROBE_FACTS.find((f) => f.id === "sec-headers-002")!;
+    expect(priceNotes(csp)).toEqual(["Rises to 24 in a grade with cross-site scripting or scripting in the browser."]);
+    const sqli = PROBE_FACTS.find((f) => f.id === "sec-sqli-001")!;
+    expect(priceNotes(sqli)).toEqual([
+      "Same flaw as sec-sqli-002, sec-sqli-003 and sec-sqli-005. Only the highest counts.",
+    ]);
+  });
+
+  it("shows a ladder once when every ladder in the category shares it", () => {
+    const of = (cat: string) => PROBE_FACTS.filter((f) => f.category === cat);
+    expect(sharedRungs(of("access-control"))?.map((r) => r.points)).toEqual([55, 68, 78, 85]);
+    expect(sharedRungs(of("file-upload"))).toBeNull(); // two ladders, different rungs
+    expect(sharedRungs(of("exposure"))).toBeNull(); // only one ladder
+  });
+
+  it("spans a category from its cheapest check to its dearest", () => {
+    const of = (cat: string) => PROBE_FACTS.filter((f) => f.category === cat);
+    expect(categorySpan(of("security-headers"))).toBe("2 to 8");
+    expect(categorySpan(of("access-control"))).toBe("30 to 90");
+    expect(categorySpan(of("web-vitals"))).toBe("off-score");
+    expect(categorySpan(of("accessibility"))).toBe("measured");
   });
 
   it("works the Lighthouse example the way the grader prices it", () => {
     const lh = PROBE_FACTS.find((f) => f.id === SCORING.lighthouse.id)!;
-    expect(measuredText(lh)).toContain("a score of 84 costs 6 and a 25 costs 65");
+    expect(measuredText(lh)).toBe("1 point per Lighthouse point below 90. An 84 costs 6.");
   });
 
   it("finds the other checks that share a flaw", () => {
@@ -365,13 +403,22 @@ describe("the price list", () => {
     expect(groupSiblings(PROBE_FACTS.find((f) => f.id === "sec-headers-002")!)).toEqual([]);
   });
 
+  // Everything this page publishes about a check, in the words a reader sees.
+  const published = () => [
+    ...PROBE_FACTS.map(probeName),
+    ...Object.values(RUNG_TEXT),
+    ...PROBE_FACTS.flatMap(priceNotes),
+  ];
+
   it("writes the published copy without em dashes", () => {
-    const copy = [
-      ...PROBE_FACTS.map((f) => f.expected ?? ""),
-      ...Object.values(RUNG_TEXT),
-      ...PROBE_FACTS.map((f) => measuredText(f) ?? ""),
-    ];
-    for (const line of copy) expect(line).not.toContain("—");
+    for (const line of published()) expect(line).not.toContain("\u2014");
+  });
+
+  it("keeps every sentence simple", () => {
+    // House rule for this page: no compound or complex sentences. A semicolon, a comma before a
+    // joining word, or a subordinating word is how one creeps back in.
+    const joins = /;|, (and|but|or|so) | (if|because|unless|when|while|although|since|which|whose) /i;
+    for (const line of published()) expect([line, joins.test(line)]).toEqual([line, false]);
   });
 });
 

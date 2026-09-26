@@ -14,7 +14,7 @@ import {
   type Pricing,
   type ProbeFact,
 } from "./checks.generated";
-import { AREA_LABELS, LABELS, RUNG_TEXT } from "./check-labels";
+import { AREA_LABELS, LABELS, PROBE_NAMES, RUNG_TEXT } from "./check-labels";
 
 export { TOTALS, AREA_ORDER, SCORING, PROBE_FACTS };
 export { AREA_LABELS };
@@ -123,21 +123,30 @@ export function priceLabel(p: Pricing): string {
   }
 }
 
-/** The rungs as one sentence: "55 if it read another user's record, 85 if it changed one". Null when
- *  the price has no rungs. A rung with no label renders its raw flag, which the checks test forbids. */
-export function rungSentence(f: ProbeFact): string | null {
-  if (f.pricing.kind !== "ladder") return null;
-  const parts = f.pricing.rungs.map((r) => {
+/** A check's short name. Falls back to the grader's own description, then the id, so a new probe
+ *  still renders; the checks test requires a name for every probe. */
+export function probeName(f: ProbeFact): string {
+  return Object.hasOwn(PROBE_NAMES, f.id) ? PROBE_NAMES[f.id] : (f.expected ?? f.id);
+}
+
+/** The prices a ladder climbs to, each with what it takes. A rung with no label shows its raw flag,
+ *  which the checks test forbids. */
+export function rungsFor(f: ProbeFact): { points: number; text: string }[] {
+  if (f.pricing.kind !== "ladder") return [];
+  return f.pricing.rungs.map((r) => {
     const key = `${f.category}:${r.evidence}`;
-    return `${r.points} if ${Object.hasOwn(RUNG_TEXT, key) ? RUNG_TEXT[key] : r.evidence}`;
+    return { points: r.points, text: Object.hasOwn(RUNG_TEXT, key) ? RUNG_TEXT[key] : r.evidence };
   });
-  // A floor of 0 means the finding only counts once proven, which reads better as its own sentence.
-  const [only] = f.pricing.rungs;
-  if (f.pricing.from === 0 && f.pricing.rungs.length === 1) {
-    const key = `${f.category}:${only.evidence}`;
-    return `Counts nothing unless ${Object.hasOwn(RUNG_TEXT, key) ? RUNG_TEXT[key] : only.evidence}, then ${only.points}.`;
-  }
-  return `Starts at ${f.pricing.from}; ${parts.join("; ")}.`;
+}
+
+/** The ladder every priced-by-proof check in a category shares, or null. Access control has six checks
+ *  climbing the same four rungs; listing them six times buries the checks, so a shared ladder is shown
+ *  once for the category. Needs at least two ladders, all identical. */
+export function sharedRungs(probes: ProbeFact[]): { points: number; text: string }[] | null {
+  const ladders = probes.filter((f) => f.pricing.kind === "ladder");
+  if (ladders.length < 2) return null;
+  const sig = (f: ProbeFact) => JSON.stringify([f.pricing, rungsFor(f)]);
+  return ladders.every((f) => sig(f) === sig(ladders[0])) ? rungsFor(ladders[0]) : null;
 }
 
 /** One decimal, dropped when whole. Rounded first: (0.90 - 0.84) * 100 is 6.000000000000005. */
@@ -152,22 +161,59 @@ export function measuredText(f: ProbeFact): string | null {
   if (f.pricing.kind !== "measured") return null;
   const t = SCORING.a11yTiers;
   const lh = SCORING.lighthouse;
+  const floor = Math.round(lh.greenFloor * 100);
   const text: Record<string, string> = {
-    [lh.id]:
-      `The distance below Lighthouse's own line for good (${Math.round(lh.greenFloor * 100)}), so a score of 84 ` +
-      `costs ${fmt1((lh.greenFloor - 0.84) * 100 * lh.scale)} and a 25 costs ${fmt1((lh.greenFloor - 0.25) * 100 * lh.scale)}. ` +
-      `At ${Math.round(lh.greenFloor * 100)} or above it costs nothing.`,
+    [lh.id]: `${fmt1(lh.scale)} point per Lighthouse point below ${floor}. An 84 costs ${fmt1((lh.greenFloor - 0.84) * 100 * lh.scale)}.`,
     "qa-a11y-001":
-      `Each distinct barrier is priced by axe's impact rating: critical ${t.critical}, serious ${t.serious}, ` +
-      `moderate ${t.moderate}, minor ${t.minor}. Low contrast is priced between those by how far it falls ` +
-      `short. The worst barrier counts in full and each further one at ${fmt1(SCORING.a11yDecay * 100)}% of the one before.`,
-    "qa-a11y-002":
-      `Priced the same way as the rendered check (critical ${t.critical}, serious ${t.serious}, moderate ` +
-      `${t.moderate}, minor ${t.minor}), from the page's markup.`,
-    "qa-links-001": `${f.pricing.nominal}, rising with the share of internal links that are dead, to ${f.pricing.nominal * 2} if all of them are.`,
-    "sec-deps-001": "The worst matched vulnerability's CVSS score times ten, so a 7.5 costs 75.",
+      `Each barrier costs its impact: critical ${t.critical}, serious ${t.serious}, moderate ${t.moderate}, ` +
+      `minor ${t.minor}. Low contrast costs its shortfall. Each extra barrier counts ` +
+      `${fmt1(SCORING.a11yDecay * 100)}% of the one before.`,
+    "qa-a11y-002": "The same prices, read from the markup.",
+    "qa-links-001": `${f.pricing.nominal} to ${f.pricing.nominal * 2}, by the share of dead links.`,
+    "sec-deps-001": "The worst CVE's CVSS score times ten.",
   };
   return Object.hasOwn(text, f.id) ? text[f.id] : null;
+}
+
+/** Everything about a check's price that its number and rungs do not say, one short line each. */
+export function priceNotes(f: ProbeFact): string[] {
+  const notes: string[] = [];
+  const measured = measuredText(f);
+  if (measured) notes.push(measured);
+  if (f.pricing.kind === "off") notes.push("Shown on the report. Adds nothing to the score.");
+  if (f.pricing.kind === "ladder" && f.pricing.from === 0) notes.push("Free until proven.");
+  if (f.raised) {
+    const when = f.raised.when.map(categoryName).sort().join(" or ");
+    notes.push(`Rises to ${f.raised.to} in a grade with ${when}.`);
+  }
+  const siblings = groupSiblings(f);
+  if (siblings.length) {
+    const list =
+      siblings.length === 1 ? siblings[0] : `${siblings.slice(0, -1).join(", ")} and ${siblings[siblings.length - 1]}`;
+    notes.push(`Same flaw as ${list}. Only the highest counts.`);
+  }
+  return notes;
+}
+
+/** A category's price span for its collapsed row: the lowest and highest a check in it can cost.
+ *  Measured and off-score checks carry no fixed span, so they are left out; a category of only those
+ *  says so instead. */
+export function categorySpan(probes: ProbeFact[]): string {
+  const lo: number[] = [];
+  const hi: number[] = [];
+  for (const f of probes) {
+    if (f.pricing.kind === "fixed") {
+      lo.push(f.pricing.points);
+      hi.push(f.pricing.points);
+    } else if (f.pricing.kind === "ladder") {
+      lo.push(f.pricing.from);
+      hi.push(f.pricing.to);
+    }
+  }
+  if (!lo.length) return probes.every((f) => f.pricing.kind === "off") ? "off-score" : "measured";
+  const min = Math.min(...lo);
+  const max = Math.max(...hi);
+  return min === max ? String(min) : `${min} to ${max}`;
 }
 
 /** The other checks that find the same flaw, which only ever count once between them. */

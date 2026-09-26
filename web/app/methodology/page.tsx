@@ -135,45 +135,44 @@ export default function MethodologyPage() {
           <li>
             <span className="k">lowest price first</span>
             <span className="v">
-              A check charges the bottom of its range unless it proves worse harm. For example, an access
-              control flaw costs {IDOR.pricing.kind === "ladder" ? IDOR.pricing.from : ""} as found,{" "}
-              {idorRung("cross_user_read")} if it read another user&apos;s record, and{" "}
-              {idorRung("cross_user_write")} if it changed one. Only the highest proven price counts; they
-              never add up.
+              Each check starts at the bottom of its range. Proof of worse harm raises the price. Only the
+              highest proof counts. An access control flaw costs{" "}
+              {IDOR.pricing.kind === "ladder" ? IDOR.pricing.from : ""} as found. Reading another
+              user&apos;s record makes it {idorRung("cross_user_read")}. Changing one makes it{" "}
+              {idorRung("cross_user_write")}.
             </span>
           </li>
           <li>
             <span className="k">damped</span>
             <span className="v">
-              Repeats of one kind of slop count for less. The worst finding of a kind counts in full, the
-              next at {one(DECAY * 100)}%, the one after at {one(DECAY ** 2 * 100)}%, and so on, so one
-              kind of slop can never cost more than {one(1 / (1 - DECAY))} times its worst finding. For
-              example, an app with no CSP, no HSTS and no clickjacking protection loses{" "}
-              {one(dampedTotal(HEADER_PRICES))} rather than {one(HEADER_PRICES.reduce((a, b) => a + b, 0))}.
+              Repeats of one kind of slop count less. The worst counts in full. The next counts{" "}
+              {one(DECAY * 100)}%. The one after counts {one(DECAY ** 2 * 100)}%. One kind never costs more
+              than {one(1 / (1 - DECAY))} times its worst finding. Missing CSP, HSTS and clickjacking
+              protection cost {one(dampedTotal(HEADER_PRICES))}. Undamped, they would cost{" "}
+              {one(HEADER_PRICES.reduce((a, b) => a + b, 0))}.
             </span>
           </li>
           <li>
             <span className="k">one flaw, one charge</span>
             <span className="v">
-              Checks that look for the same flaw in different ways count once, at the highest price
-              between them. The {SQLI_GROUP} checks that try SQL injection on a login form are one finding
-              however many of them get in.
+              Some checks test one flaw in different ways. They count once, at the highest price. The{" "}
+              {SQLI_GROUP} login SQL injection checks are one finding.
             </span>
           </li>
           <li>
             <span className="k">raised when it matters</span>
             <span className="v">
-              Some defenses only matter once something gets past them, so they are cheap alone and cost
-              more when that happens. A missing CSP costs {price(CSP)} by itself and {CSP.raised?.to} in a
-              grade that also finds {CSP.raised?.when.map(categoryName).sort().join(" or ")}.
+              Some defenses matter most during an attack. They cost little alone. A missing CSP costs{" "}
+              {price(CSP)}. It costs {CSP.raised?.to} in a grade with{" "}
+              {CSP.raised?.when.map(categoryName).sort().join(" or ")}.
             </span>
           </li>
           <li>
             <span className="k">measured</span>
             <span className="v">
-              A few checks are priced by how much they measured. Lighthouse charges how far the app falls
-              below {Math.round(SCORING.lighthouse.greenFloor * 100)}, accessibility charges each barrier
-              axe finds by its impact, and dead links by how many of the homepage&apos;s links are dead.
+              A few checks are priced by measurement. Lighthouse charges each point below{" "}
+              {Math.round(SCORING.lighthouse.greenFloor * 100)}. Accessibility charges each barrier by its
+              impact. Dead links cost more with a larger share.
             </span>
           </li>
           <li>
@@ -185,8 +184,8 @@ export default function MethodologyPage() {
           </li>
         </ul>
         <p className="section-intro">
-          A report lists what each finding added after all of this, so its numbers add up to the score.
-          The price of every check is on <a href="/checks#points">Sloptic&apos;s checks</a>.
+          A report shows each finding&apos;s share of the score. The shares add up to the score. Every
+          check&apos;s price is on <a href="/checks#points">Sloptic&apos;s checks</a>.
         </p>
       </section>
 

@@ -4,12 +4,13 @@ import {
   AREAS,
   CATALOG_URL,
   TOTALS,
-  categoryName,
-  groupSiblings,
-  measuredText,
+  categorySpan,
   priceLabel,
+  priceNotes,
+  probeName,
   probesFor,
-  rungSentence,
+  rungsFor,
+  sharedRungs,
   type ProbeFact,
 } from "@/lib/checks";
 
@@ -19,40 +20,47 @@ export const metadata: Metadata = pageMeta(
   "/checks",
 );
 
-/** The grader's report-card copy marks code with backticks. */
-function Expected({ text }: { text: string }) {
+/** Names mark code with backticks. */
+function Code({ text }: { text: string }) {
+  return <>{text.split("`").map((part, i) => (i % 2 ? <code key={i}>{part}</code> : part))}</>;
+}
+
+/** A ladder's rungs: points in a column, what it takes beside them. */
+function Rungs({ rungs }: { rungs: { points: number; text: string }[] }) {
   return (
-    <>
-      {text.split("`").map((part, i) => (i % 2 ? <code key={i}>{part}</code> : part))}
-    </>
+    <dl className="probe-rungs">
+      {rungs.map((r) => (
+        <div key={r.points}>
+          <dt>{r.points}</dt>
+          <dd>{r.text}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
-/** Everything about a check's price that the number alone does not say, one line each. */
-function PriceNotes({ f }: { f: ProbeFact }) {
-  const notes: string[] = [];
-  const rungs = rungSentence(f);
-  if (rungs) notes.push(rungs);
-  const measured = measuredText(f);
-  if (measured) notes.push(measured);
-  if (f.pricing.kind === "off") notes.push("Shown on the report, but adds nothing to the score.");
-  if (f.raised) {
-    const when = f.raised.when.map(categoryName).sort().join(" or ");
-    notes.push(`Raised to ${f.raised.to} in a grade that also finds ${when}.`);
-  }
-  const siblings = groupSiblings(f);
-  if (siblings.length) {
-    notes.push(
-      `The same flaw as ${siblings.join(", ")}, found a different way. Only the highest priced of them counts.`,
-    );
-  }
-  if (!notes.length) return null;
+/** One check: its name, where it runs and its price, then what lifts or sets the price. A ladder the
+ *  whole category shares is shown once for the category, so the row leaves it out. */
+function ProbeRow({ f, shared }: { f: ProbeFact; shared: boolean }) {
+  const rungs = shared ? [] : rungsFor(f);
+  const notes = priceNotes(f);
   return (
-    <ul className="probe-notes">
-      {notes.map((n) => (
-        <li key={n}>{n}</li>
-      ))}
-    </ul>
+    <li className="probe-row" id={f.id} data-kind={f.pricing.kind}>
+      <span className="probe-name">
+        <Code text={probeName(f)} />
+      </span>
+      <span className="probe-runs">{f.passive ? "any URL" : "verified"}</span>
+      <span className="probe-points">{priceLabel(f.pricing)}</span>
+      <span className="probe-id">{f.id}</span>
+      {rungs.length > 0 && <Rungs rungs={rungs} />}
+      {notes.length > 0 && (
+        <ul className="probe-notes">
+          {notes.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ul>
+      )}
+    </li>
   );
 }
 
@@ -62,8 +70,8 @@ export default function ChecksPage() {
       <div className="page-head">
         <h1>Sloptic's checks</h1>
         <p className="page-lead">
-          The catalog comprises {TOTALS.total} checks across {AREAS.reduce((n, a) => n + a.categories, 0)}{" "}
-          different kinds of slop. Each check is a single file in the{" "}
+          Sloptic runs {TOTALS.total} checks across {AREAS.reduce((n, a) => n + a.categories, 0)} kinds of
+          slop. Each check is one file in the{" "}
           <a href={CATALOG_URL} target="_blank" rel="noopener noreferrer">
             open grader
           </a>
@@ -74,8 +82,8 @@ export default function ChecksPage() {
       <section className="section">
         <h2 className="section-head">The counts</h2>
         <p className="section-intro">
-          {TOTALS.passive} of the {TOTALS.total} run on any URL. The remaining {TOTALS.active} send
-          test traffic, so they only run once you verify your site or event.
+          {TOTALS.passive} of the {TOTALS.total} run on any URL. The other {TOTALS.active} send test traffic.
+          They only run on a verified site or event.
         </p>
         <div className="table-scroll">
           <table className="count-table">
@@ -118,64 +126,69 @@ export default function ChecksPage() {
       <section className="section" id="points">
         <h2 className="section-head">What each check costs</h2>
         <p className="section-intro">
-          Every check below has a price in points, which is what it adds to the score when it finds slop.
-          Most have one price. Some start low and rise when the check proves worse harm, some are priced
-          by what they measure, and a few are shown on the report without counting. Repeats are damped
-          before they reach the score, which{" "}
-          <a href="/methodology#scoring">How Sloptic finds slop</a> explains.
+          Each check has a price in points. Most have one price. Some rise with proof of worse harm. Some are
+          measured. A few count nothing. Repeats count less.{" "}
+          <a href="/methodology#scoring">How Sloptic finds slop</a> has the rules.
         </p>
       </section>
 
+      {/* One category open at a time, page wide: every <details> shares a name, which makes the browser
+          close the open one. Browsers without exclusive accordions just allow several open. */}
       {AREAS.map((area) => (
         <section className="section" key={area.id} id={area.id}>
           <h2 className="section-head">
             <span className="measure-swatch" data-axis={area.id} aria-hidden /> {area.label}
           </h2>
           <p className="section-intro">
-            {area.categories} different faults, {area.probes} checks between them.
+            {area.categories} kinds of slop, {area.probes} checks. Open a kind to see its checks.
           </p>
-          <div className="probe-wrap">
-            <table className="probe-table">
-              <thead>
-                <tr>
-                  <th>check</th>
-                  <th>runs on</th>
-                  <th>points</th>
-                </tr>
-              </thead>
-              {probesFor(area.id).map(({ category, probes }) => (
-                <tbody key={category.slug}>
-                  <tr className="probe-cat">
-                    <th colSpan={3} scope="colgroup">
-                      {category.href ? (
-                        <a href={category.href} target="_blank" rel="noopener noreferrer" className="probe-link">
-                          {category.name}
+          <div className="probe-cats">
+            {probesFor(area.id).map(({ category, probes }) => {
+              const shared = sharedRungs(probes);
+              return (
+                <details
+                  className="cat-group probe-cat"
+                  name="checks"
+                  key={category.slug}
+                  id={`kind-${category.slug}`}
+                >
+                  <summary className="cat-head">
+                    <span className="cat-arrow" aria-hidden>
+                      ▸
+                    </span>
+                    <span className="cat-title">
+                      {category.name} <span className="cat-count">{probes.length}</span>
+                    </span>
+                    <span className="probe-cat-span">{categorySpan(probes)}</span>
+                  </summary>
+                  <div className="probe-cat-body">
+                    <div className="probe-cols" aria-hidden>
+                      <span>check</span>
+                      <span>runs on</span>
+                      <span>points</span>
+                    </div>
+                    <ul className="probe-list">
+                      {probes.map((f) => (
+                        <ProbeRow f={f} shared={shared !== null} key={f.id} />
+                      ))}
+                    </ul>
+                    {shared && (
+                      <div className="probe-shared">
+                        <p>Proof raises the price:</p>
+                        <Rungs rungs={shared} />
+                      </div>
+                    )}
+                    {category.href && (
+                      <p className="probe-cat-more">
+                        <a href={category.href} target="_blank" rel="noopener noreferrer">
+                          About {category.name}
                         </a>
-                      ) : (
-                        category.name
-                      )}
-                    </th>
-                  </tr>
-                  {probes.map((f) => (
-                    <tr key={f.id} id={f.id} data-kind={f.pricing.kind}>
-                      <td className="probe-what">
-                        <span className="probe-expected">
-                          {f.expected ? <Expected text={f.expected} /> : category.name}
-                        </span>
-                        <span className="probe-id">{f.id}</span>
-                        <PriceNotes f={f} />
-                      </td>
-                      <td className="probe-runs" data-label="runs on">
-                        {f.passive ? "any URL" : "verified only"}
-                      </td>
-                      <td className="probe-points" data-label="points">
-                        {priceLabel(f.pricing)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              ))}
-            </table>
+                      </p>
+                    )}
+                  </div>
+                </details>
+              );
+            })}
           </div>
         </section>
       ))}

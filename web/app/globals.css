@@ -1592,52 +1592,124 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
-/* Price table on /checks: every check, grouped by category, with what it costs ---- */
-.probe-wrap {
+/* Price list on /checks: one collapsible row per kind of slop, one open at a time, and inside it every
+   check with where it runs and what it costs. Reuses the report's .cat-group arrow so a category
+   collapses the same way on both pages; the selectors carry .probe-cats to outrank those rules,
+   which sit later in this file. */
+.probe-cats {
   margin: 1rem 0 0;
+  border-top: 1px solid var(--line);
 }
-.probe-table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 0.94rem;
+.probe-cats .cat-group {
+  margin: 0;
+  border-bottom: 1px solid var(--line);
 }
-.probe-table thead th {
+.probe-cats .cat-group > summary.cat-head {
+  margin: 0;
+  padding: 0.7rem 0;
+  font-size: 1rem;
+  color: var(--ink);
+}
+.probe-cats .cat-arrow {
+  width: 0.7rem;
+}
+.probe-cat-span {
+  margin-left: auto;
   font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-size: 0.82rem;
   font-weight: 400;
   color: var(--muted);
-  text-align: left;
-  padding: 0 0.75rem 0.45rem 0;
-  border-bottom: 1px solid var(--line-strong);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.probe-table thead th:last-child {
+.probe-cat-body {
+  padding: 0 0 1rem 1.15rem;
+}
+.probe-cols,
+.probe-row {
+  display: grid;
+  grid-template-columns: 1fr 5.5rem 5.5rem;
+  column-gap: 1rem;
+}
+.probe-cols {
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line-strong);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.probe-cols span:last-child,
+.probe-points {
   text-align: right;
-  padding-right: 0;
 }
-.probe-table td {
-  padding: 0.6rem 0.75rem 0.6rem 0;
+.probe-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.probe-row {
+  padding: 0.65rem 0;
   border-bottom: 1px solid var(--line);
-  vertical-align: top;
 }
-.probe-table .probe-cat th {
-  padding: 1.1rem 0 0.4rem;
-  border-bottom: 1px solid var(--line-strong);
-  text-align: left;
-  font-weight: 600;
+.probe-row:last-child {
+  border-bottom: 0;
+}
+/* Anchors land a reader on one check from the methodology page or a report. */
+.probe-row:target {
+  background: var(--surface);
+}
+.probe-name {
   color: var(--ink);
 }
-.probe-what {
+.probe-runs,
+.probe-points {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.probe-runs {
+  color: var(--muted);
+}
+.probe-points {
   color: var(--ink);
 }
-.probe-expected {
-  display: block;
+/* a measured or off-score check reads quieter than one with a price */
+.probe-row[data-kind="off"] .probe-points,
+.probe-row[data-kind="measured"] .probe-points {
+  color: var(--muted);
+}
+.probe-id,
+.probe-rungs,
+.probe-notes {
+  grid-column: 1 / -1;
 }
 .probe-id {
-  display: block;
-  margin-top: 0.15rem;
+  margin-top: 0.1rem;
   font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   color: var(--muted);
+}
+/* The rungs a price climbs to: points in a column, what it takes beside them. */
+.probe-rungs {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.1rem 0.7rem;
+  margin: 0.4rem 0 0;
+  font-size: 0.84rem;
+}
+.probe-rungs > div {
+  display: contents;
+}
+.probe-rungs dt {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink);
+}
+.probe-rungs dd {
+  margin: 0;
+  color: var(--ink-soft);
 }
 .probe-notes {
   list-style: none;
@@ -1647,60 +1719,37 @@ code {
   line-height: 1.45;
   color: var(--ink-soft);
 }
-.probe-notes li + li {
-  margin-top: 0.2rem;
-}
-.probe-runs,
-.probe-points {
-  font-family: var(--font-mono);
-  font-size: 0.82rem;
-  white-space: nowrap;
-}
-.probe-runs {
-  color: var(--muted);
-}
-.probe-table td.probe-points {
-  text-align: right;
-  padding-right: 0;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
-/* an off-score check reads quieter than one that counts */
-.probe-table tr[data-kind="off"] .probe-points,
-.probe-table tr[data-kind="measured"] .probe-points {
-  color: var(--muted);
-}
-/* Anchors land a reader on one check from the methodology page or a report. */
-.probe-table tr:target td {
+/* A ladder the whole category shares, shown once under its checks. */
+.probe-shared {
+  margin: 0.7rem 0 0;
+  padding: 0.6rem 0.75rem;
   background: var(--surface);
+  border-radius: var(--radius);
+  font-size: 0.84rem;
+}
+.probe-shared p {
+  margin: 0;
+  color: var(--muted);
+}
+.probe-cat-more {
+  margin: 0.7rem 0 0;
+  font-size: 0.85rem;
 }
 @media (max-width: 42rem) {
-  .probe-table thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
+  .probe-cat-body {
+    padding-left: 0;
   }
-  .probe-table tbody tr:not(.probe-cat) {
-    display: grid;
+  .probe-cols {
+    display: none;
+  }
+  .probe-row {
     grid-template-columns: 1fr auto;
-    column-gap: 1rem;
-    padding: 0.6rem 0;
-    border-bottom: 1px solid var(--line);
   }
-  .probe-table tbody tr:not(.probe-cat) td {
-    padding: 0;
-    border-bottom: 0;
-  }
-  .probe-what {
+  .probe-name {
     grid-column: 1 / -1;
-    margin-bottom: 0.35rem;
   }
-  .probe-runs::before,
-  .probe-points::before {
-    content: attr(data-label) " ";
-    color: var(--muted);
+  .probe-runs::before {
+    content: "runs on ";
   }
 }
 .channel-more {
