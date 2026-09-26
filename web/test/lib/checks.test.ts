@@ -25,7 +25,7 @@ import { LABELS } from "@/lib/check-labels";
 // shows axes, the way 3.0's accessibility split did.
 const ALL_AREAS: Area[] = ["security", "qa", "accessibility", "performance"];
 
-// Pinned on purpose. sloptic/safety.py at 3.0.0 classifies 45 passive and 61 active of 106, and
+// Pinned on purpose. sloptic/safety.py at 3.0.x classifies 45 passive and 61 active of 106, and
 // passive-2026.2 was built from exactly that selection. A drift here is not a cosmetic mismatch, it
 // is the product and the frozen curve measuring different things, and every page quoting a count
 // needs a human to look at it.

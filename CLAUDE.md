@@ -61,7 +61,7 @@ Read `sloptic-main`'s `sloptic/cli.py` and `sloptic/pipeline.py` for exact signa
   places an app at the floor of its integer bucket (worth up to 8 percentiles; fixed in the grader at
   `f5067d3`).
 - **Passive vs full:** the worker runs the full pipeline only for a verified origin; for everything else it
-  runs `--passive-only` (`sloptic/safety.py` classifies every probe, **45 passive / 61 active of 106** at 3.0.0; use the
+  runs `--passive-only` (`sloptic/safety.py` classifies every probe, **45 passive / 61 active of 106** at 3.0.x; use the
   flag or `safety.passive_catalog()`, which is also what the passive curve was built from, so the product and
   the curve must select through the same function or they drift). PASSIVE = changes no state AND fetches nothing
   hidden (reads only what the app serves every visitor, even if that reveals a leak). ACTIVE = mutates / sends
@@ -113,7 +113,7 @@ Prove control of the origin to be actively tested by serving a token we issue. T
 
 ## Conventions
 
-- **The grader is a dependency.** Pinned EXACTLY at **`sloptic==3.0.0`** from PyPI in `worker/pyproject.toml`,
+- **The grader is a dependency.** Pinned EXACTLY at **`sloptic==3.0.1`** from PyPI in `worker/pyproject.toml`,
   which is the single source of truth (the checks generator and CI both read it). Call it in `--passive-only`
   mode for unverified targets and the full run only for a verified origin. Do not copy or re-implement probe
   logic here; the vendored `worker/curves/benchmark.py` is a verbatim copy at the pinned tag, not a fork.
