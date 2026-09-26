@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { pageMeta } from "@/lib/meta";
 import { ACTIVE, fireRate, fmt } from "@/lib/corpus";
 import { LIGHTHOUSE_PROFILE as LH, SEAT_ROWS } from "@/lib/seat";
-import { PROBE_FACTS, SCORING, categoryName, dampedTotal, type ProbeFact } from "@/lib/checks";
+import { PROBE_FACTS, RATIONALE_URL, SCORING, categoryName, dampedTotal, type ProbeFact } from "@/lib/checks";
 
 export const metadata: Metadata = pageMeta(
   "How Sloptic finds slop",
@@ -196,7 +196,7 @@ export default function MethodologyPage() {
           a finding lands inside that authority&apos;s range is set by what the check saw. You can find the 
           full rationale{" "}
           <a
-            href="https://github.com/sloptic/sloptic-main/blob/main/docs/PENALTY_RATIONALE.md"
+            href={RATIONALE_URL}
             target="_blank"
             rel="noopener noreferrer"
           >

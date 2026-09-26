@@ -1,10 +1,14 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import {
   AREAS,
   AREA_BLURBS,
   AREA_LABELS,
   CATALOG_URL,
+  GRADER_VERSION,
   PASSIVE_BY_AREA,
+  RATIONALE_URL,
   TOTALS,
   categoriesFor,
   categoryName,
@@ -271,6 +275,17 @@ describe("the editorial copy", () => {
 
   it("points at the catalog in the grader repo, which is the authority on the checks", () => {
     expect(CATALOG_URL).toMatch(/^https:\/\/github\.com\/.*sloptic-main.*catalog$/);
+  });
+
+  it("links the grader at the release the worker runs, never at main", () => {
+    // main runs ahead of the pin, so it can show prices and checks this site does not use.
+    const pyproject = readFileSync(path.resolve(__dirname, "../../../worker/pyproject.toml"), "utf8");
+    const pin = pyproject.match(/"sloptic==([^"]+)"/)?.[1];
+    expect(GRADER_VERSION).toBe(pin);
+    for (const url of [CATALOG_URL, RATIONALE_URL]) {
+      expect(url).toContain(`/v${pin}/`);
+      expect(url).not.toContain("/main/");
+    }
   });
 
   it("links every label at a public authority over https", () => {

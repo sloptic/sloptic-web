@@ -4,6 +4,7 @@
 import {
   AREA_ORDER,
   CATEGORY_FACTS,
+  GRADER_VERSION,
   PROBE_FACTS,
   PROBE_INDEX,
   SCORING,
@@ -20,7 +21,14 @@ export { TOTALS, AREA_ORDER, SCORING, PROBE_FACTS };
 export { AREA_LABELS };
 export type { Area, Access, CategoryFact, Pricing, ProbeFact };
 
-export const CATALOG_URL = "https://github.com/sloptic/sloptic-main/tree/main/catalog";
+// Pinned to the release tag the worker runs, never `main`: main runs ahead of the pin (it will carry
+// the 4.0 ruler while the site still grades on 3.x), so a link to it can describe prices and checks
+// this site does not use. Moving the pin moves these with it.
+const GRADER_TREE = `https://github.com/sloptic/sloptic-main/tree/v${GRADER_VERSION}`;
+const GRADER_BLOB = `https://github.com/sloptic/sloptic-main/blob/v${GRADER_VERSION}`;
+export const CATALOG_URL = `${GRADER_TREE}/catalog`;
+export const RATIONALE_URL = `${GRADER_BLOB}/docs/PENALTY_RATIONALE.md`;
+export { GRADER_VERSION };
 
 export type Category = CategoryFact & { name: string; href?: string };
 

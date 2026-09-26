@@ -254,6 +254,10 @@ export const CATEGORY_FACTS: CategoryFact[] = [
 
 export const TOTALS = {{ total: {len(probes)}, passive: {passive}, active: {len(probes) - passive} }};
 
+/** The grader release these facts came from, which is the one worker/pyproject.toml pins. Links into
+ *  the grader repo use its tag, so they show the catalog and docs of the release that grades. */
+export const GRADER_VERSION = "{got or want}";
+
 /** How a check is priced, read from its catalog entry the way the grader resolves it at grade time.
  *  off: a diagnostic shown on the report that adds nothing to the score.
  *  fixed: one price whenever it fires.
