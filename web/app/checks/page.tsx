@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/meta";
 import { AREAS, CATALOG_URL, TOTALS, categoriesFor } from "@/lib/checks";
 
-export const metadata: Metadata = {
-  title: "Every check Sloptic runs",
-  description:
-    "The full catalog by category, with how many checks each covers and which run on any URL versus what needs verification.",
-};
+export const metadata: Metadata = pageMeta(
+  "Sloptic's checks",
+  `The ${TOTALS.total} checks Sloptic runs, grouped by kind of slop. ${TOTALS.passive} run on any URL and the other ${TOTALS.active} need you to verify your site or event.`,
+  "/checks",
+);
 
 const ACCESS_TEXT: Record<string, string> = {
   open: "any URL",

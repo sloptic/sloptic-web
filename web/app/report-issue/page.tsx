@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/meta";
 
-export const metadata: Metadata = {
-  title: "Report an issue",
-  description: "How to tell us a grade is wrong and how to report a vulnerability in Sloptic.",
-};
+export const metadata: Metadata = pageMeta(
+  "Report an issue",
+  "Where to dispute a grade, stop Sloptic from grading your site, or report a security issue in Sloptic.",
+  "/report-issue",
+);
 
 // The page exists because "email us" already did not work. hello@sloptic.org sits in the colophon of
 // every page, in /terms, in /privacy and in the participant notice, and a bare address gets back

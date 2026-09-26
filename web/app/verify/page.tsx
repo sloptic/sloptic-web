@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/meta";
 import { TOTALS } from "@/lib/checks";
 import { currentUser } from "@/lib/auth";
 import VerifyFlow from "./VerifyFlow";
@@ -6,11 +7,11 @@ import { claimsForAccount } from "@/lib/domain-claims";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Verifying your site",
-  description:
-    `Why Sloptic runs ${TOTALS.passive} of its ${TOTALS.total} checks by default.`,
-};
+export const metadata: Metadata = pageMeta(
+  "Why only some checks run",
+  `On a site nobody has proven they own, Sloptic runs only the ${TOTALS.passive} of its ${TOTALS.total} checks that read what a visitor can see. Verify yours to run the rest.`,
+  "/verify",
+);
 
 export default async function VerifyPage() {
   const user = await currentUser();

@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/meta";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
 import { TOTALS } from "@/lib/checks";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "How your entries are graded",
-  description: "What Sloptic checks, what it sends, and how to be excluded.",
-};
+// No path: this address carries the event's token, and a share card has no business repeating it.
+export const metadata: Metadata = pageMeta(
+  "How your project is graded",
+  "Your hackathon's organizer uses Sloptic to grade submitted web apps. What it does to your project, what it looks for, and how to be excluded.",
+);
 
 // The participant notice, and the reason the verification token is a link rather than a string.
 //

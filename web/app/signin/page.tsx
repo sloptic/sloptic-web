@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/meta";
 import { redirect } from "next/navigation";
 import SignInForm from "./SignInForm";
 import { currentUser, publicSupabaseConfig } from "@/lib/auth";
@@ -6,10 +7,11 @@ import { safeNext } from "@/lib/redirect";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Sign in or up",
-  description: "Sign in or create an account to verify a domain or an event.",
-};
+export const metadata: Metadata = pageMeta(
+  "Sign in / up",
+  "Sign in or create an account to verify a domain or an event.",
+  "/signin",
+);
 
 export default async function SignInPage({
   searchParams,

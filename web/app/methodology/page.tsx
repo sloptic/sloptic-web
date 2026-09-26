@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/meta";
 import { ACTIVE, fireRate, fmt } from "@/lib/corpus";
 import { LIGHTHOUSE_PROFILE as LH, SEAT_ROWS } from "@/lib/seat";
 
-export const metadata: Metadata = {
-  title: "How Sloptic grades",
-  description:
-    "The method in full: what counts as a finding, how the score is built, what happens when a check cannot run, how the ruler is validated, and what is not claimed yet.",
-};
+export const metadata: Metadata = pageMeta(
+  "How Sloptic finds slop",
+  "Sloptic checks what any visitor sees and grades on what is wrong no matter what the app is for. What counts as slop, how Sloptic scores it, and what it can't say.",
+  "/methodology",
+);
 
 export default function MethodologyPage() {
   return (

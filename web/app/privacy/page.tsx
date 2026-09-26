@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/meta";
 import { ANON_REPORT_DAYS } from "@/lib/retention";
 
-export const metadata: Metadata = {
-  title: "Privacy",
-  description: "What Sloptic stores, for how long, who processes it, and how to have it deleted.",
-};
+export const metadata: Metadata = pageMeta(
+  "Privacy",
+  "What Sloptic stores, for how long, who else processes it, and how to have it deleted.",
+  "/privacy",
+);
 
 const UPDATED = "1 September 2026";
 

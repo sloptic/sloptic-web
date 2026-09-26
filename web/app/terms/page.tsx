@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/meta";
 import { ANON_REPORT_DAYS } from "@/lib/retention";
 
-export const metadata: Metadata = {
-  title: "Terms of use",
-  description: "The rules for using Sloptic, what you may point it at, and what a grade does not claim.",
-};
+export const metadata: Metadata = pageMeta(
+  "Terms of use",
+  "The rules for using Sloptic, what you may point it at, and what a grade does not claim.",
+  "/terms",
+);
 
 const UPDATED = "1 September 2026";
 

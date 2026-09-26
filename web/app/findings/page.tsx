@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/meta";
 import { ACTIVE, GEMINI_LIVE_APPS, comparableEvents, MIN_EVENT_N, fmt } from "@/lib/corpus";
 import EventSpread from "./EventSpread";
 import Exploitable from "./Exploitable";
 
-export const metadata: Metadata = {
-  title: "What do hackathon apps look like?",
-  // Read from the corpus, like every other number on this page, so it moves when the corpus does.
-  description: `The state of hackathon apps across ${ACTIVE.provenance.n_events} hackathons as Sloptic grades them.`,
-};
+// Read from the corpus, like every other number on this page, so it moves when the corpus does.
+export const metadata: Metadata = pageMeta(
+  "What do hackathon apps look like?",
+  `What Sloptic found when it graded ${ACTIVE.attrition.graded.toLocaleString("en-US")} apps in ${ACTIVE.provenance.n_events} hackathons.`,
+  "/findings",
+);
 
 const D = ACTIVE.distribution;
 const SEV = ACTIVE.severity;

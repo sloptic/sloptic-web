@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/meta";
 import BrandMark from "@/app/BrandMark";
 
-export const metadata: Metadata = {
-  title: "About Sloptic",
-  description:
-    "Why Sloptic exists, what it can judge, and who made it.",
-};
+export const metadata: Metadata = pageMeta(
+  "About Sloptic",
+  "Why Sloptic exists, why it isn't a scanner, what it can and cannot judge, and who made it.",
+  "/about",
+);
 
 export default function AboutPage() {
   return (

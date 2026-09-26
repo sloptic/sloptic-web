@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/meta";
 import EventForm from "./EventForm";
 
-export const metadata: Metadata = {
-  title: "Sloptic for organizers",
-  description:
-    "Grade the web app entries in your hackathon and give the cleanest build a prize of its own.",
-};
+export const metadata: Metadata = pageMeta(
+  "Sloptic for hackathon organizers",
+  "Sloptic grades your hackathon's web app entries on the parts no app should get wrong, ranks them on a board, and suggests a prize for the lowest slop score.",
+  "/organizers",
+);
 
 export default function OrganizersPage({
   searchParams,
