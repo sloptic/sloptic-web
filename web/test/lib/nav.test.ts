@@ -57,3 +57,15 @@ describe("the site navigation", () => {
     for (const l of ACCOUNT) expect(open).not.toContain(l.href);
   });
 });
+
+describe("the labels", () => {
+  // "/" is the exception: its title is the brand, and its label is what you go there to do.
+  const titled = ALL.filter((l) => l.href !== "/");
+
+  it.each(titled.map((l) => [l.href, l.label]))("names %s by its page title", async (href, label) => {
+    // A page renamed in one place kept its old name in the menu for weeks; the menu is now held to
+    // whatever the page calls itself.
+    const mod = await import(/* @vite-ignore */ pageFor(href));
+    expect(label).toBe(mod.metadata.title);
+  });
+});

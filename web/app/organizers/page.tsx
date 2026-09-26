@@ -142,7 +142,7 @@ export default function OrganizersPage({
             Verify your event
           </a>
           <a className="button secondary" href="/methodology">
-            How grading works
+            How Sloptic finds slop
           </a>
         </div>
       </section>

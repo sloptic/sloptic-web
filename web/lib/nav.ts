@@ -9,21 +9,21 @@ export type NavLink = { href: string; label: string };
 /** Reference pages: the ones someone goes looking for rather than lands on. */
 export const REFERENCE: NavLink[] = [
   { href: "/about", label: "About Sloptic" },
-  { href: "/methodology", label: "How grading works" },
-  { href: "/checks", label: "Every check" },
-  { href: "/findings", label: "The state of hackathons" },
+  { href: "/methodology", label: "How Sloptic finds slop" },
+  { href: "/checks", label: "Sloptic's checks" },
+  { href: "/findings", label: "What do hackathon apps look like?" },
   { href: "/verify", label: "Why only some checks run" },
 ];
 
 /** Top level destinations, in masthead order. */
 export const PRIMARY: NavLink[] = [
   { href: "/", label: "Grade an app" },
-  { href: "/organizers", label: "For organizers" },
+  { href: "/organizers", label: "Sloptic for hackathon organizers" },
 ];
 
 /** Only meaningful with an account. */
 export const ACCOUNT: NavLink[] = [
-  { href: "/account", label: "Account" },
+  { href: "/account", label: "Your account" },
   { href: "/events", label: "Your events" },
 ];
 

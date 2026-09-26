@@ -94,10 +94,10 @@ export default function ReportIssuePage() {
         </p>
         <div className="cta-row">
           <a className="button secondary" href="/methodology">
-            How grading works
+            How Sloptic finds slop
           </a>
           <a className="button secondary" href="/checks">
-            Every check
+            Sloptic&apos;s checks
           </a>
         </div>
       </section>
