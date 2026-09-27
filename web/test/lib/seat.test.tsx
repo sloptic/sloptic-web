@@ -18,7 +18,7 @@ describe("where the seat lines go", () => {
   });
 
   it("links to the explainer", () => {
-    expect(SEAT_HREF).toBe("/methodology#your-seat");
+    expect(SEAT_HREF).toBe("/faq#fast-but-bad");
   });
 });
 

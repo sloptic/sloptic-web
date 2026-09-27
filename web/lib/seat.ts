@@ -23,8 +23,9 @@ export const AXIS_SEAT: Partial<Record<Area, string>> = {
     "Checked the way a low vision or screen reader user meets your app, not the way it looks to you.",
 };
 
-/** Where the explainer lives. An anchor on /methodology rather than a page of its own. */
-export const SEAT_HREF = "/methodology#your-seat";
+/** Where the explainer lives: its answer on the FAQ. It moved there from /methodology, whose anchor
+ *  left every report's "Why?" link landing on a page with no answer. */
+export const SEAT_HREF = "/faq#fast-but-bad";
 
 /** Why each kind of slop is missed from the team's seat, and how Sloptic checks for it. Rewritten from
  *  the handoff's table to match the site's voice; the rails above still apply. */

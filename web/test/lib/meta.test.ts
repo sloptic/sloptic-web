@@ -8,6 +8,7 @@ import * as ogImage from "@/app/opengraph-image";
 
 import * as about from "@/app/about/page";
 import * as checks from "@/app/checks/page";
+import * as faq from "@/app/faq/page";
 import * as findings from "@/app/findings/page";
 import * as methodology from "@/app/methodology/page";
 import * as organizers from "@/app/organizers/page";
@@ -19,6 +20,7 @@ import * as verify from "@/app/verify/page";
 const PAGES: [string, { metadata: Metadata }][] = [
   ["/about", about],
   ["/checks", checks],
+  ["/faq", faq],
   ["/findings", findings],
   ["/methodology", methodology],
   ["/organizers", organizers],

@@ -409,7 +409,11 @@ describe("the price list", () => {
 
   it("works the Lighthouse example the way the grader prices it", () => {
     const lh = PROBE_FACTS.find((f) => f.id === SCORING.lighthouse.id)!;
-    expect(measuredText(lh)).toBe("1 point per Lighthouse point below 90. An 84 costs 6.");
+    // The arithmetic, not the wording: the copy is edited by hand. (0.90 - 0.84) x 100 is 6, and the
+    // float must not leak through as 6.000000000000005 or "6.0".
+    const text = measuredText(lh)!;
+    expect(text).toMatch(/\b84\b[^.]*\b6\b/);
+    expect(text).not.toMatch(/6\.0/);
   });
 
   it("finds the other checks that share a flaw", () => {

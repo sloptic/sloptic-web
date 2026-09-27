@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/meta";
-import { ACTIVE, fireRate, fmt } from "@/lib/corpus";
-import { LIGHTHOUSE_PROFILE as LH, SEAT_ROWS } from "@/lib/seat";
 import { PROBE_FACTS, RATIONALE_URL, SCORING, categoryName, dampedTotal, type ProbeFact } from "@/lib/checks";
 import { ASVS_HOME, asvsCounts } from "@/lib/asvs";
 
@@ -326,7 +324,7 @@ export default function MethodologyPage() {
         </ul>
       </section>
 
-      <div className="method" data-tone="limits">
+      <div className="method" data-tone="limits" id="limits">
         <h2>What Sloptic can't say</h2>
         <p>
           <b>It never says you are safe.</b> A 0 means nothing was found. The

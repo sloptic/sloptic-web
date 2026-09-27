@@ -10,6 +10,7 @@ export type NavLink = { href: string; label: string };
 export const REFERENCE: NavLink[] = [
   { href: "/about", label: "About Sloptic" },
   { href: "/methodology", label: "How Sloptic finds slop" },
+  { href: "/faq", label: "Frequently asked questions" },
   { href: "/checks", label: "Sloptic's checks" },
   { href: "/findings", label: "What do hackathon apps look like?" },
   { href: "/verify", label: "Why only some checks run" },
