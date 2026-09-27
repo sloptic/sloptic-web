@@ -158,32 +158,42 @@ export default function MethodologyPage() {
           <a href={ASVS_HOME} target="_blank" rel="noopener noreferrer">
             OWASP Application Security Verification Standard
           </a>{" "}
-          (ASVS) 5.0. ASVS is OWASP&apos;s standard for testing web app security. {ASVS_N.maps} of
-          Sloptic&apos;s {ASVS_N.security} security checks map to a requirement. {ASVS_N.near} more sit
-          close to one. <a href="/checks#security">Sloptic&apos;s checks</a> names the requirement beside
-          each check.
+          (ASVS) 5.0. {ASVS_N.maps} of the {ASVS_N.security} security checks map to a requirement.{" "}
+          {ASVS_N.near} more sit close to one. <a href="/checks#security">Sloptic&apos;s checks</a> names
+          each requirement.
         </p>
-        <p className="section-intro">
-          Sloptic is not ASVS compliant or certified. An ASVS review reads the app&apos;s source and
-          documentation. Sloptic sees neither. Each check tests only the visible part of a requirement.
-        </p>
-        <p className="section-intro">
-          Some of ASVS is out of reach by design. Business logic (V2) depends on the app&apos;s purpose.
-          Cryptography (V11) and most of logging (V16) happen out of sight. Tokens (V9) and OAuth (V10)
-          have no checks yet.
-        </p>
-        <p className="section-intro">
-          The local storage check goes further than ASVS. ASVS allows a session token in the
-          browser&apos;s local storage. Sloptic flags it. The{" "}
-          <a
-            href="https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html#local-storage"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            OWASP HTML5 Security Cheat Sheet
-          </a>{" "}
-          advises against it.
-        </p>
+        <ul className="stat-list">
+          <li>
+            <span className="k">visible part only</span>
+            <span className="v">
+              A check tests what a visitor can see. An ASVS review also reads source and documentation.
+            </span>
+          </li>
+          <li>
+            <span className="k">out of reach</span>
+            <span className="v">
+              Business logic (V2), cryptography (V11) and most of logging (V16).
+            </span>
+          </li>
+          <li>
+            <span className="k">no checks yet</span>
+            <span className="v">Tokens (V9) and OAuth (V10).</span>
+          </li>
+          <li>
+            <span className="k">stricter than ASVS</span>
+            <span className="v">
+              Session tokens in local storage. ASVS allows them. The{" "}
+              <a
+                href="https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html#local-storage"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                OWASP HTML5 Security Cheat Sheet
+              </a>{" "}
+              does not.
+            </span>
+          </li>
+        </ul>
       </section>
 
       <section className="section">
@@ -327,17 +337,17 @@ export default function MethodologyPage() {
       <div className="method" data-tone="limits" id="limits">
         <h2>What Sloptic can't say</h2>
         <p>
-          <b>It never says you are safe.</b> A 0 means nothing was found. The
-          score cannot tell a defended thing from an absent one, and it cannot see everything. Hence, 
-          you should treat the score as a minimum, not a maximum.
+          <b>It never says you are safe.</b> A 0 means nothing was found. The score cannot tell a defended
+          app from one with nothing to test. Treat the score as a minimum.
         </p>
         <p>
-          <b>Precision is vouched in places.</b> The classes with precision
-          rules are checked, but the rest are considered unaudited.
+          <b>Precision is vouched in places.</b> Classes with precision rules are checked. The rest are
+          unaudited.
         </p>
         <p>
-          <b>The miss rate is not measured yet.</b> The checks are validated for precision, but full recall is
-          difficult due to the diversity of web apps. To compensate, Sloptic checks parity, the range of coverage across apps.
+          <b>The miss rate is not measured yet.</b> Checks are validated for precision. Recall is hard to
+          measure across such varied apps. Sloptic tracks coverage instead: how much of the battery applied
+          to each app.
         </p>
         <div className="cta-row">
           <a className="button" href="/">
