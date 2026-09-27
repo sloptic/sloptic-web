@@ -165,7 +165,7 @@ export default function FaqPage() {
         <p className="section-intro">
           No. Sloptic is not compliant with or certified against ASVS. Most of its security checks map to
           an ASVS requirement. Each check tests only the visible part of it.{" "}
-          <a href="/methodology#asvs">Where the checks come from</a> explains.
+          <a href="/methodology#asvs">Where the scores come from</a> explains.
         </p>
       </section>
 

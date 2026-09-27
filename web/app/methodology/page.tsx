@@ -73,58 +73,31 @@ export default function MethodologyPage() {
           <li>
             <span className="k">deduction only</span>
             <span className="v">
-              Nothing is earned for passing, but you get penalized for failing. This mirrors how failures work:
-              successes are quiet but failures are visible. A lower score is better.
+              Nothing is earned for passing but you get penalized for failing. This is similar to how 
+              failures work in that failures are visible but successes are not. Lower is better.
             </span>
           </li>
           <li>
             <span className="k">risk priced</span>
             <span className="v">
-              Sloptic penalizes slop based on expected harm, or how often it hurts someone multiplied by how bad it is
+              Sloptic penalizes slop based on expected harm, or how often it hurts * how bad it is
               (i.e. the classical risk formula).
             </span>
           </li>
           <li>
-            <span className="k">lowest price first</span>
+            <span className="k">fixed, tiered, and measured</span>
             <span className="v">
-              Each check starts at the bottom of its range. Proof of worse harm raises the price. Only the
-              highest proof counts. An access control flaw costs{" "}
-              {IDOR.pricing.kind === "ladder" ? IDOR.pricing.from : ""} as found. Reading another
-              user&apos;s record makes it {idorRung("cross_user_read")}. Changing one makes it{" "}
-              {idorRung("cross_user_write")}.
+              Some checks are tiered, meaning they have a penalty range and escalate whenever worse issues are found
+              in that category, while others apply a fixed penalty. 
+              Lighthouse performance is penalized to the tune of {" "}{Math.round(SCORING.lighthouse.greenFloor * 100)} - N 
+              (with N being the Lighthouse score).
             </span>
           </li>
           <li>
             <span className="k">damped</span>
             <span className="v">
-              Repeats of the same kind of slop count less. The worst counts in full. The next counts{" "}
-              {one(DECAY * 100)}%. The one after counts {one(DECAY ** 2 * 100)}%. A kind of slop never costs more
-              than {one(1 / (1 - DECAY))} times its worst finding. Missing CSP, HSTS and clickjacking
-              protection cost {one(dampedTotal(HEADER_PRICES))}. Undamped, they would cost{" "}
-              {one(HEADER_PRICES.reduce((a, b) => a + b, 0))}.
-            </span>
-          </li>
-          <li>
-            <span className="k">counted once</span>
-            <span className="v">
-              Some checks test the same flaw in different ways. They count once, at the highest price. The{" "}
-              {SQLI_GROUP} login SQL injection checks are one finding.
-            </span>
-          </li>
-          <li>
-            <span className="k">raised when it matters</span>
-            <span className="v">
-              Some defenses matter most during an attack. They cost little alone. A missing CSP costs{" "}
-              {price(CSP)}. It costs {CSP.raised?.to} in a grade with{" "}
-              {CSP.raised?.when.map(categoryName).sort().join(" or ")}.
-            </span>
-          </li>
-          <li>
-            <span className="k">measured</span>
-            <span className="v">
-              A few checks are priced by measurement. Lighthouse charges each point below{" "}
-              {Math.round(SCORING.lighthouse.greenFloor * 100)}. Accessibility charges each barrier by its
-              impact. Dead links cost more with a larger share.
+              Repeats of the same kind of slop count less after the first instance. This way, 
+              your app is not penalized repeatedly for the same issue (double jeopardy).
             </span>
           </li>
           <li>
@@ -132,58 +105,6 @@ export default function MethodologyPage() {
             <span className="v">
               Security, quality, accessibility and performance each report their own subtotal and the
               four sum to the score. There are no limits on how high the score can be.
-            </span>
-          </li>
-        </ul>
-        <p className="section-intro">
-          A report shows each finding&apos;s share of the score. The shares add up to the score. Every
-          check&apos;s price is on <a href="/checks#points">Sloptic&apos;s checks</a>.
-        </p>
-      </section>
-
-      {/* ASVS citations: a check MAPS TO a requirement, it tests the part a visitor can see. Never
-          "compliant", "certified" or "verified": ASVS assumes a verifier with source and docs. The
-          mapping and its caveats live in lib/asvs.ts. */}
-      <section className="section" id="asvs">
-        <h2 className="section-head">Where the checks come from</h2>
-        <p className="section-intro">
-          Most security checks map to a requirement in the{" "}
-          <a href={ASVS_HOME} target="_blank" rel="noopener noreferrer">
-            OWASP Application Security Verification Standard
-          </a>{" "}
-          (ASVS) 5.0. {ASVS_N.maps} of the {ASVS_N.security} security checks map to a requirement.{" "}
-          {ASVS_N.near} more sit close to one. <a href="/checks#security">Sloptic&apos;s checks</a> names
-          each requirement.
-        </p>
-        <ul className="stat-list">
-          <li>
-            <span className="k">visible part only</span>
-            <span className="v">
-              A check tests what a visitor can see. An ASVS review also reads source and documentation.
-            </span>
-          </li>
-          <li>
-            <span className="k">out of reach</span>
-            <span className="v">
-              Business logic (V2), cryptography (V11) and most of logging (V16).
-            </span>
-          </li>
-          <li>
-            <span className="k">no checks yet</span>
-            <span className="v">Tokens (V9) and OAuth (V10).</span>
-          </li>
-          <li>
-            <span className="k">stricter than ASVS</span>
-            <span className="v">
-              Session tokens in local storage. ASVS allows them. The{" "}
-              <a
-                href="https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html#local-storage"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                OWASP HTML5 Security Cheat Sheet
-              </a>{" "}
-              does not.
             </span>
           </li>
         </ul>
@@ -271,6 +192,50 @@ export default function MethodologyPage() {
                 WCAG
               </a>
               .
+            </span>
+          </li>
+        </ul>
+        {/* ASVS citations: a check MAPS TO a requirement, it tests the part a visitor can see. Never
+            "compliant", "certified" or "verified": ASVS assumes a verifier with source and docs. The
+            mapping and its caveats live in lib/asvs.ts. #asvs is linked from the FAQ. */}
+        <p className="section-intro" id="asvs">
+          <b>Why the security checks exist.</b> Most map to a requirement in the{" "}
+          <a href={ASVS_HOME} target="_blank" rel="noopener noreferrer">
+            OWASP Application Security Verification Standard
+          </a>{" "}
+          (ASVS) 5.0. {ASVS_N.maps} of the {ASVS_N.security} security checks map to a requirement.{" "}
+          {ASVS_N.near} more sit close to one. <a href="/checks#security">Sloptic&apos;s checks</a> names
+          each requirement.
+        </p>
+        <ul className="stat-list">
+          <li>
+            <span className="k">visible part only</span>
+            <span className="v">
+              A check tests what a visitor can see. An ASVS review also reads source and documentation.
+            </span>
+          </li>
+          <li>
+            <span className="k">out of reach</span>
+            <span className="v">
+              Business logic (V2), cryptography (V11) and most of logging (V16).
+            </span>
+          </li>
+          <li>
+            <span className="k">no checks yet</span>
+            <span className="v">Tokens (V9) and OAuth (V10).</span>
+          </li>
+          <li>
+            <span className="k">stricter than ASVS</span>
+            <span className="v">
+              Session tokens in local storage. ASVS allows them. The{" "}
+              <a
+                href="https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html#local-storage"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                OWASP HTML5 Security Cheat Sheet
+              </a>{" "}
+              does not.
             </span>
           </li>
         </ul>
