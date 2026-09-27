@@ -138,17 +138,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </p>
             </div>
 
-            {/* One row, because five links stacked in a column beside the brand read as a leftover
-                nav. Each is here because something depends on it: the address is the takedown route
+            {/* One row, because links stacked in a column beside the brand read as a leftover nav.
+                Each is here because something depends on it: the address is the takedown route
                 /terms, /privacy and the participant notice all point at, the grader source is the
                 evidence for the claim the product rests on, and a tool that tells strangers they are
                 wrong needs the reverse route somewhere a stranger will look for it, which is the
-                footer. The page list is in the menus. */}
+                footer. The FAQ sits beside it for the same reader, who looks here first. The page
+                list is in the menus. */}
             <div className="colophon-bar">
               <a className="colophon-contact" href="mailto:hello@sloptic.org">
                 hello@sloptic.org
               </a>
               <nav className="colophon-links" aria-label="Site">
+                <a href="/faq">Frequently asked questions</a>
                 <a href="/report-issue">Report an issue</a>
                 <a href="/terms">Terms of use</a>
                 <a href="/privacy">Privacy</a>
