@@ -7,7 +7,7 @@ import { ASVS_HOME, asvsCounts } from "@/lib/asvs";
 
 export const metadata: Metadata = pageMeta(
   "How Sloptic finds slop",
-  "Sloptic checks what any visitor sees and grades on what is wrong no matter what the app is for. What counts as slop, how Sloptic scores it, and what it can't say.",
+  "Sloptic checks what any visitor sees and grades on what is wrong no matter what the app is for. This page covers how it does that.",
   "/methodology",
 );
 
@@ -37,22 +37,14 @@ export default function MethodologyPage() {
       <div className="page-head">
         <h1>How does Sloptic find slop?</h1>
         <p className="page-lead">
-          TL;DR: by checking what any visitor sees and grading on what is wrong no matter what the app is for. 
+          Short answer: by checking your app for problems that no app should ever have. Long answer:
         </p>
       </div>
 
       <section className="section">
-        <h2 className="section-head">What Sloptic sees</h2>
-        <p className="section-intro">
-          Sloptic never sees your code. It checks the app the way a visitor would over the web. This method
-          works on any app you give it, which is what makes two unrelated apps comparable at all.
-        </p>
-      </section>
-
-      <section className="section">
         <h2 className="section-head">What counts as slop?</h2>
         <p className="section-intro">
-          <b>It has to be wrong in every app.</b> Before a behavior is considered slop, it must answer a simple question:
+          <b>1. It has to be wrong in every app.</b> Before a behavior is considered slop, it must answer a simple question:
           Is there a legitimate app for which this behavior is correct? For example, a table any visitor can
           read can be right for a product catalogue. Allowing duplicates may be correct for logs but wrong for payment transactions. These examples are cases where an app can <em>legitimately
           exhibit a particular behavior</em> and thus wouldn't be considered slop.
@@ -63,11 +55,16 @@ export default function MethodologyPage() {
           &quot;correct&quot; and thus these are considered slop and Sloptic docks them.
         </p>
         <p className="section-intro">
-          <b>It has to be proven.</b> An instance of slop rests on something only that instance could
-          produce, with evidence to back it up. Unlike traditional{" "} 
+          You might disagree with this definition of slop, but Sloptic operates this way so it can compare
+          two apps against each other, which depends on an issue being an issue in every app. Without this 
+          criterion, we run into the oracle problem, which states that there is no way to determine correct
+          behavior without knowing what &quot;correct&quot; even means.
+        </p>
+        <p className="section-intro">
+          <b>2. It has to be proven.</b> Unlike traditional{" "} 
           <a href="https://en.wikipedia.org/wiki/Dynamic_application_security_testing" target="_blank" rel="noopener noreferrer">DAST</a> tools, 
           where a false positive can be dismissed with only some wasted time, the slop Sloptic sees
-          must be trustworthy on their own, since (1) the score is meant to be taken at face value, and (2) any
+          must be trustworthy by itself, since (1) the score is meant to be taken at face value, and (2) any
           human intervention affects the objective nature of Sloptic.
         </p>
       </section>

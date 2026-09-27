@@ -104,19 +104,19 @@ export default function ChecksPage() {
         <h1>Sloptic's checks</h1>
         <p className="page-lead">
           Sloptic runs {TOTALS.total} checks across {AREAS.reduce((n, a) => n + a.categories, 0)} kinds of
-          slop. Each check is a file in the{" "}
+          slop. Each check is a file in this{" "}
           <a href={CATALOG_URL} target="_blank" rel="noopener noreferrer">
-            open grader
+            GitHub repository.
           </a>
           .
         </p>
       </div>
 
       <section className="section">
-        <h2 className="section-head">The counts</h2>
+        <h2 className="section-head">How many?</h2>
         <p className="section-intro">
-          {TOTALS.passive} of the {TOTALS.total} run on any URL. The other {TOTALS.active} send test traffic.
-          They only run on a verified site or event.
+          {TOTALS.passive} of the {TOTALS.total} run on any app; the other {TOTALS.active} send test traffic and
+          require ownership verification.
         </p>
         <div className="table-scroll">
           <table className="count-table">
@@ -124,8 +124,8 @@ export default function ChecksPage() {
               <tr>
                 <th>area</th>
                 <th>kinds</th>
-                <th>runs on any URL</th>
-                <th>needs verification</th>
+                <th>runs on any app</th>
+                <th>needs ownership proof</th>
                 <th>total</th>
               </tr>
             </thead>
@@ -157,11 +157,11 @@ export default function ChecksPage() {
       {/* Every number in the tables below is generated from the pinned grader
           (scripts/generate-checks.py); only the words around them are written here. */}
       <section className="section" id="points">
-        <h2 className="section-head">What each check costs</h2>
+        <h2 className="section-head">Scoring</h2>
         <p className="section-intro">
-          Each check has a price in points. Most have a fixed price. Some rise with proof of worse harm. Some are
-          measured. A few count nothing. Repeats count less.{" "}
-          <a href="/methodology#scoring">How Sloptic finds slop</a> has the rules.
+          Each check has a price. Checks can have fixed prices or vary depending on thresholds reached 
+          or frequency. {" "}
+          <a href="/methodology#scoring">How does Sloptic finds slop?</a>
         </p>
       </section>
 
@@ -173,7 +173,7 @@ export default function ChecksPage() {
             <span className="measure-swatch" data-axis={area.id} aria-hidden /> {area.label}
           </h2>
           <p className="section-intro">
-            {area.categories} kinds of slop, {area.probes} checks. Open a kind to see its checks.
+            {area.categories} kinds of slop across {area.probes} checks. Open to learn more:
             {area.id === "security" && " Most name the ASVS requirement they test."}
           </p>
           <div className="price-cats">
@@ -208,7 +208,7 @@ export default function ChecksPage() {
                     </ul>
                     {shared && (
                       <div className="price-shared">
-                        <p>Proof raises the price:</p>
+                        <p>Thresholds that raise the price:</p>
                         <Rungs rungs={shared} />
                       </div>
                     )}

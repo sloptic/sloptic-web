@@ -171,14 +171,14 @@ export function measuredText(f: ProbeFact): string | null {
   const lh = SCORING.lighthouse;
   const floor = Math.round(lh.greenFloor * 100);
   const text: Record<string, string> = {
-    [lh.id]: `${fmt1(lh.scale)} point per Lighthouse point below ${floor}. An 84 costs ${fmt1((lh.greenFloor - 0.84) * 100 * lh.scale)}.`,
+    [lh.id]: `${fmt1(lh.scale)} point per Lighthouse point below ${floor}. For example, a score of 84 on Lighthouse nets ${fmt1((lh.greenFloor - 0.84) * 100 * lh.scale)} slop points.`,
     "qa-a11y-001":
       `Each barrier costs its impact: critical ${t.critical}, serious ${t.serious}, moderate ${t.moderate}, ` +
       `minor ${t.minor}. Low contrast costs its shortfall. Each extra barrier counts ` +
       `${fmt1(SCORING.a11yDecay * 100)}% of the one before.`,
-    "qa-a11y-002": "The same prices, read from the markup.",
+    "qa-a11y-002": "The same prices read from the markup.",
     "qa-links-001": `${f.pricing.nominal} to ${f.pricing.nominal * 2}, by the share of dead links.`,
-    "sec-deps-001": "The worst CVE's CVSS score times ten.",
+    "sec-deps-001": "The worst CVE's CVSS score * 10.",
   };
   return Object.hasOwn(text, f.id) ? text[f.id] : null;
 }
