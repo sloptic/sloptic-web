@@ -70,12 +70,38 @@ export default function FaqPage() {
         </p>
       </section>
 
+      {/* Moved from /methodology's "It has to be proven", when that point left the definition. */}
+      <section className="section" id="trust">
+        <h2 className="section-head">Can this score be trusted as is?</h2>
+        <p className="section-intro">
+          It is built to be. A finding counts only with proof from the app itself. Traditional{" "}
+          <a
+            href="https://en.wikipedia.org/wiki/Dynamic_application_security_testing"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            DAST
+          </a>{" "}
+          tools can raise false alarms. A person then dismisses the wrong ones, at the cost of a few
+          minutes. Sloptic has no such step. Its score is meant to be taken at face value. Each finding has
+          to stand on its own.
+        </p>
+        <p className="section-intro">
+          No human reviews a grade. A reviewer would add judgment to the score. Two reviewers could grade
+          the same app differently. Their scores would no longer compare. Comparable scores are the point
+          of Sloptic.
+        </p>
+        <p className="section-intro">
+          Precision is still audited only in places. <a href="#accuracy">How accurate is Sloptic?</a> has
+          the details.
+        </p>
+      </section>
+
       {/* Moved from /methodology's "What Sloptic can't say" when that section was cut. */}
       <section className="section" id="accuracy">
         <h2 className="section-head">How accurate is Sloptic?</h2>
         <p className="section-intro">
-          Every finding rests on evidence. Checks are validated for precision. Classes with precision rules
-          are audited. The rest are not yet. The miss rate is not measured yet. Recall is hard to measure
+          Checks are validated for precision. Classes with precision rules are audited. The rest are not yet. The miss rate is not measured yet. Recall is hard to measure
           across such varied apps. Sloptic tracks coverage instead: how much of the battery applied to each
           app. <a href="/methodology">How Sloptic finds slop</a> covers the validation.
         </p>
