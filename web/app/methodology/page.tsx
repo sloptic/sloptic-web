@@ -3,6 +3,7 @@ import { pageMeta } from "@/lib/meta";
 import { ACTIVE, fireRate, fmt } from "@/lib/corpus";
 import { LIGHTHOUSE_PROFILE as LH, SEAT_ROWS } from "@/lib/seat";
 import { PROBE_FACTS, RATIONALE_URL, SCORING, categoryName, dampedTotal, type ProbeFact } from "@/lib/checks";
+import { ASVS_HOME, asvsCounts } from "@/lib/asvs";
 
 export const metadata: Metadata = pageMeta(
   "How Sloptic finds slop",
@@ -28,6 +29,7 @@ const HEADERS = ["sec-headers-002", "sec-headers-003", "sec-headers-004"].map(pr
 const HEADER_PRICES = HEADERS.map(price);
 const CSP = probe("sec-headers-002");
 const SQLI_GROUP = PROBE_FACTS.filter((f) => f.group === probe("sec-sqli-001").group).length;
+const ASVS_N = asvsCounts();
 
 export default function MethodologyPage() {
   return (
@@ -186,6 +188,44 @@ export default function MethodologyPage() {
         <p className="section-intro">
           A report shows each finding&apos;s share of the score. The shares add up to the score. Every
           check&apos;s price is on <a href="/checks#points">Sloptic&apos;s checks</a>.
+        </p>
+      </section>
+
+      {/* ASVS citations: a check MAPS TO a requirement, it tests the part a visitor can see. Never
+          "compliant", "certified" or "verified": ASVS assumes a verifier with source and docs. The
+          mapping and its caveats live in lib/asvs.ts. */}
+      <section className="section" id="asvs">
+        <h2 className="section-head">Where the checks come from</h2>
+        <p className="section-intro">
+          Most security checks map to a requirement in the{" "}
+          <a href={ASVS_HOME} target="_blank" rel="noopener noreferrer">
+            OWASP Application Security Verification Standard
+          </a>{" "}
+          (ASVS) 5.0. ASVS is OWASP&apos;s standard for testing web app security. {ASVS_N.maps} of
+          Sloptic&apos;s {ASVS_N.security} security checks map to a requirement. {ASVS_N.near} more sit
+          close to one. <a href="/checks#security">Sloptic&apos;s checks</a> names the requirement beside
+          each check.
+        </p>
+        <p className="section-intro">
+          Sloptic is not ASVS compliant or certified. An ASVS review reads the app&apos;s source and
+          documentation. Sloptic sees neither. Each check tests only the visible part of a requirement.
+        </p>
+        <p className="section-intro">
+          Some of ASVS is out of reach by design. Business logic (V2) depends on the app&apos;s purpose.
+          Cryptography (V11) and most of logging (V16) happen out of sight. Tokens (V9) and OAuth (V10)
+          have no checks yet.
+        </p>
+        <p className="section-intro">
+          The local storage check goes further than ASVS. ASVS allows a session token in the
+          browser&apos;s local storage. Sloptic flags it. The{" "}
+          <a
+            href="https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html#local-storage"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            OWASP HTML5 Security Cheat Sheet
+          </a>{" "}
+          advises against it.
         </p>
       </section>
 

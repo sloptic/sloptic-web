@@ -1679,16 +1679,30 @@ code {
 .price-row[data-kind="measured"] .price-points {
   color: var(--muted);
 }
-.price-id,
+.price-meta,
 .price-rungs,
 .price-notes {
   grid-column: 1 / -1;
 }
-.price-id {
+/* The check's id and, for security checks, the ASVS requirement it answers to, on one quiet line. */
+.price-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.9rem;
   margin-top: 0.1rem;
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--muted);
+}
+.price-asvs a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 2px;
+}
+.price-asvs a:hover {
+  color: var(--ink);
+  text-decoration-color: var(--accent);
 }
 /* The rungs a price climbs to: points in a column, what it takes beside them. */
 .price-rungs {

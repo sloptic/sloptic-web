@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/meta";
+import { ASVS, ASVS_VERSION, asvsHref } from "@/lib/asvs";
 import {
   AREAS,
   CATALOG_URL,
@@ -39,11 +40,40 @@ function Rungs({ rungs }: { rungs: { points: number; text: string }[] }) {
   );
 }
 
+/** The ASVS 5.0 requirement a security check answers to, beside its id. Says "closest" or "related"
+ *  when the requirement is not an exact fit, and names the other OWASP source when the check is
+ *  stricter than ASVS. Nothing for a check with no requirement, or outside security. */
+function AsvsCite({ id }: { id: string }) {
+  const ref = Object.hasOwn(ASVS, id) ? ASVS[id] : undefined;
+  if (!ref || ref.kind === "none") return null;
+  if (ref.kind === "stricter") {
+    return (
+      <span className="price-asvs">
+        stricter than ASVS, per{" "}
+        <a href={ref.source.href} target="_blank" rel="noopener noreferrer">
+          {ref.source.name}
+        </a>
+      </span>
+    );
+  }
+  const lead = ref.kind === "closest" ? "closest ASVS" : ref.kind === "related" ? "related ASVS" : "ASVS";
+  return (
+    <span className="price-asvs">
+      {lead} {ASVS_VERSION.replace(/\.0$/, "")}{" "}
+      <a href={asvsHref(ref.req)} target="_blank" rel="noopener noreferrer">
+        {ref.req}
+      </a>{" "}
+      (L{ref.level})
+    </span>
+  );
+}
+
 /** One check: its name, where it runs and its price, then what lifts or sets the price. A ladder the
  *  whole category shares is shown once for the category, so the row leaves it out. */
 function ProbeRow({ f, shared }: { f: ProbeFact; shared: boolean }) {
   const rungs = shared ? [] : rungsFor(f);
-  const notes = priceNotes(f);
+  const asvs = Object.hasOwn(ASVS, f.id) ? ASVS[f.id] : undefined;
+  const notes = [...priceNotes(f), ...(asvs && "note" in asvs && asvs.note ? [asvs.note] : [])];
   return (
     <li className="price-row" id={f.id} data-kind={f.pricing.kind}>
       <span className="price-name">
@@ -51,7 +81,10 @@ function ProbeRow({ f, shared }: { f: ProbeFact; shared: boolean }) {
       </span>
       <span className="price-runs">{f.passive ? "any URL" : "verified"}</span>
       <span className="price-points">{priceLabel(f.pricing)}</span>
-      <span className="price-id">{f.id}</span>
+      <span className="price-meta">
+        <span className="price-id">{f.id}</span>
+        <AsvsCite id={f.id} />
+      </span>
       {rungs.length > 0 && <Rungs rungs={rungs} />}
       {notes.length > 0 && (
         <ul className="price-notes">
@@ -141,6 +174,7 @@ export default function ChecksPage() {
           </h2>
           <p className="section-intro">
             {area.categories} kinds of slop, {area.probes} checks. Open a kind to see its checks.
+            {area.id === "security" && " Most name the ASVS requirement they test."}
           </p>
           <div className="price-cats">
             {probesFor(area.id).map(({ category, probes }) => {
