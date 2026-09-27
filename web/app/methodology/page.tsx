@@ -58,13 +58,6 @@ export default function MethodologyPage() {
           criterion, we run into the oracle problem, which states that there is no way to determine correct
           behavior without knowing what &quot;correct&quot; even means.
         </p>
-        <p className="section-intro">
-          <b>2. It has to be proven.</b> Unlike traditional{" "} 
-          <a href="https://en.wikipedia.org/wiki/Dynamic_application_security_testing" target="_blank" rel="noopener noreferrer">DAST</a> tools, 
-          where a false positive can be dismissed with only some wasted time, the slop Sloptic sees
-          must be trustworthy by itself, since (1) the score is meant to be taken at face value, and (2) any
-          human intervention affects the objective nature of Sloptic.
-        </p>
       </section>
 
       {/* The builder's seat (3.0 handoff), linked from the performance and accessibility lines on
