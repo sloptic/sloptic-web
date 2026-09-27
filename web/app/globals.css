@@ -1575,6 +1575,91 @@ code {
   text-underline-offset: 3px;
 }
 
+/* Scoring rules on /methodology as tiles: a figure where the rule has a number, the rule's name, and
+   what it means. Three across where they fit, one on a phone; a row's tiles share a height. */
+.score-tiles {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.75rem;
+}
+.score-tile,
+.kind-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 1.05rem 1.1rem;
+}
+.score-top {
+  min-height: 3.6rem;
+  margin-bottom: 0.7rem;
+}
+.score-fig {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  line-height: 1.05;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.score-cap {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.score-tile h3 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.score-tile p,
+.kind-card p {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+/* The damper drawn: the worst finding of a kind at full weight, each repeat at the decay of the one
+   before. One series, one hue, the share printed in text beside each bar. */
+.decay-bars {
+  display: grid;
+  gap: 3px;
+}
+.decay-bars > span {
+  display: block;
+  height: 14px;
+  border-radius: 0 4px 4px 0;
+  background: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  line-height: 14px;
+  color: var(--paper);
+  padding-left: 0.35rem;
+  white-space: nowrap;
+}
+/* The two kinds of checks side by side, each headed by how many there are. */
+.kind-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+}
+.kind-card .score-cap {
+  margin-bottom: 0.7rem;
+}
+.kind-card[data-kind="active"] {
+  border-color: var(--line-strong);
+}
+
 /* label and explanation, for the parts of the method that enumerate */
 .stat-list {
   list-style: none;

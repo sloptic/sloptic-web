@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/meta";
-import { PROBE_FACTS, RATIONALE_URL, SCORING, categoryName, dampedTotal, type ProbeFact } from "@/lib/checks";
+import { PROBE_FACTS, RATIONALE_URL, SCORING, TOTALS } from "@/lib/checks";
 import { ASVS_HOME, asvsCounts } from "@/lib/asvs";
 
 export const metadata: Metadata = pageMeta(
@@ -9,24 +9,13 @@ export const metadata: Metadata = pageMeta(
   "/methodology",
 );
 
-// The worked examples below are computed from the grader's own prices and decay, so they stay true
-// when the catalog moves. Each one names the check it reads.
-const probe = (id: string): ProbeFact => {
-  const f = PROBE_FACTS.find((p) => p.id === id);
-  if (!f) throw new Error(`methodology example names ${id}, which is not in the catalog`);
-  return f;
-};
-const price = (f: ProbeFact) => (f.pricing.kind === "fixed" ? f.pricing.points : NaN);
-const one = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+// The figures on the scoring tiles are read from the grader's own catalog and constants, so they stay
+// true when the catalog moves.
 const DECAY = SCORING.categoryDecay;
-
-const IDOR = probe("sec-idor-001");
-const idorRung = (evidence: string) =>
-  IDOR.pricing.kind === "ladder" ? IDOR.pricing.rungs.find((r) => r.evidence === evidence)?.points : undefined;
-const HEADERS = ["sec-headers-002", "sec-headers-003", "sec-headers-004"].map(probe);
-const HEADER_PRICES = HEADERS.map(price);
-const CSP = probe("sec-headers-002");
-const SQLI_GROUP = PROBE_FACTS.filter((f) => f.group === probe("sec-sqli-001").group).length;
+const PRICED = PROBE_FACTS.flatMap((f) =>
+  f.pricing.kind === "fixed" ? [f.pricing.points] : f.pricing.kind === "ladder" ? [f.pricing.from, f.pricing.to] : [],
+).filter((n) => n > 0);
+const PRICE_SPAN = `${Math.min(...PRICED)} to ${Math.max(...PRICED)}`;
 const ASVS_N = asvsCounts();
 
 export default function MethodologyPage() {
@@ -69,43 +58,61 @@ export default function MethodologyPage() {
           examples cannot drift from the prices on /checks. */}
       <section className="section" id="scoring">
         <h2 className="section-head">How Sloptic scores</h2>
-        <ul className="stat-list">
-          <li>
-            <span className="k">deduction only</span>
-            <span className="v">
-              Nothing is earned for passing but you get penalized for failing. This is similar to how 
-              failures work in that failures are visible but successes are not. Lower is better.
-            </span>
+        {/* Tiles, one per rule: a figure where the rule has a number (read from the grader), the
+            rule's name, and what it means. */}
+        <ul className="score-tiles">
+          <li className="score-tile">
+            <div className="score-top">
+              <span className="score-fig">0</span>
+              <span className="score-cap">the cleanest score</span>
+            </div>
+            <h3>deduction only</h3>
+            <p>Nothing is earned for passing but you get penalized for failing. This is similar to how 
+              failures work in that failures are visible but successes are not. Lower is better.</p>
           </li>
-          <li>
-            <span className="k">risk priced</span>
-            <span className="v">
-              Sloptic penalizes slop based on expected harm, or how often it hurts * how bad it is
-              (i.e. the classical risk formula).
-            </span>
+          <li className="score-tile">
+            <div className="score-top">
+              <span className="score-fig">often × bad</span>
+              <span className="score-cap">expected harm</span>
+            </div>
+            <h3>risk priced</h3>
+            <p>Sloptic penalizes slop based on expected harm, or how often it hurts * how bad it is
+              (i.e. the classical risk formula).</p>
           </li>
-          <li>
-            <span className="k">fixed, tiered, and measured</span>
-            <span className="v">
-              Some checks are tiered, meaning they have a penalty range and escalate whenever worse issues are found
+          <li className="score-tile">
+            <div className="score-top">
+              <span className="score-fig">{PRICE_SPAN}</span>
+              <span className="score-cap">points per check</span>
+            </div>
+            <h3>fixed, tiered, and measured</h3>
+            <p>Some checks are tiered, meaning they have a penalty range and escalate whenever worse issues are found
               in that category, while others apply a fixed penalty. 
               Lighthouse performance is penalized to the tune of {" "}{Math.round(SCORING.lighthouse.greenFloor * 100)} - N 
-              (with N being the Lighthouse score).
-            </span>
+              (with N being the Lighthouse score).</p>
           </li>
-          <li>
-            <span className="k">damped</span>
-            <span className="v">
-              Repeats of the same kind of slop count less after the first instance. This way, 
-              your app is not penalized repeatedly for the same issue (double jeopardy).
-            </span>
+          <li className="score-tile">
+            <div className="score-top">
+              <span className="decay-bars" aria-hidden>
+                {[0, 1, 2].map((i) => (
+                  <span key={i} style={{ width: `${DECAY ** i * 100}%` }}>
+                    {Math.round(DECAY ** i * 100)}%
+                  </span>
+                ))}
+              </span>
+              <span className="score-cap">each repeat of a kind</span>
+            </div>
+            <h3>damped</h3>
+            <p>Repeats of the same kind of slop count less after the first instance. This way, 
+              your app is not penalized repeatedly for the same issue (double jeopardy).</p>
           </li>
-          <li>
-            <span className="k">unbounded</span>
-            <span className="v">
-              Security, quality, accessibility and performance each report their own subtotal and the
-              four sum to the score. There are no limits on how high the score can be.
-            </span>
+          <li className="score-tile">
+            <div className="score-top">
+              <span className="score-fig">no cap</span>
+              <span className="score-cap">four subtotals, summed</span>
+            </div>
+            <h3>unbounded</h3>
+            <p>Security, quality, accessibility and performance each report their own subtotal and the
+              four sum to the score. There are no limits on how high the score can be.</p>
           </li>
         </ul>
       </section>
@@ -243,16 +250,26 @@ export default function MethodologyPage() {
 
       <section className="section">
         <h2 className="section-head">Two kinds of checks for slop</h2>
-        <p className="section-intro">
-          <b>Passive</b> checks read what your app already shows every visitor. Running them on a
+        <div className="kind-cards">
+          <div className="kind-card" data-kind="passive">
+            <span className="score-fig">{TOTALS.passive}</span>
+            <span className="score-cap">checks, on any app</span>
+            <p>
+              <b>Passive</b> checks read what your app already shows every visitor. Running them on a
           stranger&apos;s site is no different from visiting it.
-        </p>
-        <p className="section-intro">
-          <b>Active</b> checks go looking for holes by sending real attacks (because some instance of slop are
+            </p>
+          </div>
+          <div className="kind-card" data-kind="active">
+            <span className="score-fig">{TOTALS.active}</span>
+            <span className="score-cap">checks, with ownership proof</span>
+            <p>
+              <b>Active</b> checks go looking for holes by sending real attacks (because some instance of slop are
           security vulnerabilities). Doing that to a site you don't own is considered unauthorized testing, 
           so they only run when ownership is proven.{" "}
           <a href="/verify">Learn more about domain verification here.</a>
-        </p>
+            </p>
+          </div>
+        </div>
       </section>
 
       <section className="section">
