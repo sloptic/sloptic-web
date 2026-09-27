@@ -78,7 +78,7 @@ export default function EventSpread({ events, minN }: { events: EventRow[]; minN
           ))}
           <g className="tick">
             <text x="0" y={totalH - 8}>
-              each row is one event, sorted by median
+              each row is an event, sorted by median
             </text>
           </g>
         </svg>

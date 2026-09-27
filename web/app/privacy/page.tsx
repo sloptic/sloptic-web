@@ -32,7 +32,7 @@ export default function PrivacyPage() {
           Worth saying first, because it is unusual. Sloptic runs no advertising, no tracking pixels,
           and no session recorder. Your browser talks to two places besides us: our database and
           sign-in provider when you sign in, and Google or GitHub if you pick one of those to sign in
-          with. Both are listed below. The one measurement we take is
+          with. Both are listed below. The only measurement we take is
           analytics on our own domain: page paths, referrers, country, and device class, counted
           cookielessly by our host with no fingerprinting, no cross-site tracking, and no IP storage.
           The URL you submit never appears in analytics. We do not sell or share personal data.
@@ -98,7 +98,7 @@ export default function PrivacyPage() {
       <section className="section">
         <h2 className="section-head">Cookies</h2>
         <p className="section-intro">
-          One kind: the session cookie that keeps you signed in. There are no advertising cookies, and
+          Only the session cookie that keeps you signed in. There are no advertising cookies, and
           the analytics is cookieless. Signing out clears it, and the local list below with it. Your
           browser also keeps a list of grades you ran, so you can find them again without an account.
           It lives in your browser and is cleared with your site data. When you open your grades we
@@ -159,7 +159,7 @@ export default function PrivacyPage() {
         <h2 className="section-head">Your choices</h2>
         <p className="section-intro">
           Delete any report using its link. Ask us to delete your account and everything attached to
-          it. Ask what we hold about you. One address for all of it:{" "}
+          it. Ask what we hold about you. The address for all of it:{" "}
           <a href="mailto:hello@sloptic.org">hello@sloptic.org</a>.
         </p>
         <div className="cta-row">

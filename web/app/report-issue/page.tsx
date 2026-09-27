@@ -74,7 +74,7 @@ export default function ReportIssuePage() {
         </p>
         <p className="section-intro">In scope: sloptic.org and its API ONLY.</p>
         {/* The scope limit that actually matters. A reader who wants to stress test something will
-            reach for the queue, and the queue is one desktop in a house, on a home connection,
+            reach for the queue, and the queue is a desktop in a house, on a home connection,
             deliberately (a datacenter IP gets challenged, which would make the population
             ungradeable). Saying so is more effective than a rate limit at stopping a well meant
             load test, because the person doing it does not know what is on the other end. */}

@@ -145,17 +145,17 @@ export default function MethodologyPage() {
           <li>
             <span className="k">damped</span>
             <span className="v">
-              Repeats of one kind of slop count less. The worst counts in full. The next counts{" "}
-              {one(DECAY * 100)}%. The one after counts {one(DECAY ** 2 * 100)}%. One kind never costs more
+              Repeats of the same kind of slop count less. The worst counts in full. The next counts{" "}
+              {one(DECAY * 100)}%. The one after counts {one(DECAY ** 2 * 100)}%. A kind of slop never costs more
               than {one(1 / (1 - DECAY))} times its worst finding. Missing CSP, HSTS and clickjacking
               protection cost {one(dampedTotal(HEADER_PRICES))}. Undamped, they would cost{" "}
               {one(HEADER_PRICES.reduce((a, b) => a + b, 0))}.
             </span>
           </li>
           <li>
-            <span className="k">one flaw, one charge</span>
+            <span className="k">counted once</span>
             <span className="v">
-              Some checks test one flaw in different ways. They count once, at the highest price. The{" "}
+              Some checks test the same flaw in different ways. They count once, at the highest price. The{" "}
               {SQLI_GROUP} login SQL injection checks are one finding.
             </span>
           </li>

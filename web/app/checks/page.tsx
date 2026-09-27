@@ -71,7 +71,7 @@ export default function ChecksPage() {
         <h1>Sloptic's checks</h1>
         <p className="page-lead">
           Sloptic runs {TOTALS.total} checks across {AREAS.reduce((n, a) => n + a.categories, 0)} kinds of
-          slop. Each check is one file in the{" "}
+          slop. Each check is a file in the{" "}
           <a href={CATALOG_URL} target="_blank" rel="noopener noreferrer">
             open grader
           </a>
@@ -126,7 +126,7 @@ export default function ChecksPage() {
       <section className="section" id="points">
         <h2 className="section-head">What each check costs</h2>
         <p className="section-intro">
-          Each check has a price in points. Most have one price. Some rise with proof of worse harm. Some are
+          Each check has a price in points. Most have a fixed price. Some rise with proof of worse harm. Some are
           measured. A few count nothing. Repeats count less.{" "}
           <a href="/methodology#scoring">How Sloptic finds slop</a> has the rules.
         </p>
