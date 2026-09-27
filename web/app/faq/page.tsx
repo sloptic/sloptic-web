@@ -27,29 +27,28 @@ export default function FaqPage() {
       <section className="section" id="fast-but-bad">
         <h2 className="section-head">Why is my score bad when my app is fast?</h2>
         <p className="section-intro">
-          Some kinds of slop are easy to miss when you build and test an app yourself. The table below
-          shows the most common ones and how Sloptic checks for each.
+          Some kinds of slop are easy to miss when you build and test an app yourself. Below are the
+          most common ones and how Sloptic checks for each.
         </p>
-        <div className="seat-wrap">
-          <table className="count-table seat-table">
-            <thead>
-              <tr>
-                <th>slop</th>
-                <th>why it&apos;s missed</th>
-                <th>how Sloptic checks</th>
-              </tr>
-            </thead>
-            <tbody>
-              {SEAT_ROWS.map((r) => (
-                <tr key={r.failure}>
-                  <th scope="row">{r.failure}</th>
-                  <td data-label="why it's missed">{r.invisible}</td>
-                  <td data-label="how Sloptic checks">{r.instead}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {/* Cards, not a table: each row was three sentences about one kind of slop, read on its own and
+            never compared column to column, and a phone fits two wordy columns at most. */}
+        <ul className="seat-cards">
+          {SEAT_ROWS.map((r) => (
+            <li className="seat-card" key={r.failure}>
+              <h3>{r.failure}</h3>
+              <dl>
+                <div>
+                  <dt>why it&apos;s missed</dt>
+                  <dd>{r.invisible}</dd>
+                </div>
+                <div>
+                  <dt>how Sloptic checks</dt>
+                  <dd>{r.instead}</dd>
+                </div>
+              </dl>
+            </li>
+          ))}
+        </ul>
         <p className="section-intro">
           For performance, Lighthouse measures how the app would load on a mid range phone ({LH.device},
           with a {LH.screen} screen) over slow 4G, i.e. a {LH.rttMs} ms round trip, {LH.downMbps} Mbps
@@ -67,8 +66,18 @@ export default function FaqPage() {
         <h2 className="section-head">Does a low score mean my app is secure?</h2>
         <p className="section-intro">
           No. A 0 means Sloptic found nothing. It cannot tell a defended app from an app with nothing to
-          test. A passive grade runs no attack checks at all.{" "}
-          <a href="/methodology#limits">What Sloptic can&apos;t say</a> has the rest.
+          test. A passive grade runs no attack checks at all. Treat the score as a minimum.
+        </p>
+      </section>
+
+      {/* Moved from /methodology's "What Sloptic can't say" when that section was cut. */}
+      <section className="section" id="accuracy">
+        <h2 className="section-head">How accurate is Sloptic?</h2>
+        <p className="section-intro">
+          Every finding rests on evidence. Checks are validated for precision. Classes with precision rules
+          are audited. The rest are not yet. The miss rate is not measured yet. Recall is hard to measure
+          across such varied apps. Sloptic tracks coverage instead: how much of the battery applied to each
+          app. <a href="/methodology">How Sloptic finds slop</a> covers the validation.
         </p>
       </section>
 

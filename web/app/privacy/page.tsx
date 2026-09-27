@@ -41,49 +41,58 @@ export default function PrivacyPage() {
 
       <section className="section">
         <h2 className="section-head">What we store</h2>
-        <div className="table-scroll">
-          <table className="count-table">
-            <thead>
-              <tr>
-                <th>what</th>
-                <th>why</th>
-                <th>how long</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th scope="row">the URL you submit</th>
-                <td>to grade it, and to show you the result</td>
-                <td>kept</td>
-              </tr>
-              <tr>
-                <th scope="row">the report</th>
-                <td>the findings, measurements, and score</td>
-                <td>{ANON_REPORT_DAYS} days, or kept if an account saves it</td>
-              </tr>
-              <tr>
-                <th scope="row">a hash of your IP address</th>
-                <td>rate limiting and abuse</td>
-                <td>2 days</td>
-              </tr>
-              <tr>
-                <th scope="row">page views and a few product events (a grade submitted, a grade finished)</th>
-                <td>knowing what is used, and what kinds of people use Sloptic</td>
-                <td>held by Vercel, aggregated, cookieless: no cookies, no IP storage, no cross-site tracking</td>
-              </tr>
-              <tr>
-                <th scope="row">your email address</th>
-                <td>only if you make an account, to sign you in</td>
-                <td>until you delete the account</td>
-              </tr>
-              <tr>
-                <th scope="row">verification records</th>
-                <td>proof you control a domain or event, and when we checked</td>
-                <td>until the grant expires or is revoked</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        {/* A stacked list, not a table: each row is read on its own, and the cells are phrases. Each
+            item keeps its how-long beside it, labelled, which the table's column header used to do. */}
+        <dl className="store-list">
+          <div className="store-item">
+            <dt>the URL you submit</dt>
+            <dd className="store-why">to grade it, and to show you the result</dd>
+            <dd className="store-keep">
+              <span className="store-label">how long</span>
+              kept
+            </dd>
+          </div>
+          <div className="store-item">
+            <dt>the report</dt>
+            <dd className="store-why">the findings, measurements, and score</dd>
+            <dd className="store-keep">
+              <span className="store-label">how long</span>
+              {ANON_REPORT_DAYS} days, or kept if an account saves it
+            </dd>
+          </div>
+          <div className="store-item">
+            <dt>a hash of your IP address</dt>
+            <dd className="store-why">rate limiting and abuse</dd>
+            <dd className="store-keep">
+              <span className="store-label">how long</span>
+              2 days
+            </dd>
+          </div>
+          <div className="store-item">
+            <dt>page views and a few product events (a grade submitted, a grade finished)</dt>
+            <dd className="store-why">knowing what is used, and what kinds of people use Sloptic</dd>
+            <dd className="store-keep">
+              <span className="store-label">how long</span>
+              held by Vercel, aggregated, cookieless: no cookies, no IP storage, no cross-site tracking
+            </dd>
+          </div>
+          <div className="store-item">
+            <dt>your email address</dt>
+            <dd className="store-why">only if you make an account, to sign you in</dd>
+            <dd className="store-keep">
+              <span className="store-label">how long</span>
+              until you delete the account
+            </dd>
+          </div>
+          <div className="store-item">
+            <dt>verification records</dt>
+            <dd className="store-why">proof you control a domain or event, and when we checked</dd>
+            <dd className="store-keep">
+              <span className="store-label">how long</span>
+              until the grant expires or is revoked
+            </dd>
+          </div>
+        </dl>
         <p className="section-intro">
           We keep the fact that a grade ran, its score and its timestamps, after the report itself is
           deleted. That is what rate limiting, abuse investigation and population statistics need, and

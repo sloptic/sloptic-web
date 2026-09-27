@@ -3,6 +3,7 @@ import { pageMeta } from "@/lib/meta";
 import { ACTIVE, GEMINI_LIVE_APPS, comparableEvents, MIN_EVENT_N, fmt } from "@/lib/corpus";
 import EventSpread from "./EventSpread";
 import Exploitable from "./Exploitable";
+import BarList from "./BarList";
 
 // Read from the corpus, like every other number on this page, so it moves when the corpus does.
 export const metadata: Metadata = pageMeta(
@@ -307,28 +308,15 @@ export default function FindingsPage() {
           {A.graded.toLocaleString()} of them, or {fmt(A.graded_pct)}%. Most of the rest
           were due to link rot (expired free tier), timeouts, a WAF/bot challenge, or other reasons.
         </p>
-        <div className="table-scroll">
-          <table className="count-table">
-            <thead>
-              <tr>
-                <th>no grade reason</th>
-                <th>apps</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(A.dnf_by_reason).map(([reason, n]) => (
-                <tr key={reason}>
-                  <th scope="row">{reason}</th>
-                  <td>{(n as number).toLocaleString()}</td>
-                </tr>
-              ))}
-              <tr className="total-row">
-                <th scope="row">not graded</th>
-                <td>{A.dnf.toLocaleString()}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        {/* A bar list, not a table: one measure across four reasons. "other" stays last whatever its
+            size, since it is the remainder rather than a reason. */}
+        <BarList
+          label="no grade reason"
+          rows={Object.entries(A.dnf_by_reason as Record<string, number>)
+            .map(([label, n]) => ({ label, n }))
+            .sort((x, y) => Number(x.label === "other") - Number(y.label === "other") || y.n - x.n)}
+          total={{ label: "not graded", n: A.dnf }}
+        />
         <p className="section-intro fineprint">
           Also excluded are {ACTIVE.by_stack_excluded.map((s) => `${s.apps} ${s.stack} apps`).join(", ")} since
           Sloptic is currently unable to properly separate what the teams built from these platforms.

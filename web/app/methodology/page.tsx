@@ -334,21 +334,7 @@ export default function MethodologyPage() {
         </ul>
       </section>
 
-      <div className="method" data-tone="limits" id="limits">
-        <h2>What Sloptic can't say</h2>
-        <p>
-          <b>It never says you are safe.</b> A 0 means nothing was found. The score cannot tell a defended
-          app from one with nothing to test. Treat the score as a minimum.
-        </p>
-        <p>
-          <b>Precision is vouched in places.</b> Classes with precision rules are checked. The rest are
-          unaudited.
-        </p>
-        <p>
-          <b>The miss rate is not measured yet.</b> Checks are validated for precision. Recall is hard to
-          measure across such varied apps. Sloptic tracks coverage instead: how much of the battery applied
-          to each app.
-        </p>
+      <section className="section">
         <div className="cta-row">
           <a className="button" href="/">
             Grade an app
@@ -357,7 +343,7 @@ export default function MethodologyPage() {
             The full grader
           </a>
         </div>
-      </div>
+      </section>
     </>
   );
 }
