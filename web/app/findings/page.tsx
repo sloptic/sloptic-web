@@ -226,19 +226,19 @@ export default function FindingsPage() {
       <section className="section">
         <h2 className="section-head">What do teams miss?</h2>
         <p className="section-intro">
-          After missing security headers, the most common slop is accessibility and performance. Both look
-          fine from the laptop the app was built on. Most teams only learn about them from a report.
+          The most common kinds of slop are missing security headers, accessibility issues, and slow 
+          performance. Most are invisible to the teams building the apps.
         </p>
         <div className="kind-cards">
           <div className="kind-card">
             <span className="score-fig">{fmt(fireRate("qa-a11y-001") ?? 0)}%</span>
             <span className="score-cap">of apps have an accessibility barrier</span>
-            <p>About 4 in 5 of those have text too faint to read against its background.</p>
+            <p>About 4 in 5 of those have low contrast text.</p>
           </div>
           <div className="kind-card">
             <span className="score-fig">{fmt(fireRate("perf-lighthouse-001") ?? 0)}%</span>
             <span className="score-cap">of apps score below 90 on Lighthouse</span>
-            <p>The median score is {fmt(ACTIVE.lighthouse.overall.median)}. Lighthouse loads the page as a mid range phone on slow 4G would.</p>
+            <p>The median score is {fmt(ACTIVE.lighthouse.overall.median)}. Lighthouse loads the page as a mid range phone on slow 4G, reflecting the average device profile.</p>
           </div>
         </div>
         <BarList
@@ -365,6 +365,16 @@ export default function FindingsPage() {
           Also excluded are {ACTIVE.by_stack_excluded.map((s) => `${s.apps} ${s.stack} apps`).join(", ")} since
           Sloptic is currently unable to properly separate what the teams built from these platforms.
         </p>
+      </section>
+      <section className="section">
+        <div className="cta-row">
+          <a className="button" href="/">
+            Grade an app
+          </a>
+          <a className="button secondary" href="https://github.com/sloptic/sloptic-main/blob/main/CORPUS_REPORT.md">
+            The full report
+          </a>
+        </div>
       </section>
     </>
   );
