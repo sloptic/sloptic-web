@@ -38,8 +38,9 @@ export type StackRow = (typeof active.by_stack)[number];
 export type Bin = [number, number, number];
 
 /** Events large enough to compare, worst first. */
-export function comparableEvents(min = MIN_EVENT_N): EventRow[] {
-  return active.by_event.filter((e) => e.n >= min).sort((a, b) => b.median - a.median);
+export function comparableEvents(min = MIN_EVENT_N, mode: "active" | "passive" = "active"): EventRow[] {
+  const events = (mode === "active" ? active : passive).by_event as EventRow[];
+  return events.filter((e) => e.n >= min).sort((a, b) => b.median - a.median);
 }
 
 export function fmt(n: number, digits = 1): string {

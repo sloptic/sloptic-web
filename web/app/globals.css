@@ -4143,3 +4143,32 @@ h1.report-url {
   color: var(--ink);
   border-color: var(--ink);
 }
+
+/* /findings: which grades the page shows. The report's two-option toggle, as links, since each view
+   has its own address. */
+.mode-toggle a {
+  padding: 0.32rem 0.8rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+.mode-toggle a.on {
+  background: var(--ink);
+  color: var(--paper);
+}
+.mode-toggle a:not(.on):hover {
+  color: var(--ink);
+}
+.mode-toggle a:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.grades-toggle {
+  margin-top: 1rem;
+}
+.grades-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+}

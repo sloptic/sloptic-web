@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/meta";
-import { ACTIVE, GEMINI_LIVE_APPS, fireRate, comparableEvents, MIN_EVENT_N, fmt } from "@/lib/corpus";
+import Link from "next/link";
+import { ACTIVE, PASSIVE, GEMINI_LIVE_APPS, fireRate, comparableEvents, MIN_EVENT_N, fmt } from "@/lib/corpus";
 import EventSpread from "./EventSpread";
 import Exploitable from "./Exploitable";
 import BarList from "./BarList";
@@ -13,17 +14,20 @@ export const metadata: Metadata = pageMeta(
   "/findings",
 );
 
-const D = ACTIVE.distribution;
-const SEV = ACTIVE.severity;
-const W = ACTIVE.winners;
-const A = ACTIVE.attrition;
-const STAR = ACTIVE.star_finding;
-const RHO = ACTIVE.axis_independence;
+// Two corpora, one page. Full grades (all 106 checks, curve 2026.4) and passive grades (the 45 that
+// read what any visitor sees, curve passive-2026.2) are different measurements of the same apps, so
+// the page shows one at a time and never mixes them. Both figure files have the same shape; a few
+// numbers are transcribed from CORPUS_REPORT.md and exist for full grades only (the winners p values,
+// "4 in 5" low contrast, the exploitable classes), so the passive view leaves them out rather than
+// borrowing them.
+type Mode = "active" | "passive";
+type Figures = typeof ACTIVE;
+const FIGURES: Record<Mode, Figures> = { active: ACTIVE, passive: PASSIVE as Figures };
 
 /** Slop across the corpus. One series, so no legend: the heading names it. Direct labels sit on the
  *  landmarks only, never on every bar, and each bar carries a <title> so a reader can hover for the
  *  exact count without the page shipping a tooltip runtime. */
-function Histogram() {
+function Histogram({ D }: { D: Figures["distribution"] }) {
   const bins = D.bins as [number, number, number][];
   const peak = Math.max(...bins.map((b) => b[2]));
   const W_ = 720;
@@ -79,7 +83,7 @@ function Histogram() {
  *  of anything. */
 const BAND_ORDER = ["minor", "moderate", "serious", "severe", "critical"] as const;
 
-function Bands() {
+function Bands({ SEV }: { SEV: Figures["severity"] }) {
   const tiers = SEV.tiers as Record<string, { findings: number; apps: number; pct_apps: number }>;
   const total = BAND_ORDER.reduce((n, k) => n + tiers[k].findings, 0);
   const peak = Math.max(...BAND_ORDER.map((k) => tiers[k].findings));
@@ -132,7 +136,7 @@ function Bands() {
 /** The three levels are CUMULATIVE subsets, not parts of a whole, so they are drawn nested rather
  *  than stacked. A stacked bar would silently claim they sum to the population, and they do not:
  *  every acute app is also a significant one. */
-function Levels() {
+function Levels({ SEV }: { SEV: Figures["severity"] }) {
   const rows = [
     ...SEV.levels.map((l) => ({ key: l.key, label: l.label, pct: l.pct, apps: l.apps,
                                 threshold: l.threshold, definition: l.definition })),
@@ -159,8 +163,17 @@ function Levels() {
   );
 }
 
-export default function FindingsPage() {
-  const events = comparableEvents();
+export default function FindingsPage({ searchParams }: { searchParams?: { grades?: string } }) {
+  const mode: Mode = searchParams?.grades === "passive" ? "passive" : "active";
+  const F = FIGURES[mode];
+  const D = F.distribution;
+  const SEV = F.severity;
+  const W = F.winners;
+  const A = F.attrition;
+  const STAR = F.star_finding;
+  const RHO = F.axis_independence;
+  const full = mode === "active";
+  const events = comparableEvents(MIN_EVENT_N, mode);
   const spread = events[0].median / events[events.length - 1].median;
 
   return (
@@ -168,7 +181,27 @@ export default function FindingsPage() {
       <div className="page-head">
         <h1>What do hackathon apps look like?</h1>
         <p className="page-lead">
-          When Sloptic graded {A.graded.toLocaleString()} apps in {ACTIVE.provenance.n_events} hackathons, it found that...
+          When Sloptic graded {A.graded.toLocaleString()} apps in {F.provenance.n_events} hackathons, it found that...
+        </p>
+        {/* A link per view, not a client switch: each view has its own address, works without script,
+            and only one set of figures is ever on the page. */}
+        <nav className="mode-toggle grades-toggle" aria-label="Which grades">
+          <Link href="/findings" scroll={false} className={full ? "on" : undefined} aria-current={full ? "page" : undefined}>
+            full grades
+          </Link>
+          <Link
+            href="/findings?grades=passive"
+            scroll={false}
+            className={full ? undefined : "on"}
+            aria-current={full ? undefined : "page"}
+          >
+            passive grades
+          </Link>
+        </nav>
+        <p className="grades-note">
+          {full
+            ? "Full grades run all 106 checks, attacks included."
+            : "Passive grades run the 45 checks that read what any visitor sees. Most reports are passive."}
         </p>
       </div>
 
@@ -184,7 +217,7 @@ export default function FindingsPage() {
             : `Only ${A.clean_zero.toLocaleString()} scored 0.`}{" "}
           In other words, there is slop in every app.
         </p>
-        <Histogram />
+        <Histogram D={D} />
         <h2 className="section-head">
           More stats
         </h2>
@@ -211,12 +244,12 @@ export default function FindingsPage() {
           quite a few apps have serious or even critical problems. The table below shows the 
           number of instances of slop of each kind and how many apps have what:
         </p>
-        <Bands />
+        <Bands SEV={SEV} />
         <br />
         <p className="section-intro">
           When evaluated on its single worst slop instance, this is what apps had:
         </p>
-        <Levels />
+        <Levels SEV={SEV} />
       </section>
 
       {/* The two findings a team rarely sees coming: common, and invisible from the team's own laptop.
@@ -231,20 +264,20 @@ export default function FindingsPage() {
         </p>
         <div className="kind-cards">
           <div className="kind-card">
-            <span className="score-fig">{fmt(fireRate("qa-a11y-001") ?? 0)}%</span>
+            <span className="score-fig">{fmt(fireRate("qa-a11y-001", mode) ?? 0)}%</span>
             <span className="score-cap">of apps have an accessibility barrier</span>
-            <p>About 4 in 5 of those have low contrast text.</p>
+            {full && <p>About 4 in 5 of those have low contrast text.</p>}
           </div>
           <div className="kind-card">
-            <span className="score-fig">{fmt(fireRate("perf-lighthouse-001") ?? 0)}%</span>
+            <span className="score-fig">{fmt(fireRate("perf-lighthouse-001", mode) ?? 0)}%</span>
             <span className="score-cap">of apps score below 90 on Lighthouse</span>
-            <p>The median score is {fmt(ACTIVE.lighthouse.overall.median)}. Lighthouse loads the page as a mid range phone on slow 4G would.</p>
+            <p>The median score is {fmt(F.lighthouse.overall.median)}. Lighthouse loads the page as a mid range phone on slow 4G would.</p>
           </div>
         </div>
         <BarList
           label="the most common slop, by share of apps"
           format={(n) => `${fmt(n)}%`}
-          rows={[...ACTIVE.fire_frequency]
+          rows={[...F.fire_frequency]
             .sort((a, b) => b.pct - a.pct)
             .slice(0, 8)
             .map((r) => {
@@ -271,11 +304,18 @@ export default function FindingsPage() {
             Source: sloptic-main CORPUS_REPORT.md 4.7. The p values are transcribed from there because
             the figures file does not carry them; every other number here is read from the file. */}
         <h2 className="section-head">Are winners cleaner?</h2>
-        <p className="section-intro">
-          No, but not dirtier either. Winning apps carry a median slop of {fmt(W.winner.median)} against{" "}
-          {fmt(W.non_winner.median)} for everyone else, which can be chalked up to chance (p = 0.22). Winners' apps
-          crash, leak secrets and have nonfunctioning buttons at the same rates as everyone else.
-        </p>
+        {full ? (
+          <p className="section-intro">
+            No, but not dirtier either. Winning apps carry a median slop of {fmt(W.winner.median)} against{" "}
+            {fmt(W.non_winner.median)} for everyone else, which can be chalked up to chance (p = 0.22). Winners' apps
+            crash, leak secrets and have nonfunctioning buttons at the same rates as everyone else.
+          </p>
+        ) : (
+          <p className="section-intro">
+            Winning apps carry a median slop of {fmt(W.winner.median)} against {fmt(W.non_winner.median)} for
+            everyone else. The corpus report tests this gap on full grades only.
+          </p>
+        )}
         <div className="versus">
           <div className="versus-side" data-side="winner">
             <span className="versus-num"><b>{fmt(W.winner.median)}</b></span>
@@ -289,19 +329,20 @@ export default function FindingsPage() {
           </div>
         </div>
         <p className="section-intro">
-          But speed does differ, as winning apps are heavier and hence score lower on Lighthouse
-          (p = 0.003):
+          {full
+            ? "But speed does differ, as winning apps are heavier and hence score lower on Lighthouse (p = 0.003):"
+            : "Winning apps also score lower on Lighthouse:"}
         </p>
         <div className="versus">
           <div className="versus-side" data-side="winner">
-            <span className="versus-num"><b>{fmt(ACTIVE.lighthouse.winners.median)}</b></span>
+            <span className="versus-num"><b>{fmt(F.lighthouse.winners.median)}</b></span>
             <span className="versus-cap">median Lighthouse score, winners</span>
-            <span className="versus-n">{ACTIVE.lighthouse.winners.n} apps</span>
+            <span className="versus-n">{F.lighthouse.winners.n} apps</span>
           </div>
           <div className="versus-side">
-            <span className="versus-num">{fmt(ACTIVE.lighthouse.non_winners.median)}</span>
+            <span className="versus-num">{fmt(F.lighthouse.non_winners.median)}</span>
             <span className="versus-cap">median Lighthouse score, everyone else</span>
-            <span className="versus-n">{ACTIVE.lighthouse.non_winners.n.toLocaleString()} apps</span>
+            <span className="versus-n">{F.lighthouse.non_winners.n.toLocaleString()} apps</span>
           </div>
         </div>
       </section>
@@ -326,7 +367,7 @@ export default function FindingsPage() {
       <section className="section">
         <h2 className="section-head">Breakdown per hackathon</h2>
         <p className="section-intro">
-          Across {events.length} hackathons out of {ACTIVE.provenance.n_events} with {MIN_EVENT_N} or more graded apps, median slop runs
+          Across {events.length} hackathons out of {F.provenance.n_events} with {MIN_EVENT_N} or more graded apps, median slop runs
           from {fmt(events[events.length - 1].median)} to {fmt(events[0].median)}, a {" "}
           {spread.toFixed(1)}x difference. Hover over a bar for the event in question.
         </p>
@@ -335,14 +376,24 @@ export default function FindingsPage() {
 
       <section className="section">
         <h2 className="section-head">How many are exploitable?</h2>
-        <p className="section-intro">
-          Yet only {fmt(SEV.exploitable_pct)}% of apps had an exploitable vulnerability. The largest class is
-          a credential in the bundle, most often ({GEMINI_LIVE_APPS} apps) a Google API key
-          that can call the Gemini API. Next is an open Supabase or Firebase database, as {STAR.apps} apps
-          lacked row level security which allowed an anonymous client to read or write rows. See the table below
-          for details:
-        </p>
-        <Exploitable />
+        {full ? (
+          <>
+            <p className="section-intro">
+              Yet only {fmt(SEV.exploitable_pct)}% of apps had an exploitable vulnerability. The largest class is
+              a credential in the bundle, most often ({GEMINI_LIVE_APPS} apps) a Google API key
+              that can call the Gemini API. Next is an open Supabase or Firebase database, as {STAR.apps} apps
+              lacked row level security which allowed an anonymous client to read or write rows. See the table below
+              for details:
+            </p>
+            <Exploitable />
+          </>
+        ) : (
+          <p className="section-intro">
+            Only {fmt(SEV.exploitable_pct)}% of apps had an exploitable vulnerability a passive grade can see.
+            A passive grade sends no attacks. It finds only what any visitor can see, mostly secret keys shipped
+            in the app&apos;s own code. <Link href="/findings" scroll={false}>Full grades</Link> find more.
+          </p>
+        )}
       </section>
 
       <section className="section">
@@ -362,7 +413,7 @@ export default function FindingsPage() {
           total={{ label: "not graded", n: A.dnf }}
         />
         <p className="section-intro fineprint">
-          Also excluded are {ACTIVE.by_stack_excluded.map((s) => `${s.apps} ${s.stack} apps`).join(", ")} since
+          Also excluded are {F.by_stack_excluded.map((s) => `${s.apps} ${s.stack} apps`).join(", ")} since
           Sloptic is currently unable to properly separate what the teams built from these platforms.
         </p>
       </section>
