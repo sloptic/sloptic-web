@@ -105,7 +105,8 @@ export default function SignInForm({
           terms_accepted_at stamp in the auth callback honest. */}
       <p className="signin-terms">
         Signing in accepts the <a href="/terms">terms of use</a> and the{" "}
-        <a href="/privacy">privacy policy</a>.
+        <a href="/privacy">privacy policy</a>. {" "} 
+        <a href="https://www.kensington.com/news/security-blog/benefits-of-passwordless-logins/">Why passwordless?</a>
       </p>
     </>
   );
