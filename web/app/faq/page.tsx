@@ -62,10 +62,11 @@ export default function FaqPage() {
       </section>
 
       <section className="section" id="secure">
-        <h2 className="section-head">Does a low score mean my app is secure?</h2>
+        <h2 className="section-head">Does a low score mean my app is good for sure?</h2>
         <p className="section-intro">
-          No. A 0 means Sloptic found nothing. It cannot tell a defended app from an app with nothing to
-          test. A passive grade runs no attack checks at all. Treat the score as a minimum.
+          No. A 0 means Sloptic can't find anything. This could be due to limitations on what Sloptic
+          can check. If you graded passively, Sloptic never sent any test traffic to your app. So treat
+          the score as a minimum.
         </p>
       </section>
 
@@ -73,7 +74,7 @@ export default function FaqPage() {
       <section className="section" id="trust">
         <h2 className="section-head">Can I trust Sloptic&apos;s scores as is?</h2>
         <p className="section-intro">
-          It is built to be. A finding counts only with proof from the app itself. Traditional{" "}
+          It is meant to be. Traditional{" "}
           <a
             href="https://en.wikipedia.org/wiki/Dynamic_application_security_testing"
             target="_blank"
@@ -81,19 +82,14 @@ export default function FaqPage() {
           >
             DAST
           </a>{" "}
-          tools can raise false alarms. A person then dismisses the wrong ones, at the cost of a few
-          minutes. Sloptic has no such step. Its score is meant to be taken at face value. Each finding has
-          to stand on its own.
-        </p>
-        <p className="section-intro">
-          No human reviews a grade. A reviewer would add judgment to the score. Two reviewers could grade
-          the same app differently. Their scores would no longer compare. Comparable scores are the point
-          of Sloptic.
+          tools can raise false alarms, of which a person can then dismiss them with in a few
+          minutes. Sloptic, meanwhile, does not have a human in the loop, because a human would add
+          subjective judgment to the score which affects comparisons.
         </p>
         {/* Moved from /methodology's "How we validate our checks". */}
         <p className="section-intro">
-          Checks are calibrated against apps with known answers because no single target
-          proves much by itself.
+          As a result, findings from Sloptic must be trustworthy and precise. 
+          So we calibrate Sloptic against references with known answers, such as:
         </p>
         <ul className="stat-list">
           <li>
@@ -105,12 +101,12 @@ export default function FaqPage() {
           <li>
             <span className="k">apps broken on purpose</span>
             <span className="v">
-              DVWA, Juice Shop, VAmPI and bWAPP, the intentionally vulnerable apps the industry already
+              DVWA, Juice Shop, VAmPI and bWAPP, the deliberately vulnerable apps the industry already
               uses with documented faults.
             </span>
           </li>
           <li>
-            <span className="k">an outside benchmark</span>
+            <span className="k">a benchmark</span>
             <span className="v">
               {" "}<a href="https://gapbench.vibe-eval.com/" target="_blank" rel="noopener noreferrer">GapBench</a>, 
               a recall benchmark with an answer key for testing security scanners. 
@@ -125,80 +121,68 @@ export default function FaqPage() {
           </li>
         </ul>
         <p className="section-intro">
-          Precision is still audited only in places. <a href="#accuracy">How accurate is Sloptic?</a> has
-          the details.
-        </p>
-      </section>
-
-      {/* Moved from /methodology's "What Sloptic can't say" when that section was cut. */}
-      <section className="section" id="accuracy">
-        <h2 className="section-head">How accurate is Sloptic?</h2>
-        <p className="section-intro">
-          Checks are validated for precision. Classes with precision rules are audited. The rest are not yet. The miss rate is not measured yet. Recall is hard to measure
-          across such varied apps. Sloptic tracks coverage instead: how much of the battery applied to each
-          app. <a href="#trust">Can I trust Sloptic&apos;s scores as is?</a> covers the validation.
+          Precision is still audited only in places, and we are continuing to improve Sloptic's precision
+          over the years.
         </p>
       </section>
 
       <section className="section" id="some-checks">
         <h2 className="section-head">Why did only some checks run?</h2>
         <p className="section-intro">
-          An unverified app gets the {TOTALS.passive} passive checks. They read what any visitor sees. The
-          other {TOTALS.active} send test traffic, including real attacks. Running those on someone else&apos;s app is
-          unauthorized testing. <a href="/verify">Verify your app</a> to run them.
+          An unverified app gets the {TOTALS.passive} passive checks that sees what visitors see. The
+          other {TOTALS.active} send test traffic, including attacks. Because running those on 
+          others&apos; apps is considered unauthorized testing, you need to <a href="/verify">verify you own the app</a> to run them.
         </p>
       </section>
 
       <section className="section" id="not-mine">
         <h2 className="section-head">Can I grade an app I don&apos;t own?</h2>
         <p className="section-intro">
-          Yes, with the passive checks only. They read what any visitor can see. The other checks need
-          proof of ownership.
+          Yes, but only passively. Grading actively requires proof of ownership.
         </p>
       </section>
 
       <section className="section" id="no-score">
-        <h2 className="section-head">Why does my report have no score?</h2>
+        <h2 className="section-head">Why didn't I get a score?</h2>
         <p className="section-intro">
-          A bot challenge blocked the grade. Sloptic never tries to get past one. A partial grade would
-          flatter the app. The report shows no score instead.
+          There are many reasons why this can happen. Your app may not be reachable, or Sloptic was bot challenged,
+          or it took too long to grade your app and Sloptic timed out. 
+          If you think your app should have been graded, please <a href="/report-issue">report an issue</a>.
         </p>
       </section>
 
       <section className="section" id="where-leak">
         <h2 className="section-head">Why can&apos;t I see where a leak is?</h2>
         <p className="section-intro">
-          For leaked secrets, exposed backends and exposed files, the location is enough to exploit it. The
-          report shows it only to the app&apos;s verified owner. Owning the report does not prove you own
-          the app. <a href="/verify">Verify the app</a> to see it.
+          For leaked secrets and exposed files or backends, the finding itself is enough for attackers to exploit it. 
+          To mitigate this risk, we only show the location to the app&apos;s owner. 
+          <a href="/verify">Verify the app</a> to see it. 
+          Likewise, if we did find a leak, please patch it and rotate your secrets as soon as possible!
         </p>
       </section>
 
       <section className="section" id="percentile">
         <h2 className="section-head">What does &ldquo;cleaner than&rdquo; mean?</h2>
         <p className="section-intro">
-          It places your app against real hackathon apps graded the same way. A passive grade is placed
-          against {PASSIVE.attrition.graded.toLocaleString("en-US")} passive grades. A full grade is placed
-          against {ACTIVE.attrition.graded.toLocaleString("en-US")} full grades. These sets are frozen. New
-          grades never move them. <a href="/findings">What do hackathon apps look like?</a> describes them.
+          It means your app was cleaner against a set of hackathon apps graded for ranking purposes. 
+          Learn more about them <a href="/findings">here</a>.
         </p>
       </section>
 
       <section className="section" id="compare">
         <h2 className="section-head">Can I compare this grade to an older one?</h2>
         <p className="section-intro">
-          Only on the same ruler. Each report names the ruler that scored it. Scores from before Sloptic
-          3.0 do not compare to current ones. A passive grade and a full grade are different measurements
-          too.
+          Only on the same ruler. Scores from before Sloptic
+          3.0 do not compare to current ones. Likewise, a passive grade and a full grade are different measurements as well.
         </p>
       </section>
 
       <section className="section" id="asvs">
         <h2 className="section-head">Is Sloptic ASVS compliant?</h2>
         <p className="section-intro">
-          No. Sloptic is not compliant with or certified against ASVS. Most of its security checks map to
-          an ASVS requirement. Each check tests only the visible part of it.{" "}
-          <a href="/methodology#asvs">Where the scores come from</a> explains.
+          No. Sloptic is not compliant with or certified against ASVS, but most of its security checks do
+          line up with a requirement.{" "}
+          <a href="/methodology#asvs">Click here to learn more</a>.
         </p>
       </section>
 
@@ -207,7 +191,14 @@ export default function FaqPage() {
         <p className="section-intro">
           Email <a href="mailto:abuse@sloptic.org">abuse@sloptic.org</a> with the site&apos;s address. We
           will block it from being graded again by anyone. No reason is needed.{" "}
-          <a href="/report-issue">Report an issue</a> covers the other routes.
+        </p>
+      </section>
+
+      <section className="section" id="more">
+        <h2 className="section-head">My question isn't listed!</h2>
+        <p className="section-intro">
+          Email{" "}<a href="mailto:hello@sloptic.org">hello@sloptic.org</a> with your question and we will
+          get back to you as soon as possible. If it is a common question, we will add it to this page.
         </p>
       </section>
     </>
