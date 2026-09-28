@@ -31,7 +31,7 @@ export default function AddEvent({ initialEvent = "" }: { initialEvent?: string 
 
   return (
     <>
-      <form className="grade-form" onSubmit={submit}>
+      <form className="grade-form at-start" onSubmit={submit}>
         <input
           type="text" inputMode="url" value={input} onChange={(e) => setInput(e.target.value)}
           placeholder="https://your-event.devpost.com" aria-label="Devpost event address"

@@ -68,7 +68,7 @@ export default function SignInForm({
 
   return (
     <>
-      <form onSubmit={sendLink} className="grade-form">
+      <form onSubmit={sendLink} className="grade-form at-start">
         <input
           type="email"
           required
