@@ -52,12 +52,12 @@ export default function FaqPage() {
         <p className="section-intro">
           For performance, Lighthouse measures how the app would load on a mid range phone ({LH.device},
           with a {LH.screen} screen) over slow 4G, i.e. a {LH.rttMs} ms round trip, {LH.downMbps} Mbps
-          down, and CPU work taking {LH.cpuSlowdown} times as long. This reflects how the average user in the world
-          accesses the internet. 
+          down, and CPU work taking {LH.cpuSlowdown} times as long. This is Lighthouse&apos;s standard mobile test, slower
+          than most laptops on wifi.
         </p>
         <p className="section-intro">
           Regarding accessibility, {fmt(fireRate("qa-a11y-001") ?? 0)}% of apps had an accessibility problem.
-          The most common one was low contrast text in 80% of apps, 
+          The most common one was low contrast text, in 4 in 5 of those apps.
         </p>
       </section>
 
@@ -65,7 +65,7 @@ export default function FaqPage() {
         <h2 className="section-head">Does a low score mean my app is good for sure?</h2>
         <p className="section-intro">
           No. A 0 means Sloptic can't find anything. This could be due to limitations on what Sloptic
-          can check. If you graded passively, Sloptic never sent any test traffic to your app. So treat
+          can check. If you graded passively, Sloptic didn't send any attack traffic. So treat
           the score as a minimum.
         </p>
       </section>
@@ -129,7 +129,7 @@ export default function FaqPage() {
       <section className="section" id="some-checks">
         <h2 className="section-head">Why did only some checks run?</h2>
         <p className="section-intro">
-          An unverified app gets the {TOTALS.passive} passive checks that sees what visitors see. The
+          An unverified app gets the {TOTALS.passive} passive checks that see what visitors see. The
           other {TOTALS.active} send test traffic, including attacks. Because running those on 
           others&apos; apps is considered unauthorized testing, you need to <a href="/verify">verify you own the app</a> to run them.
         </p>
@@ -154,8 +154,8 @@ export default function FaqPage() {
       <section className="section" id="where-leak">
         <h2 className="section-head">Why can&apos;t I see where a leak is?</h2>
         <p className="section-intro">
-          For leaked secrets and exposed files or backends, the finding itself is enough for attackers to exploit it. 
-          To mitigate this risk, we only show the location to the app&apos;s owner. 
+          For leaked secrets and exposed files or backends, the location is enough for attackers to exploit it. 
+          To mitigate this risk, we only show the location to the app&apos;s owner.{" "}
           <a href="/verify">Verify the app</a> to see it. 
           Likewise, if we did find a leak, please patch it and rotate your secrets as soon as possible!
         </p>

@@ -28,6 +28,7 @@ const GRADER_TREE = `https://github.com/sloptic/sloptic-main/tree/v${GRADER_VERS
 const GRADER_BLOB = `https://github.com/sloptic/sloptic-main/blob/v${GRADER_VERSION}`;
 export const CATALOG_URL = `${GRADER_TREE}/catalog`;
 export const RATIONALE_URL = `${GRADER_BLOB}/docs/PENALTY_RATIONALE.md`;
+export const REPORT_URL = `${GRADER_BLOB}/CORPUS_REPORT.md`;
 export { GRADER_VERSION };
 
 export type Category = CategoryFact & { name: string; href?: string };

@@ -4,7 +4,7 @@ import { ACTIVE, GEMINI_LIVE_APPS, fireRate, comparableEvents, MIN_EVENT_N, fmt 
 import EventSpread from "./EventSpread";
 import Exploitable from "./Exploitable";
 import BarList from "./BarList";
-import { PROBE_FACTS, probeName } from "@/lib/checks";
+import { PROBE_FACTS, REPORT_URL, probeName } from "@/lib/checks";
 
 // Read from the corpus, like every other number on this page, so it moves when the corpus does.
 export const metadata: Metadata = pageMeta(
@@ -238,7 +238,7 @@ export default function FindingsPage() {
           <div className="kind-card">
             <span className="score-fig">{fmt(fireRate("perf-lighthouse-001") ?? 0)}%</span>
             <span className="score-cap">of apps score below 90 on Lighthouse</span>
-            <p>The median score is {fmt(ACTIVE.lighthouse.overall.median)}. Lighthouse loads the page as a mid range phone on slow 4G, reflecting the average device profile.</p>
+            <p>The median score is {fmt(ACTIVE.lighthouse.overall.median)}. Lighthouse loads the page as a mid range phone on slow 4G would.</p>
           </div>
         </div>
         <BarList
@@ -371,7 +371,7 @@ export default function FindingsPage() {
           <a className="button" href="/">
             Grade an app
           </a>
-          <a className="button secondary" href="https://github.com/sloptic/sloptic-main/blob/main/CORPUS_REPORT.md">
+          <a className="button secondary" href={REPORT_URL}>
             The full report
           </a>
         </div>

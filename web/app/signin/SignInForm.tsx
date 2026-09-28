@@ -106,7 +106,7 @@ export default function SignInForm({
       <p className="signin-terms">
         Signing in accepts the <a href="/terms">terms of use</a> and the{" "}
         <a href="/privacy">privacy policy</a>. {" "} 
-        <a href="https://www.kensington.com/news/security-blog/benefits-of-passwordless-logins/">Why passwordless?</a>
+        <a href="https://en.wikipedia.org/wiki/Passwordless_authentication#Benefits_and_drawbacks">Why passwordless?</a>
       </p>
     </>
   );

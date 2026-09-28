@@ -9,6 +9,7 @@ import {
   GRADER_VERSION,
   PASSIVE_BY_AREA,
   RATIONALE_URL,
+  REPORT_URL,
   TOTALS,
   categoriesFor,
   categoryName,
@@ -282,7 +283,7 @@ describe("the editorial copy", () => {
     const pyproject = readFileSync(path.resolve(__dirname, "../../../worker/pyproject.toml"), "utf8");
     const pin = pyproject.match(/"sloptic==([^"]+)"/)?.[1];
     expect(GRADER_VERSION).toBe(pin);
-    for (const url of [CATALOG_URL, RATIONALE_URL]) {
+    for (const url of [CATALOG_URL, RATIONALE_URL, REPORT_URL]) {
       expect(url).toContain(`/v${pin}/`);
       expect(url).not.toContain("/main/");
     }
