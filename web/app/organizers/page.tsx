@@ -16,7 +16,7 @@ export default function OrganizersPage({
   return (
     <>
       <div className="page-head">
-        <h1>Sloptic for hackathon organizers</h1>
+        <h1>Sloptic for hackathons</h1>
         <p className="page-lead">
           Judging by hand can be tedious, especially for diverse web apps. Sloptic grades the parts that no app should ever get wrong.
         </p>
