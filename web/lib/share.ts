@@ -11,6 +11,8 @@
 // /s/<share token>, which leads nowhere else.
 
 import { AREA_LABELS, AREA_ORDER, type Area } from "./checks";
+import { axisView, type AreaRow } from "./axes";
+import type { GradeResult } from "./types";
 
 export type ShareCard = {
   /** The graded origin's host, e.g. "myapp.dev". */
@@ -22,6 +24,11 @@ export type ShareCard = {
   /** The curve version this grade was scored against, for its mode: "passive-2026.2" or "2026.4". */
   ruler: string;
   axes: { id: Area; label: string; slop: number }[];
+  /** The report's score band rows: per axis, checks failed / applied / available and slop against
+   *  its potential. Counts only; the findings they are counted from never leave the loader. */
+  rows: AreaRow[];
+  /** What the placement was measured against, as the ranker describes it: the band's footnote. */
+  reference: string | null;
   /** The account holding this report holds a live verified-ownership grant for the app. */
   verifiedOwner: boolean;
   /** A retry after a bot challenge is still pending, so the score can still change. */
@@ -43,7 +50,10 @@ export type ShareSource = {
     axis_slop?: Partial<Record<string, number>> | null;
     ruler?: { full?: string; passive?: string } | null;
     ranking?: { cleaner_than_pct?: number; reference?: string } | null;
-    coverage?: { probes_total?: number } | null;
+    coverage?: { probes_total?: number; applied?: unknown; by_kind?: unknown } | null;
+    /** Read only to count failed checks per axis for the band. Never copied into the card. */
+    findings?: { probe_id: string; bundle: string }[] | null;
+    axis_potential?: Partial<Record<string, number>> | null;
     blocked_probes?: string[] | null;
     bot_challenge?: boolean | null;
     challenge_stage?: string | null;
@@ -108,6 +118,10 @@ export function shareCardFrom(src: ShareSource): ShareCard | null {
     // The 3.0 axes, always all four: a grade with a ruler was scored on them, and the grader omits
     // a clean axis rather than zeroing it, so an absent key IS a clean zero here.
     axes: AREA_ORDER.map((id) => ({ id, label: AREA_LABELS[id], slop: Number(result.axis_slop?.[id] ?? 0) })),
+    // The same rows the report draws, built the same way, so the share page's band cannot disagree
+    // with the report's. axisView reads findings to count them; only the counts come back.
+    rows: axisView({ ...result, mode, findings: result.findings ?? [] } as unknown as GradeResult).rows,
+    reference: result.ranking?.reference ?? null,
     verifiedOwner: src.verifiedOwner,
     provisional: Boolean(grade.retry_due_at),
   };

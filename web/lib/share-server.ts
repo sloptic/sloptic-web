@@ -1,8 +1,9 @@
 // The database half of sharing: find a grade by its report id or its share token, and build its
 // card. Server only. It holds the service-role client, which must never reach a browser bundle.
 //
-// It selects the columns a card needs and nothing else. Findings, outcomes, evidence and the report
-// card never load here, so no bug in the share page or the card image can leak one.
+// It selects the columns a card needs and nothing else. Findings are read only so the band can count
+// failed checks per axis, and only those counts leave this module: no title, target or evidence ever
+// reaches the share page or the card image. Outcomes and the report card never load here.
 
 import { randomBytes } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabase";
@@ -30,7 +31,7 @@ type GradeRow = {
 
 const GRADE_COLS = "id, status, origin, submitted_url, retry_due_at, account_id, share_token";
 const RESULT_COLS =
-  "mode, slop_score, axis_slop, ruler, ranking, coverage, blocked_probes, bot_challenge, challenge_stage";
+  "mode, slop_score, axis_slop, axis_potential, ruler, ranking, coverage, findings, blocked_probes, bot_challenge, challenge_stage";
 
 export type LoadedShare = { grade: GradeRow; card: ShareCard | null };
 

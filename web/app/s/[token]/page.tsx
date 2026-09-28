@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SHARE_TOKEN, loadShare } from "@/lib/share-server";
-import { fmtShareScore, shareText, shareTitle, type ShareCard } from "@/lib/share";
-import BarList from "@/app/findings/BarList";
+import { shareText, shareTitle, type ShareCard } from "@/lib/share";
+import ScoreBand from "@/app/ScoreBand";
 
 export const dynamic = "force-dynamic";
 
@@ -71,27 +71,29 @@ export default async function SharePage({ params }: { params: { token: string } 
         <h1 className="share-host">{card.host}</h1>
       </div>
 
+      {/* The report's own score band, so a shared score looks like the report it came from: the same
+          big number, placement, bars and checks/points toggle. Built from counts only. */}
       <section className="section share-summary">
-        <div className="share-score">
-          <span className="score-fig">{fmtShareScore(card.score)}</span>
-          <span className="score-cap">slop, lower is better</span>
-        </div>
-        {card.cleanerThan !== null && (
-          <p className="share-place">
-            cleaner than <b>{Math.round(card.cleanerThan)}%</b> of hackathon apps
-          </p>
-        )}
-        <BarList
-          label="slop by axis"
-          format={fmtShareScore}
-          rows={card.axes.map((a) => ({ label: a.label, n: a.slop }))}
+        <ScoreBand
+          score={card.score}
+          cleanerThanPct={card.cleanerThan}
+          mode={card.mode}
+          rows={card.rows}
+          referenceMark={!!card.reference}
+          footer={
+            <>
+              <div>
+                {card.reference && <p className="band-footnote">* compared against {card.reference}.</p>}
+              </div>
+              <div className="score-chips">
+                <span className="tag">{card.mode}</span>
+                <span className="tag">ruler {card.ruler}</span>
+                {card.verifiedOwner && <span className="tag share-owner">verified owner</span>}
+                {card.provisional && <span className="tag">provisional</span>}
+              </div>
+            </>
+          }
         />
-        <div className="share-tags">
-          <span className="tag">{card.mode}</span>
-          <span className="tag">ruler {card.ruler}</span>
-          {card.verifiedOwner && <span className="tag share-owner">verified owner</span>}
-          {card.provisional && <span className="tag">provisional</span>}
-        </div>
         <p className="section-intro fineprint">
           {card.mode === "active"
             ? "An active grade also runs attack checks, with the owner's permission."

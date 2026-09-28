@@ -4155,24 +4155,6 @@ h1.report-url {
 .share-host {
   overflow-wrap: anywhere;
 }
-.share-score {
-  display: flex;
-  align-items: baseline;
-  gap: 0.8rem;
-}
-.share-score .score-fig {
-  font-size: 3.4rem;
-}
-.share-place {
-  margin: 0.4rem 0 0;
-  color: var(--ink-soft);
-}
-.share-tags {
-  margin: 0.25rem 0 0.75rem;
-}
-.share-tags .tag:first-child {
-  margin-left: 0;
-}
 .share-owner {
   color: var(--ink);
   border-color: var(--ink);

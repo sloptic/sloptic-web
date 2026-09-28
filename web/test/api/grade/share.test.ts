@@ -118,6 +118,9 @@ describe("the share lookup behind /s/<token>", () => {
     expect(text).toContain("myapp.dev");
     expect(text).not.toContain("index-abc123");
     expect(text).not.toContain("sec-secrets-001");
+    // the band still counts it: one failed security check
+    const rows = found.ok ? found.share?.card?.rows ?? [] : [];
+    expect(rows.find((r) => r.id === "security")?.failed).toBe(1);
   });
 
   it("finds nothing for a token no grade carries", async () => {

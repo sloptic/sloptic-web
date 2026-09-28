@@ -143,7 +143,7 @@ Prove control of the origin to be actively tested by serving a token we issue. T
   `grades.share_token` (random, unrelated to the id) and /s/<token> shows the summary only: host,
   score, placement, axis subtotals, mode, ruler, and the verified-owner mark (the REPORT's account holds
   a live app_origin grant). Built in `web/lib/share.ts` (pure) and `web/lib/share-server.ts`, which
-  never selects a finding. No share for a withheld, pre-3.0, expired or unfinished grade.
+  reads findings only to count failed checks per axis for the score band; only the counts leave it. No share for a withheld, pre-3.0, expired or unfinished grade.
 - **Secrets are server-side only** (LLM key, DB, queue creds). Never ship them to the client bundle, Sloptic
   itself grades for exactly this leak, so leaking one here would be self-parody.
 - **Prose:** no em dashes; use commas, colons, parentheses, periods.

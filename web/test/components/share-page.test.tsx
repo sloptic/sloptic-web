@@ -22,6 +22,13 @@ const CARD: ShareCard = {
     { id: "accessibility", label: "accessibility", slop: 4.4 },
     { id: "performance", label: "performance", slop: 0 },
   ],
+  rows: [
+    { id: "security", label: "security", failed: 3, applied: 16, possible: 17, slop: 8, potential: 200 },
+    { id: "qa", label: "quality", failed: 0, applied: 13, possible: 13, slop: 0, potential: 90 },
+    { id: "accessibility", label: "accessibility", failed: 1, applied: 3, possible: 3, slop: 4.4, potential: 40 },
+    { id: "performance", label: "performance", failed: 0, applied: 11, possible: 12, slop: 0, potential: 90 },
+  ],
+  reference: "live hackathon web apps, n=1702, passive-2026.2",
   verifiedOwner: false,
   provisional: false,
 };
@@ -51,11 +58,14 @@ beforeEach(() => {
 });
 
 describe("the share page", () => {
-  it("shows the summary: host, score, placement, axes, mode and ruler", async () => {
+  it("shows the report's own score band: host, score, placement, axis counts, mode and ruler", async () => {
     const html = await page();
-    for (const s of ["myapp.dev", "12.4", "slop, lower is better", "91%", "of hackathon apps", "security", "quality", "passive-2026.2"]) {
+    for (const s of ["myapp.dev", "12.4", "cleaner than", "91%", "security", "quality", "accessibility", "passive-2026.2", "score-band"]) {
       expect(html).toContain(s);
     }
+    // the checks view's failed / applied / available, as the report prints it
+    expect(html).toMatch(/3<span class="of">\/16<\/span><span class="of dim">\/17<\/span>/);
+    expect(html).toContain("* compared against live hackathon web apps, n=1702, passive-2026.2.");
   });
 
   it("links nowhere near the report", async () => {

@@ -18,6 +18,8 @@ const CARD: ShareCard = {
   mode: "passive",
   ruler: "passive-2026.2",
   axes: [],
+  rows: [],
+  reference: null,
   verifiedOwner: false,
   provisional: false,
 };

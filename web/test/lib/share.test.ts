@@ -52,7 +52,7 @@ describe("shareCardFrom", () => {
   it("carries only the summary, never a finding", () => {
     const card = shareCardFrom(src())!;
     expect(Object.keys(card).sort()).toEqual(
-      ["axes", "cleanerThan", "host", "mode", "provisional", "ruler", "score", "verifiedOwner"].sort(),
+      ["axes", "cleanerThan", "host", "mode", "provisional", "reference", "rows", "ruler", "score", "verifiedOwner"].sort(),
     );
   });
 
