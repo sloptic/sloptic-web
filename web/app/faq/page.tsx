@@ -29,8 +29,8 @@ export default function FaqPage() {
         <h2 className="section-head">What can Sloptic even grade?</h2>
         <p className="section-intro">
           Sloptic grades web apps hosted on a live domain. It cannot grade mobile apps, Jupyter or Colab
-          notebooks, native games, or anything else that does not run in a browser. Most hackathon
-          projects, and most AI-built projects, end up as web apps. That is where Sloptic focuses.
+          notebooks, native games, or anything else that doesn't run in a browser. Most hackathon
+          projects and most AI-built projects end up as web apps which is where Sloptic focuses on.
         </p>
         <p className="section-intro">Some web apps can be graded, with limits:</p>
         <ul className="stat-list">
