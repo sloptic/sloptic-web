@@ -390,8 +390,8 @@ export default function FindingsPage({ searchParams }: { searchParams?: { grades
         ) : (
           <p className="section-intro">
             Only {fmt(SEV.exploitable_pct)}% of apps had an exploitable vulnerability a passive grade can see.
-            A passive grade sends no attacks. It finds only what any visitor can see, mostly secret keys shipped
-            in the app&apos;s own code. <Link href="/findings" scroll={false}>Full grades</Link> find more.
+            Note that a passive grade does not send attacks over and only sees what a visitor sees, such as
+            secrets shipped in the app&apos;s own code in a bundle. 
           </p>
         )}
       </section>
