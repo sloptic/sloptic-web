@@ -25,10 +25,10 @@ export default function FaqPage() {
           hold here too: Lighthouse SIMULATES the phone on the grading box, never "tested on a phone",
           and the phone framing is for performance only. */}
       <section className="section" id="fast-but-bad">
-        <h2 className="section-head">Why is my score bad when my app is fast?</h2>
+        <h2 className="section-head">How is my score bad when my app is fast?</h2>
         <p className="section-intro">
           Some kinds of slop are easy to miss when you build and test an app yourself. Below are the
-          most common ones and how Sloptic checks for each.
+          most common ones and how Sloptic checks them:
         </p>
         {/* Cards, not a table: each row was three sentences about one kind of slop, read on its own and
             never compared column to column, and a phone fits two wordy columns at most. */}
@@ -52,13 +52,12 @@ export default function FaqPage() {
         <p className="section-intro">
           For performance, Lighthouse measures how the app would load on a mid range phone ({LH.device},
           with a {LH.screen} screen) over slow 4G, i.e. a {LH.rttMs} ms round trip, {LH.downMbps} Mbps
-          down, and CPU work taking {LH.cpuSlowdown} times as long. Sloptic simulates this on the machine
-          that grades your app. Across the corpus, {fmt(fireRate("perf-lighthouse-001") ?? 0)}% of apps
-          scored below 90, and the median score was {fmt(ACTIVE.lighthouse.overall.median)}.
+          down, and CPU work taking {LH.cpuSlowdown} times as long. This reflects how the average user in the world
+          accesses the internet. 
         </p>
         <p className="section-intro">
-          For accessibility, {fmt(fireRate("qa-a11y-001") ?? 0)}% of apps had at least one instance of
-          slop, and about 4 in 5 of those had text too faint to read against its background.
+          Regarding accessibility, {fmt(fireRate("qa-a11y-001") ?? 0)}% of apps had an accessibility problem.
+          The most common one was low contrast text in 80% of apps, 
         </p>
       </section>
 
