@@ -23,6 +23,7 @@
   --security: #a83f2c;
   --qa: #2f6d99;
   --performance: #3f8a58;
+  --accessibility: #9a7b0f;
 
   /* Amber, for a check that was PREVENTED rather than failed: a challenge blocked it, so nothing
      was found and nothing passed. It must not read as the red of a finding.
@@ -59,6 +60,7 @@
   --security: #d6604a;
   --qa: #5f9dcb;
   --performance: #62b082;
+  --accessibility: #e0c25a;
   --warn: #e0a33f;
 }
 
@@ -79,6 +81,7 @@
   --security: #d6604a;
     --qa: #5f9dcb;
     --performance: #62b082;
+    --accessibility: #e0c25a;
   }
 }
 
@@ -467,6 +470,9 @@ a {
 .channel[data-axis="performance"] .channel-dot {
   background: var(--performance);
 }
+.channel[data-axis="accessibility"] .channel-dot {
+  background: var(--accessibility);
+}
 .channel-label {
   font-size: 1rem;
   font-weight: 600;
@@ -631,6 +637,9 @@ a {
 .sample-axis[data-axis="performance"] .seg.failed {
   background: var(--performance);
 }
+.sample-axis[data-axis="accessibility"] .seg.failed {
+  background: var(--accessibility);
+}
 .sample-axis[data-axis="security"] .seg.clean {
   background: color-mix(in srgb, var(--security) 26%, transparent);
 }
@@ -639,6 +648,9 @@ a {
 }
 .sample-axis[data-axis="performance"] .seg.clean {
   background: color-mix(in srgb, var(--performance) 26%, transparent);
+}
+.sample-axis[data-axis="accessibility"] .seg.clean {
+  background: color-mix(in srgb, var(--accessibility) 26%, transparent);
 }
 .seg.na {
   background: repeating-linear-gradient(
@@ -754,6 +766,9 @@ a {
 }
 .finding-row[data-axis="performance"] .finding-dot {
   background: var(--performance);
+}
+.finding-row[data-axis="accessibility"] .finding-dot {
+  background: var(--accessibility);
 }
 .finding-cat {
   color: var(--ink);
@@ -968,6 +983,9 @@ a {
 .axis-row[data-axis="performance"] .axis-fill {
   background: var(--performance);
 }
+.axis-row[data-axis="accessibility"] .axis-fill {
+  background: var(--accessibility);
+}
 .axis-val {
   text-align: right;
   font-family: var(--font-mono);
@@ -1044,6 +1062,9 @@ section.report h2 {
 }
 .finding[data-axis="performance"] .swatch {
   background: var(--performance);
+}
+.finding[data-axis="accessibility"] .swatch {
+  background: var(--accessibility);
 }
 .finding-head {
   display: flex;
@@ -1354,6 +1375,9 @@ code {
 }
 .measure-swatch[data-axis="performance"] {
   background: var(--performance);
+}
+.measure-swatch[data-axis="accessibility"] {
+  background: var(--accessibility);
 }
 
 /* Comparison table (what makes it different, on About). Left aligned prose rather
