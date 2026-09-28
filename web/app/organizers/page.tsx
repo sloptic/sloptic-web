@@ -82,22 +82,8 @@ export default function OrganizersPage({
           Additionally, Sloptic only supports <b> web app grading</b> for deployed web apps.
           Other projects, such as mobile apps, hardware projects, notebooks, AI/ML models, etc.,
           are not supported. If your hackathon accepts non-web app projects,
-          it is better to use Sloptic to award a categorical prize for web apps, such as the one 
-          below.
+          it is better to use Sloptic to award a separate categorical prize for web apps.
         </p>
-      </section>
-
-      <section className="section" id="prize">
-        <h2 className="section-head">Suggested prize</h2>
-        
-        <div className="callout" data-tone="award">
-          <p className="award-name">Slopless Builder</p>
-          <p>
-            To the web app entry with the lowest slop score, hence the name "slopless." A 
-            "slopless builder" demonstrates that they can build a web app that is not only 
-            demos well, but is also clean, secure, and performant.
-          </p>
-        </div>
       </section>
 
       <section className="section" id="how">
@@ -115,7 +101,7 @@ export default function OrganizersPage({
             <span className="n">02</span>
             <p>
               Pick how deep to go. A passive grade reads what every visitor can see and runs as soon
-              as you verify. But an active grade adds the checks that send real traffic, so it needs the
+              as you verify. But an active grade adds the checks that send attacks, so it needs the
               disclosure to have been up before your deadline and a word with us first. Email{" "}
               <a href="mailto:hello@sloptic.org">hello@sloptic.org</a> and we will review your
               event.
