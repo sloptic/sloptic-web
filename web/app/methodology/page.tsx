@@ -31,15 +31,15 @@ export default function MethodologyPage() {
       <section className="section">
         <h2 className="section-head">What counts as slop?</h2>
         <p className="section-intro">
-          <b>1. It has to be wrong in every app.</b> Before a behavior is considered slop, it must answer a simple question:
-          Is there a legitimate app for which this behavior is correct? For example, a table any visitor can
-          read can be right for a product catalogue. Allowing duplicates may be correct for logs but wrong for payment transactions. These examples are cases where an app can <em>legitimately
-          exhibit a particular behavior</em> and thus wouldn't be considered slop.
+          Sloptic defines &quot;slop&quot; as <em>issues that no app should ever have no matter what</em>.
+          Some apps may exhibit behavior that is wrong for this particular app but may be correct for 
+          another app, or even a different use case. For example, a table any visitor can read can be right for a marketplace's
+          product listing but wrong for a user database. Allowing duplicates may be correct for logs but incorrect for payment transactions. 
         </p>
         <p className="section-intro">
-          However, behaviors like exposed secrets, SQL injection, an unhandled server error, or a pathologically slow
-          app, are wrong for <em>any app you come across</em>. No app on earth exists where such behaviors are
-          &quot;correct&quot; and thus these are considered slop and Sloptic docks them.
+          But certain behaviors, like exposed secrets, injections, unhandled server errors, or pathologically slow
+          apps, are wrong for <em>any app you come across</em>. No app on earth exists where such behaviors are
+          &quot;correct&quot;. Thus these are considered slop and Sloptic docks apps for them.
         </p>
         <p className="section-intro">
           You might disagree with this definition of slop, but Sloptic operates this way so it can compare
@@ -67,12 +67,12 @@ export default function MethodologyPage() {
               <span className="score-cap">the cleanest score</span>
             </div>
             <h3>deduction only</h3>
-            <p>Nothing is earned for passing but you get penalized for failing. This is similar to how 
-              failures work in that failures are visible but successes are not. Lower is better.</p>
+            <p>Nothing is earned for passing but you get penalized for failing, similar to how quality and security
+              failures work in the real world. A lower score is better.</p>
           </li>
           <li className="score-tile">
             <div className="score-top">
-              <span className="score-fig">often × bad</span>
+              <span className="score-fig">likelihood × impact</span>
               <span className="score-cap">expected harm</span>
             </div>
             <h3>risk priced</h3>
@@ -84,7 +84,7 @@ export default function MethodologyPage() {
               <span className="score-fig">{PRICE_SPAN}</span>
               <span className="score-cap">points per check</span>
             </div>
-            <h3>fixed, tiered, and measured</h3>
+            <h3>varies based on check</h3>
             <p>Some checks are tiered, meaning they have a penalty range and escalate whenever worse issues are found
               in that category, while others apply a fixed penalty. 
               Lighthouse performance is penalized to the tune of {" "}{Math.round(SCORING.lighthouse.greenFloor * 100)} - N 
@@ -102,13 +102,12 @@ export default function MethodologyPage() {
               <span className="score-cap">each repeat of a kind</span>
             </div>
             <h3>damped</h3>
-            <p>Repeats of the same kind of slop count less after the first instance. This way, 
-              your app is not penalized repeatedly for the same issue (double jeopardy).</p>
+            <p>Repeats count less after the first instance, so your app is not penalized repeatedly for the same issue (double jeopardy).</p>
           </li>
           <li className="score-tile">
             <div className="score-top">
               <span className="score-fig">no cap</span>
-              <span className="score-cap">four subtotals, summed</span>
+              <span className="score-cap">four subtotals summed</span>
             </div>
             <h3>unbounded</h3>
             <p>Security, quality, accessibility and performance each report their own subtotal and the
@@ -118,7 +117,7 @@ export default function MethodologyPage() {
       </section>
 
       <section className="section">
-        <h2 className="section-head">Where the scores come from</h2>
+        <h2 className="section-head">Where do scores come from?</h2>
         <p className="section-intro">
           A penalty is not a matter of taste. Every number traces to a published authority, and where
           a finding lands inside that authority&apos;s range is set by what the check saw. You can find the 
@@ -128,13 +127,9 @@ export default function MethodologyPage() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            in the open grader
+            here
           </a>
-          .
-        </p>
-        <p className="section-intro">
-          Different failures answer to different authorities, and only severity sets the
-          number.
+          . Sloptic derives its scores from four authorities:
         </p>
         <ul className="stat-list">
           <li>
@@ -172,7 +167,7 @@ export default function MethodologyPage() {
               >
                 Nielsen&apos;s severity scale
               </a>{" "}
-              for how much a fault hurts a user.
+              for how much an issue hurts a user.
             </span>
           </li>
           <li>
@@ -185,7 +180,7 @@ export default function MethodologyPage() {
               >
                 Google Lighthouse
               </a>
-              , charging only the distance an app falls below Lighthouse&apos;s own line for good.
+              , where Sloptic penalizes the distance below Lighthouse&apos;s standard for &quot;good&quot;.
             </span>
           </li>
           <li>
@@ -206,46 +201,13 @@ export default function MethodologyPage() {
             "compliant", "certified" or "verified": ASVS assumes a verifier with source and docs. The
             mapping and its caveats live in lib/asvs.ts. #asvs is linked from the FAQ. */}
         <p className="section-intro" id="asvs">
-          <b>Why the security checks exist.</b> Most map to a requirement in the{" "}
+          Additionally, Sloptic's security checks map to a requirement in the{" "}
           <a href={ASVS_HOME} target="_blank" rel="noopener noreferrer">
             OWASP Application Security Verification Standard
           </a>{" "}
-          (ASVS) 5.0. {ASVS_N.maps} of the {ASVS_N.security} security checks map to a requirement.{" "}
-          {ASVS_N.near} more sit close to one. <a href="/checks#security">Sloptic&apos;s checks</a> names
-          each requirement.
+          (ASVS) 5.0. {ASVS_N.maps} of the {ASVS_N.security} security checks map to a requirement while {" "}
+          {ASVS_N.near} more are close to one. <a href="/checks#security">See here</a> for the full mapping.
         </p>
-        <ul className="stat-list">
-          <li>
-            <span className="k">visible part only</span>
-            <span className="v">
-              A check tests what a visitor can see. An ASVS review also reads source and documentation.
-            </span>
-          </li>
-          <li>
-            <span className="k">out of reach</span>
-            <span className="v">
-              Business logic (V2), cryptography (V11) and most of logging (V16).
-            </span>
-          </li>
-          <li>
-            <span className="k">no checks yet</span>
-            <span className="v">Tokens (V9) and OAuth (V10).</span>
-          </li>
-          <li>
-            <span className="k">stricter than ASVS</span>
-            <span className="v">
-              Session tokens in local storage. ASVS allows them. The{" "}
-              <a
-                href="https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html#local-storage"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                OWASP HTML5 Security Cheat Sheet
-              </a>{" "}
-              does not.
-            </span>
-          </li>
-        </ul>
       </section>
 
       <section className="section">
@@ -255,58 +217,19 @@ export default function MethodologyPage() {
             <span className="score-fig">{TOTALS.passive}</span>
             <span className="score-cap">checks, on any app</span>
             <p>
-              <b>Passive</b> checks read what your app already shows every visitor. Running them on a
-          stranger&apos;s site is no different from visiting it.
+              <b>Passive</b> checks read what your app already shows your visitors.
             </p>
           </div>
           <div className="kind-card" data-kind="active">
             <span className="score-fig">{TOTALS.active}</span>
             <span className="score-cap">checks, with ownership proof</span>
             <p>
-              <b>Active</b> checks go looking for holes by sending real attacks (because some instance of slop are
-          security vulnerabilities). Doing that to a site you don't own is considered unauthorized testing, 
-          so they only run when ownership is proven.{" "}
-          <a href="/verify">Learn more about domain verification here.</a>
+              <b>Active</b> checks go looking for holes by sending attacks and writes to your app. 
+              Doing that to a site you don't own is considered unauthorized testing, 
+          so they only run when {" "}<a href="/verify">ownership is proven</a>.
             </p>
           </div>
         </div>
-      </section>
-
-      <section className="section">
-        <h2 className="section-head">How we validate our checks</h2>
-        <p className="section-intro">
-          Checks are calibrated against apps with known answers because no single target
-          proves much by itself.
-        </p>
-        <ul className="stat-list">
-          <li>
-            <span className="k">a matched pair</span>
-            <span className="v">
-              One reference app intentionally broken, one clean. A check that can't tell these apart does not get added.
-            </span>
-          </li>
-          <li>
-            <span className="k">apps broken on purpose</span>
-            <span className="v">
-              DVWA, Juice Shop, VAmPI and bWAPP, the intentionally vulnerable apps the industry already
-              uses with documented faults.
-            </span>
-          </li>
-          <li>
-            <span className="k">an outside benchmark</span>
-            <span className="v">
-              {" "}<a href="https://gapbench.vibe-eval.com/" target="_blank" rel="noopener noreferrer">GapBench</a>, 
-              a recall benchmark with an answer key for testing security scanners. 
-            </span>
-          </li>
-          <li>
-            <span className="k">a population</span>
-            <span className="v">
-              More than 1,600 real deployed apps, which shows how often a fault occurs but not
-              whether one actually exists or not.
-            </span>
-          </li>
-        </ul>
       </section>
 
       <section className="section">
