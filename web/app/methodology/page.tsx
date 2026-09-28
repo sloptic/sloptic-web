@@ -238,7 +238,7 @@ export default function MethodologyPage() {
             Grade an app
           </a>
           <a className="button secondary" href="https://github.com/sloptic/sloptic-main">
-            The full grader
+            The grader repo
           </a>
         </div>
       </section>
