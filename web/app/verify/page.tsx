@@ -8,7 +8,7 @@ import { claimsForAccount } from "@/lib/domain-claims";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMeta(
-  "Why only some checks run",
+  "Verification",
   `On a site nobody has proven they own, Sloptic runs only the ${TOTALS.passive} of its ${TOTALS.total} checks that read what a visitor can see. Verify yours to run the rest.`,
   "/verify",
 );
@@ -20,7 +20,7 @@ export default async function VerifyPage() {
   return (
     <>
       <div className="page-head">
-        <h1>Why only some checks run</h1>
+        <h1>Verification</h1>
         <p className="page-lead">
           Sloptic has {TOTALS.total} tests. On a URL nobody has proven they own, it runs the{" "}
           {TOTALS.passive} checks that only read what a visitor can see. Why?
