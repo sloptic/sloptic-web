@@ -3,7 +3,7 @@ import { pageMeta } from "@/lib/meta";
 import EventForm from "./EventForm";
 
 export const metadata: Metadata = pageMeta(
-  "Sloptic for hackathon organizers",
+  "Sloptic for hackathons",
   "Sloptic grades your hackathon's web app entries on the parts no app should get wrong, ranks them on a board, and suggests a prize for the lowest slop score.",
   "/organizers",
 );
