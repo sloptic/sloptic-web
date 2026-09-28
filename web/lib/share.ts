@@ -115,7 +115,7 @@ export function shareCardFrom(src: ShareSource): ShareCard | null {
 export function shareText(card: ShareCard): string {
   const placed =
     card.cleanerThan !== null
-      ? `, cleaner than ${Math.round(card.cleanerThan)}% of ${card.mode === "active" ? "actively" : "passively"} graded apps`
+      ? `, cleaner than ${Math.round(card.cleanerThan)}% of hackathon apps`
       : "";
   return `${card.host} scored ${fmtShareScore(card.score)} on Sloptic${placed}. Lower is better.`;
 }

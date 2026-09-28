@@ -53,7 +53,7 @@ beforeEach(() => {
 describe("the share page", () => {
   it("shows the summary: host, score, placement, axes, mode and ruler", async () => {
     const html = await page();
-    for (const s of ["myapp.dev", "12.4", "slop, lower is better", "91%", "passively graded apps", "security", "quality", "passive-2026.2"]) {
+    for (const s of ["myapp.dev", "12.4", "slop, lower is better", "91%", "of hackathon apps", "security", "quality", "passive-2026.2"]) {
       expect(html).toContain(s);
     }
   });

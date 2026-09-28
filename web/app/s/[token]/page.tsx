@@ -78,8 +78,7 @@ export default async function SharePage({ params }: { params: { token: string } 
         </div>
         {card.cleanerThan !== null && (
           <p className="share-place">
-            cleaner than <b>{Math.round(card.cleanerThan)}%</b> of{" "}
-            {card.mode === "active" ? "actively" : "passively"} graded apps
+            cleaner than <b>{Math.round(card.cleanerThan)}%</b> of hackathon apps
           </p>
         )}
         <BarList
