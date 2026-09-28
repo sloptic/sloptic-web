@@ -4155,6 +4155,9 @@ h1.report-url {
 .share-host {
   overflow-wrap: anywhere;
 }
+.share-summary .fineprint {
+  margin-top: 0.75rem;
+}
 .share-owner {
   color: var(--ink);
   border-color: var(--ink);

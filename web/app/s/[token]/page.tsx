@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SHARE_TOKEN, loadShare } from "@/lib/share-server";
-import { shareText, shareTitle, type ShareCard } from "@/lib/share";
+import { shareText, shareTitle, shareVerdict, type ShareCard } from "@/lib/share";
 import ScoreBand from "@/app/ScoreBand";
 
 export const dynamic = "force-dynamic";
@@ -69,11 +69,12 @@ export default async function SharePage({ params }: { params: { token: string } 
       <div className="page-head">
         <p className="share-kicker">A Sloptic grade</p>
         <h1 className="share-host">{card.host}</h1>
+        {shareVerdict(card) && <p className="page-lead">{shareVerdict(card)}</p>}
       </div>
 
       {/* The report's own score band, so a shared score looks like the report it came from: the same
           big number, placement, bars and checks/points toggle. Built from counts only. */}
-      <section className="section share-summary">
+      <section className="section attached share-summary">
         <ScoreBand
           score={card.score}
           cleanerThanPct={card.cleanerThan}

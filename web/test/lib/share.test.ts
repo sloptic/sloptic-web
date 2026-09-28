@@ -6,7 +6,7 @@
  *  platform's documented format, since a wrong parameter fails silently on their side.
  */
 import { describe, it, expect } from "vitest";
-import { fmtShareScore, hostOf, shareCardFrom, shareTargets, shareText, shareTitle, type ShareSource } from "@/lib/share";
+import { VERDICTS, fmtShareScore, hostOf, shareCardFrom, shareTargets, shareText, shareTitle, shareVerdict, type ShareSource } from "@/lib/share";
 
 const RULER = { full: "2026.4", passive: "passive-2026.2" };
 
@@ -110,6 +110,31 @@ describe("the post", () => {
   it("reads a host from an origin", () => {
     expect(hostOf("https://myapp.dev")).toBe("myapp.dev");
     expect(hostOf("http://localhost:3000")).toBe("localhost:3000");
+  });
+});
+
+describe("shareVerdict", () => {
+  const at = (pct: number | null) =>
+    shareVerdict({ ...shareCardFrom(src())!, cleanerThan: pct });
+
+  it("reads the placement by range, top down", () => {
+    expect(at(95)).toBe(VERDICTS[0].text);
+    expect(at(90)).toBe(VERDICTS[0].text);
+    expect(at(89.9)).toBe(VERDICTS[1].text);
+    expect(at(50)).toBe(VERDICTS[2].text);
+    expect(at(49)).toBe(VERDICTS[3].text);
+    expect(at(26)).toBe(VERDICTS[4].text); // 74% of apps are cleaner: sloppier than most
+    expect(at(0)).toBe(VERDICTS[5].text);
+  });
+
+  it("says nothing for an unranked grade", () => {
+    expect(at(null)).toBeNull();
+  });
+
+  it("covers every placement, with ranges from high to low", () => {
+    const froms = VERDICTS.map((v) => v.from);
+    expect(froms).toEqual([...froms].sort((a, b) => b - a));
+    expect(froms[froms.length - 1]).toBe(0);
   });
 });
 
