@@ -24,6 +24,16 @@ export default function FaqPage() {
       {/* The builder's seat (3.0 handoff), moved here from /methodology. The rails from the handoff
           hold here too: Lighthouse SIMULATES the phone on the grading box, never "tested on a phone",
           and the phone framing is for performance only. */}
+      
+      <section className="section" id="scope">
+        <h2 className="section-head">What can Sloptic even grade?</h2>
+        <p className="section-intro">
+          Sloptic supports <b>web app grading</b> that is hosted on a live domain. It cannot grade
+          mobile apps, Jupyter/Colab notebooks, games, or other projects that are not web apps. That being said,
+          web apps are the easiest to build, easier still with AI, and so Sloptic focuses its grading there. {" "}
+        </p>
+      </section>
+      
       <section className="section" id="fast-but-bad">
         <h2 className="section-head">How is my score bad when my app is fast?</h2>
         <p className="section-intro">
@@ -191,9 +201,9 @@ export default function FaqPage() {
       </section>
 
       <section className="section" id="stop">
-        <h2 className="section-head">How do I stop Sloptic grading my site?</h2>
+        <h2 className="section-head">How do I stop Sloptic grading my app?</h2>
         <p className="section-intro">
-          Email <a href="mailto:abuse@sloptic.org">abuse@sloptic.org</a> with the site&apos;s address. We
+          Email <a href="mailto:abuse@sloptic.org">abuse@sloptic.org</a> with the app&apos;s address. We
           will block it from being graded again by anyone. No reason is needed.{" "}
         </p>
       </section>
