@@ -2518,6 +2518,10 @@ code {
   padding: 0.4rem 0;
   border-bottom: 1px solid var(--line);
 }
+/* Emphasis in the accent hue, for bar lists whose story is not security. */
+.hbar-bar[data-hot="accent"] .seg {
+  background: var(--accent);
+}
 /* A list's total: no bar (it would dwarf the rows it sums), a heavier rule above, the count in ink. */
 .hbar-total {
   border-top: 1px solid var(--line-strong);

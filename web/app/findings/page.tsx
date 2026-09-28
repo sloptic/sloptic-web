@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/meta";
-import { ACTIVE, GEMINI_LIVE_APPS, comparableEvents, MIN_EVENT_N, fmt } from "@/lib/corpus";
+import { ACTIVE, GEMINI_LIVE_APPS, fireRate, comparableEvents, MIN_EVENT_N, fmt } from "@/lib/corpus";
 import EventSpread from "./EventSpread";
 import Exploitable from "./Exploitable";
 import BarList from "./BarList";
+import { PROBE_FACTS, probeName } from "@/lib/checks";
 
 // Read from the corpus, like every other number on this page, so it moves when the corpus does.
 export const metadata: Metadata = pageMeta(
@@ -216,6 +217,49 @@ export default function FindingsPage() {
           When evaluated on its single worst slop instance, this is what apps had:
         </p>
         <Levels />
+      </section>
+
+      {/* The two findings a team rarely sees coming: common, and invisible from the team's own laptop.
+          Every number is read from the corpus except "4 in 5", which is transcribed from sloptic-main
+          CORPUS_REPORT.md 4.8 (contrast is 80.5% of apps with an accessibility violation); the figures
+          file does not carry it. */}
+      <section className="section">
+        <h2 className="section-head">What do teams miss?</h2>
+        <p className="section-intro">
+          After missing security headers, the most common slop is accessibility and performance. Both look
+          fine from the laptop the app was built on. Most teams only learn about them from a report.
+        </p>
+        <div className="kind-cards">
+          <div className="kind-card">
+            <span className="score-fig">{fmt(fireRate("qa-a11y-001") ?? 0)}%</span>
+            <span className="score-cap">of apps have an accessibility barrier</span>
+            <p>About 4 in 5 of those have text too faint to read against its background.</p>
+          </div>
+          <div className="kind-card">
+            <span className="score-fig">{fmt(fireRate("perf-lighthouse-001") ?? 0)}%</span>
+            <span className="score-cap">of apps score below 90 on Lighthouse</span>
+            <p>The median score is {fmt(ACTIVE.lighthouse.overall.median)}. Lighthouse loads the page as a mid range phone on slow 4G would.</p>
+          </div>
+        </div>
+        <BarList
+          label="the most common slop, by share of apps"
+          format={(n) => `${fmt(n)}%`}
+          rows={[...ACTIVE.fire_frequency]
+            .sort((a, b) => b.pct - a.pct)
+            .slice(0, 8)
+            .map((r) => {
+              const f = PROBE_FACTS.find((x) => x.id === r.probe_id);
+              return {
+                label: f ? probeName(f).replace(/`/g, "") : r.probe_id,
+                n: r.pct,
+                hot: r.bundle === "accessibility" || r.bundle === "performance",
+              };
+            })}
+        />
+        <p className="section-intro fineprint">
+          The eight most common findings, by share of graded apps.{" "}
+          <a href="/faq#fast-but-bad">Why is my score bad when my app is fast?</a>
+        </p>
       </section>
 
       <section className="section">
