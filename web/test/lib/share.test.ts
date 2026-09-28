@@ -77,8 +77,13 @@ describe("shareCardFrom", () => {
     expect(shareCardFrom(src({ result: { slop_score: null } }))).toBeNull();
   });
 
-  it("leaves the placement out when it was ranked against a stand-in reference", () => {
-    expect(shareCardFrom(src({ result: { ranking: { cleaner_than_pct: 50, reference: "2026.3" } } }))?.cleanerThan).toBeNull();
+  it("keeps the placement on a ranked grade, whose reference only names the curve", () => {
+    // Every ranked grade carries one: benchmark.rank() sets it to the curve's own description.
+    const ref = "live hackathon web apps, n=1702, passive-2026.2";
+    expect(shareCardFrom(src({ result: { ranking: { cleaner_than_pct: 26, reference: ref } } }))?.cleanerThan).toBe(26);
+  });
+
+  it("leaves the placement out of an unranked grade", () => {
     expect(shareCardFrom(src({ result: { ranking: null } }))?.cleanerThan).toBeNull();
   });
 

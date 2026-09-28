@@ -16,8 +16,7 @@ export type ShareCard = {
   /** The graded origin's host, e.g. "myapp.dev". */
   host: string;
   score: number;
-  /** "Cleaner than X%" on the curve for the grade's mode. Null when the grade was not ranked, or was
-   *  ranked against a stand-in reference, which the report footnotes and a share cannot. */
+  /** "Cleaner than X%" on the curve for the grade's mode. Null when the grade was not ranked. */
   cleanerThan: number | null;
   mode: "passive" | "active";
   /** The curve version this grade was scored against, for its mode: "passive-2026.2" or "2026.4". */
@@ -95,7 +94,10 @@ export function shareCardFrom(src: ShareSource): ShareCard | null {
   if (!ruler) return null;
 
   const pct = result.ranking?.cleaner_than_pct;
-  const cleanerThan = !result.ranking?.reference && typeof pct === "number" && Number.isFinite(pct) ? pct : null;
+  // `ranking.reference` is the ranker's description of the curve ("live hackathon web apps, n=1702,
+  // passive-2026.2"), set on every ranked grade; it says what was compared against, not that the
+  // comparison was a stand-in, so it never withholds the placement.
+  const cleanerThan = typeof pct === "number" && Number.isFinite(pct) ? pct : null;
 
   return {
     host: hostOf(grade.origin ?? grade.submitted_url ?? ""),
