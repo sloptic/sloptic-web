@@ -13,7 +13,7 @@ export const REFERENCE: NavLink[] = [
   { href: "/faq", label: "Frequently asked questions" },
   { href: "/checks", label: "Sloptic's checks" },
   { href: "/findings", label: "What do hackathon apps look like?" },
-  { href: "/verify", label: "Why only some checks run" },
+  { href: "/verify", label: "Verification" },
 ];
 
 /** Top level destinations, in masthead order. */
