@@ -95,17 +95,11 @@ export default async function SharePage({ params }: { params: { token: string } 
             </>
           }
         />
-        <p className="section-intro fineprint">
-          {card.mode === "active"
-            ? "An active grade also runs attack checks, with the owner's permission."
-            : "A passive grade reads only what any visitor can see."}
-          {card.provisional && " A retry is pending, so this score can still change."}
-        </p>
       </section>
 
       <section className="section">
         <p className="section-intro">
-          Sloptic grades a deployed web app from the outside. It scores the slop no app should have.
+          Sloptic checks a web app on the outside and scores on the slop no app should have.
         </p>
         <div className="cta-row">
           <a className="button" href="/">
