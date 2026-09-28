@@ -28,10 +28,37 @@ export default function FaqPage() {
       <section className="section" id="scope">
         <h2 className="section-head">What can Sloptic even grade?</h2>
         <p className="section-intro">
-          Sloptic supports <b>web app grading</b> that is hosted on a live domain. It cannot grade
-          mobile apps, Jupyter/Colab notebooks, games, or other projects that are not web apps. That being said,
-          web apps are the easiest to build, easier still with AI, and so Sloptic focuses its grading there. {" "}
+          Sloptic grades web apps hosted on a live domain. It cannot grade mobile apps, Jupyter or Colab
+          notebooks, native games, or anything else that does not run in a browser. Most hackathon
+          projects, and most AI-built projects, end up as web apps. That is where Sloptic focuses.
         </p>
+        <p className="section-intro">Some web apps can be graded, with limits:</p>
+        <ul className="stat-list">
+          <li>
+            <span className="k">Streamlit and similar hosts</span>
+            <span className="v">Sloptic can grade them, but the score describes the platform, not your app.</span>
+          </li>
+          <li>
+            <span className="k">apps behind a login</span>
+            <span className="v">A passive grade sees only what a signed-out visitor sees.</span>
+          </li>
+          <li>
+            <span className="k">local and private addresses</span>
+            <span className="v">Localhost and private network addresses are blocked on purpose.</span>
+          </li>
+          <li>
+            <span className="k">apps that are down or asleep</span>
+            <span className="v">
+              An app that does not load in time cannot be graded. Free tiers often put apps to sleep.
+            </span>
+          </li>
+          <li>
+            <span className="k">apps behind a bot challenge</span>
+            <span className="v">
+              They may not get a score. See <a href="#no-score">Why didn&apos;t I get a score?</a>
+            </span>
+          </li>
+        </ul>
       </section>
       
       <section className="section" id="fast-but-bad">
