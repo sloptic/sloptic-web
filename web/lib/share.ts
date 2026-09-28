@@ -132,12 +132,12 @@ export function shareCardFrom(src: ShareSource): ShareCard | null {
  *  down; the first range whose `from` the placement reaches wins. Neutral enough for a stranger to
  *  post about someone else's app. Edit the wording freely; the ranges are what the tests hold. */
 export const VERDICTS: { from: number; text: string }[] = [
-  { from: 90, text: "One of the cleanest hackathon apps Sloptic has graded." },
+  { from: 90, text: "One of the cleanest apps Sloptic has graded." },
   { from: 70, text: "Cleaner than most hackathon apps." },
   { from: 50, text: "Cleaner than the typical hackathon app." },
   { from: 30, text: "Sloppier than the typical hackathon app." },
   { from: 10, text: "Sloppier than most hackathon apps." },
-  { from: 0, text: "One of the sloppiest hackathon apps Sloptic has graded." },
+  { from: 0, text: "One of the sloppiest apps Sloptic has graded." },
 ];
 
 /** The verdict for a card, or null when the grade was not ranked and there is nothing to compare. */
