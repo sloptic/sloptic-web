@@ -135,9 +135,15 @@ Prove control of the origin to be actively tested by serving a token we issue. T
   (never a substring search, or a participant quoting the token in a comment could verify someone else), and
   catch `Blocked` from `submissions()` rather than treating a partial gallery as the whole field.
 - **A passive grade is a DIFFERENT measurement from a full grade** (fewer probes apply). It ranks on
-  `passive-2026.2` and is labelled "passive floor" in the UI. Never mix a passive grade onto the full-grade
+  `passive-2026.2` and is labelled "passive" in the UI (never "floor", in any user-facing copy). Never mix a passive grade onto the full-grade
   percentile, and never let a clean passive placement read as "secure": it means clean on what a visitor can
   see, and the passive floor runs no active security checks at all.
+- **A share link is its own capability.** The report URL (/grade/<id>) is read access to every finding
+  and, while unclaimed, the right to delete the report, so it is never what gets shared. Sharing mints
+  `grades.share_token` (random, unrelated to the id) and /s/<token> shows the summary only: host,
+  score, placement, axis subtotals, mode, ruler, and the verified-owner mark (the REPORT's account holds
+  a live app_origin grant). Built in `web/lib/share.ts` (pure) and `web/lib/share-server.ts`, which
+  never selects a finding. No share for a withheld, pre-3.0, expired or unfinished grade.
 - **Secrets are server-side only** (LLM key, DB, queue creds). Never ship them to the client bundle, Sloptic
   itself grades for exactly this leak, so leaking one here would be self-parody.
 - **Prose:** no em dashes; use commas, colons, parentheses, periods.

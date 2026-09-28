@@ -16,6 +16,15 @@ const nextConfig = {
   // choosing an exploit. Sloptic grades that (sec-headers-006) and we were serving it.
   poweredByHeader: false,
 
+  // The share card (/s/<token>/card) is rendered per request and reads the vendored font from disk.
+  // File tracing does not follow a path built from process.cwd(), so without this the font is missing
+  // from the deployed function and every shared link unfurls with no image.
+  experimental: {
+    outputFileTracingIncludes: {
+      "/s/[token]/card": ["./app/_fonts/**"],
+    },
+  },
+
   // `import text from "./file.csv?raw"` hands back the file as a string. For the corpus data the
   // grader commits as CSV (docs/charts/*.csv), vendored byte for byte so scripts/check-corpus-drift.sh
   // can compare it against the grader's own copy. Vitest resolves ?raw natively, so tests read the

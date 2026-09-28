@@ -12,6 +12,8 @@ import { failureText, ordinal, recoveryMarks } from "@/lib/grades";
 import ScoreBand, { fmtScore } from "@/app/ScoreBand";
 import RecoverySup from "@/app/RecoverySup";
 import { forgetGrade } from "@/lib/history";
+import { shareCardFrom } from "@/lib/share";
+import ShareControls from "./ShareControls";
 
 const POLL_MS = 3000;
 const MAX_POLL_FAILS = 8;   // ~1 minute of server errors before giving up on the page
@@ -504,6 +506,20 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
           </>
         }
       />
+
+      {/* Sharing, when the grade has a score worth posting: shareCardFrom says no for anything
+          unfinished, withheld, expired or from before 3.0. The owner mark is the share page's
+          business, not this page's, so it is left false here. */}
+      {(() => {
+        const card = shareCardFrom({
+          grade: { status: view.status, origin: view.origin ?? null, retry_due_at: view.retry_due_at },
+          result: r,
+          verifiedOwner: false,
+        });
+        return card ? (
+          <ShareControls gradeId={view.id} card={card} claimed={view.claimed} expiresAt={view.expires_at} />
+        ) : null;
+      })()}
 
       <ChallengeNote
         blocked={r.blocked_probes ?? []}

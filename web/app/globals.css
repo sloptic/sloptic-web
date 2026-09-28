@@ -4041,3 +4041,105 @@ h1.report-url {
   white-space: nowrap;
   text-align: right;
 }
+
+/* ===== sharing a score ===== */
+
+/* On the report: two controls under the band, and a note on what the link shows and how long it
+   lasts. The menu is the site's dropdown, anchored under its button. */
+.share {
+  margin: 1rem 0 0.5rem;
+}
+.share-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+.share-menu-wrap {
+  position: relative;
+}
+.share-menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  z-index: 20;
+  list-style: none;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 13rem;
+  padding: 0.4rem;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 16%, transparent);
+}
+.share-menu a,
+.share-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: none;
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+}
+.share-menu a:hover,
+.share-menu a:focus-visible,
+.share-menu button:hover,
+.share-menu button:focus-visible {
+  background: var(--paper);
+  color: var(--ink);
+}
+.share-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.share-manual {
+  display: block;
+  width: 100%;
+  max-width: 28rem;
+  margin-top: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+/* The share page (/s/<token>): the card's contents as a page, and nothing more. */
+.share-kicker {
+  margin: 0 0 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.share-host {
+  overflow-wrap: anywhere;
+}
+.share-score {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+}
+.share-score .score-fig {
+  font-size: 3.4rem;
+}
+.share-place {
+  margin: 0.4rem 0 0;
+  color: var(--ink-soft);
+}
+.share-tags {
+  margin: 0.25rem 0 0.75rem;
+}
+.share-tags .tag:first-child {
+  margin-left: 0;
+}
+.share-owner {
+  color: var(--ink);
+  border-color: var(--ink);
+}
