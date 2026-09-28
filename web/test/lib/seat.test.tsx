@@ -10,7 +10,7 @@ import { render, screen } from "@testing-library/react";
 import { AXIS_SEAT, SEAT_HREF, SEAT_ROWS, LIGHTHOUSE_PROFILE } from "@/lib/seat";
 import ScoreBand from "@/app/ScoreBand";
 
-const ALL_COPY = [...Object.values(AXIS_SEAT), ...SEAT_ROWS.flatMap((r) => [r.failure, r.invisible, r.instead])];
+const ALL_COPY = [...Object.values(AXIS_SEAT), ...SEAT_ROWS.flatMap((r) => [r.failure, r.invisible, r.matters, r.instead])];
 
 describe("where the seat lines go", () => {
   it("is under performance and accessibility only, where a grade most surprises its team", () => {

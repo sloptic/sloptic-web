@@ -42,6 +42,10 @@ export default function FaqPage() {
                   <dd>{r.invisible}</dd>
                 </div>
                 <div>
+                  <dt>why it matters</dt>
+                  <dd>{r.matters}</dd>
+                </div>
+                <div>
                   <dt>how Sloptic checks</dt>
                   <dd>{r.instead}</dd>
                 </div>

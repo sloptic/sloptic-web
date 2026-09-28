@@ -19,7 +19,7 @@ export const REFERENCE: NavLink[] = [
 /** Top level destinations, in masthead order. */
 export const PRIMARY: NavLink[] = [
   { href: "/", label: "Grade an app" },
-  { href: "/organizers", label: "Sloptic for hackathon organizers" },
+  { href: "/organizers", label: "Sloptic for hackathons" },
 ];
 
 /** Only meaningful with an account. */

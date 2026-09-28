@@ -29,35 +29,41 @@ export const SEAT_HREF = "/faq#fast-but-bad";
 
 /** Why each kind of slop is missed from the team's seat, and how Sloptic checks for it. Rewritten from
  *  the handoff's table to match the site's voice; the rails above still apply. */
-export const SEAT_ROWS: { failure: string; invisible: string; instead: string }[] = [
+export const SEAT_ROWS: { failure: string; invisible: string; matters: string; instead: string }[] = [
   {
     failure: "slow page",
     invisible: "the team builds the app on a fast laptop with good wifi",
+    matters: "most visitors leave a page that takes too long to load",
     instead: "Lighthouse loads the page the way a mid range phone on slow 4G would",
   },
   {
     failure: "low contrast text",
     invisible: "the team reads it fine on a bright screen",
+    matters: "people with low vision, or anyone reading in bright sunlight, can't read it",
     instead: "axe checks every piece of text against the WCAG contrast ratio",
   },
   {
     failure: "unlabeled button or field",
     invisible: "nobody on the team uses a screen reader",
+    matters: "screen reader users hear only \"button\" and can't tell what it does",
     instead: "axe checks that every control has a name a screen reader can read out",
   },
   {
     failure: "crash on bad input",
     invisible: "the team only types valid input into its own forms",
+    matters: "a visitor who mistypes gets a server error instead of a helpful message",
     instead: "Sloptic sends malformed input and checks that the app rejects it without crashing",
   },
   {
     failure: "button that does nothing",
     invisible: "demos only use the buttons that work",
+    matters: "visitors assume the app is broken and leave",
     instead: "Sloptic clicks the app's controls (skipping destructive ones) and watches for any effect",
   },
   {
     failure: "missing security header or leaked key",
     invisible: "the app works the same either way",
+    matters: "attackers scan every site for both",
     instead: "Sloptic reads the headers and the code shipped to the browser",
   },
 ];
