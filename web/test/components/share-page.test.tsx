@@ -75,8 +75,8 @@ describe("the share page", () => {
   it("marks a verified owner and a provisional score", async () => {
     answer = found({ ...CARD, verifiedOwner: true, provisional: true });
     const html = await page();
-    expect(html).toContain("verified owner");
-    expect(html).toContain("A retry is pending, so this score can still change.");
+    expect(html).toContain('<span class="tag share-owner">verified owner</span>');
+    expect(html).toContain('<span class="tag">provisional</span>');
   });
 
   it("says a score is unavailable once its report is gone", async () => {
