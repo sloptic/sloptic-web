@@ -77,7 +77,7 @@ export function deeperFor(slug: string, origin: string): Deeper | null {
         kind: "tool",
         name: "WAVE",
         href: `https://wave.webaim.org/report#/${app.origin}`,
-        what: "marks each accessibility problem on the page itself.",
+        what: "marks each accessibility problem on the page.",
       };
     }
     if (OBSERVATORY.has(slug)) {
@@ -85,7 +85,7 @@ export function deeperFor(slug: string, origin: string): Deeper | null {
         kind: "tool",
         name: "HTTP Observatory",
         href: `https://developer.mozilla.org/en-US/observatory/analyze?host=${encodeURIComponent(app.hostname)}`,
-        what: "checks this app's headers in more detail.",
+        what: "checks this app's headers in detail.",
       };
     }
   }

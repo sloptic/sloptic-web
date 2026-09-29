@@ -26,7 +26,7 @@ export default function FaqPage() {
           and the phone framing is for performance only. */}
       
       <section className="section" id="scope">
-        <h2 className="section-head">What can Sloptic even grade?</h2>
+        <h2 className="section-head">What can Sloptic grade?</h2>
         <p className="section-intro">
           Sloptic grades web apps hosted on a live domain. It cannot grade mobile apps, Jupyter or Colab
           notebooks, native games, or anything else that doesn't run in a browser. Most hackathon

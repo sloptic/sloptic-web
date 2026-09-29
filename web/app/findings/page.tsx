@@ -201,11 +201,6 @@ export default function FindingsPage({ searchParams }: { searchParams?: { grades
             passive grades
           </Link>
         </nav>
-        <p className="grades-note">
-          {full
-            ? "Full grades run all 106 checks, attacks included."
-            : "Passive grades run the 45 checks that read what any visitor sees. Most reports are passive."}
-        </p>
       </div>
 
       <section className="section attached">
@@ -269,12 +264,12 @@ export default function FindingsPage({ searchParams }: { searchParams?: { grades
           <div className="kind-card">
             <span className="score-fig">{fmt(fireRate("qa-a11y-001", mode) ?? 0)}%</span>
             <span className="score-cap">of apps have an accessibility barrier</span>
-            {full && <p>About 4 in 5 of those have low contrast text.</p>}
+            <p>About 4 in 5 of those have low contrast text.</p>
           </div>
           <div className="kind-card">
             <span className="score-fig">{fmt(fireRate("perf-lighthouse-001", mode) ?? 0)}%</span>
             <span className="score-cap">of apps score below 90 on Lighthouse</span>
-            <p>The median score is {fmt(F.lighthouse.overall.median)}. Lighthouse loads the page as a mid range phone on slow 4G would.</p>
+            <p>The median score is {fmt(F.lighthouse.overall.median)}.</p>
           </div>
         </div>
         <BarList

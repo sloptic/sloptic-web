@@ -1320,20 +1320,20 @@ function NotChecked({ origin, canGradeActively }: { origin: string; canGradeActi
   return (
     <div className="not-checked">
       <p>
-        A passive grade sees only what any visitor sees. It did not check your database rules, pages
-        behind a login, or how the app handles attacks.
+        A passive grade sees only what a visitor sees and does not run attacks or writes to the 
+        app. 
       </p>
       <p>
         {canGradeActively ? (
           <>You have verified this app, so you can grade it actively above.</>
         ) : platform ? (
           <>
-            A {platform} address cannot be verified, so a full grade needs a custom domain.{" "}
-            <a href="/faq#custom-domain">How to get a full grade</a>
+            This app appears to be hosted on {platform}. Add a custom domain to allow full grading.{" "}
+            <a href="/faq#custom-domain">How do get a full grade?</a>
           </>
         ) : (
           <>
-            If you own this app, <a href="/verify">verify it</a> for a full grade.
+            <a href="/verify">Verify it</a> for a full grade if you own this app.
           </>
         )}
       </p>
@@ -1371,7 +1371,7 @@ function Passed({ items }: { items: PassedItem[] }) {
   return (
     <>
       <h2>Passes ({items.length})</h2>
-      <p className="section-intro">Open a category for what its checks measured.</p>
+      <p className="section-intro">Open a category for what its checks measured:</p>
       <div className="sample-findings">
         {cats.map((cat) => (
           <details className="cat-group" data-axis={cat.area} key={cat.slug}>
