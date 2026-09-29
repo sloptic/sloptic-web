@@ -101,7 +101,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               label="about"
               items={REFERENCE}
             />
-            <a href="/organizers">organizers</a>
+            {/* The builder's path at the top level: what apps miss, and answers. Organizers are one
+                click further, in the menu. */}
+            <a href="/findings">findings</a>
+            <a href="/faq">faq</a>
             {/* Signed OUT, the browser's own list is the only way back to a report, so it stays a
                 top level link. Signed in it moves into the account menu with the rest. */}
             {user ? null : <a href="/grades">your grades</a>}

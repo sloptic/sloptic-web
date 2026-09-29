@@ -237,7 +237,7 @@ export default function Home() {
             different when it arrives. Layout mirrors the report too: the target line, the band,
             then findings below, rather than everything inside one box. */}
         <div className="sample-meta">
-          <span className="sample-url">https://example-hackathon-app.vercel.app</span>
+          <span className="sample-url">https://your-app.vercel.app</span>
           <span className="sample-mode">passive mode</span>
         </div>
 

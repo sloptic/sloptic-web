@@ -14,13 +14,13 @@ export const REFERENCE: NavLink[] = [
   { href: "/checks", label: "Sloptic's checks" },
   { href: "/findings", label: "What do hackathon apps look like?" },
   { href: "/verify", label: "Verification" },
+  // Hackathons and classes are a channel, not the audience: the site speaks to the builder, and an
+  // organizer finds their page in the menu (and from the landing's "Running a hackathon?" line).
+  { href: "/organizers", label: "Sloptic for hackathons" },
 ];
 
 /** Top level destinations, in masthead order. */
-export const PRIMARY: NavLink[] = [
-  { href: "/", label: "Grade an app" },
-  { href: "/organizers", label: "Sloptic for hackathons" },
-];
+export const PRIMARY: NavLink[] = [{ href: "/", label: "Grade an app" }];
 
 /** Only meaningful with an account. */
 export const ACCOUNT: NavLink[] = [
