@@ -95,3 +95,18 @@ export const SAMPLE_PASSED = [
     desc: "Every link the page offers leads somewhere that answers.",
   },
 ];
+
+// The first finding, opened, so the sample shows what a report does with a failure: the fix, the
+// prompt for an AI assistant, and the tool that goes deeper. `expected` is the grader's own line for
+// sec-headers-002; the rest is sample copy, since the report writes these per grade. The deeper link
+// goes to the tool's front page, because the sample's app does not exist to be analysed.
+export const SAMPLE_FIX = {
+  probeId: "sec-headers-002",
+  category: "security headers",
+  expected: "A `Content-Security-Policy` restricts where scripts, styles, and frames may load from.",
+  actual: "No Content-Security-Policy header was sent.",
+  remediation:
+    "Send a Content-Security-Policy header that lists where your scripts, styles and frames may load from. " +
+    "Most hosts set headers in a config file, such as vercel.json.",
+  deeper: { name: "HTTP Observatory", href: "https://developer.mozilla.org/en-US/observatory" },
+};

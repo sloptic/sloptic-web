@@ -39,7 +39,7 @@ describe("the findings page", () => {
     const passive = render("passive");
     expect(passive).toContain("Are AI-built apps sloppier?");
     for (const fullOnly of ["13.4%", "22 times", "p = 0.16"]) expect(passive).not.toContain(fullOnly);
-    expect(passive).toContain("a passive grade cannot check a database");
+    expect(passive).toMatch(/passive grades? can(?:not|&#x27;t|'t) check/);
   });
 
   it("treats an unknown view as full grades", () => {

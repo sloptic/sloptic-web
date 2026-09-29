@@ -17,6 +17,7 @@ import { deeperFor } from "@/lib/deeper";
 import { fixPrompt } from "@/lib/fix-prompt";
 import { platformSuffix } from "@/lib/platform";
 import ShareControls from "./ShareControls";
+import CopyFix from "@/app/CopyFix";
 
 const POLL_MS = 3000;
 const MAX_POLL_FAILS = 8;   // ~1 minute of server errors before giving up on the page
@@ -1261,47 +1262,6 @@ function Deeper({ slug, name, origin }: { slug: string; name: string; origin: st
         </>
       )}
     </p>
-  );
-}
-
-/** Copies one finding as a prompt for an AI coding assistant. The text is built from what this row
- *  already shows (lib/fix-prompt.ts), so it never carries a location the report withheld. A browser
- *  that refuses the clipboard gets the text in a box to copy by hand. */
-function CopyFix({ probeId, text }: { probeId: string; text: string }) {
-  const [copied, setCopied] = useState(false);
-  const [manual, setManual] = useState(false);
-  return (
-    <div className="copy-fix">
-      <button
-        type="button"
-        className="button secondary copy-fix-button"
-        onClick={async () => {
-          try {
-            await navigator.clipboard.writeText(text);
-            setCopied(true);
-            track("fix_prompt_copied", { probe: probeId });
-            setTimeout(() => setCopied(false), 2500);
-          } catch {
-            setManual(true);
-          }
-        }}
-      >
-        {copied ? "Copied" : "Copy a fix prompt"}
-      </button>
-      <span className="copy-fix-hint">
-        {copied ? "Paste it into your AI assistant." : "For Cursor, Lovable, Bolt, or any AI assistant."}
-      </span>
-      {manual && (
-        <textarea
-          className="copy-fix-text"
-          readOnly
-          value={text}
-          rows={8}
-          aria-label="Fix prompt"
-          onFocus={(e) => e.currentTarget.select()}
-        />
-      )}
-    </div>
   );
 }
 

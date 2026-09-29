@@ -27,7 +27,7 @@ const mono = IBM_Plex_Mono({
 });
 
 const DESCRIPTION =
-  "Paste a link and Sloptic will poke at your web app and score it on the slop it finds. Lower is better.";
+  "Paste a link and Sloptic scores the slop in your web app across security, quality, accessibility and performance, then shows you how to fix it.";
 
 // metadataBase is what makes every relative og:url and image absolute. Without it a shared link
 // renders as a bare URL in Slack, Discord and iMessage, which is where report and board links
@@ -140,7 +140,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 sloptic
               </a>
               <p>
-                Slop grading for any app you own
+                Slop grading for any web app
               </p>
             </div>
 

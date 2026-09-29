@@ -8,7 +8,9 @@ import { AREAS, AREA_BLURBS, categoriesFor } from "@/lib/checks";
 import { provisionalCleanerThan } from "@/lib/corpus";
 import ScoreBand, { fmtScore } from "./ScoreBand";
 import { SEAT_HREF } from "@/lib/seat";
-import { SAMPLE_SCORE, SAMPLE_ROWS, SAMPLE_FINDINGS, SAMPLE_PASSED } from "@/lib/sample-grade";
+import { SAMPLE_SCORE, SAMPLE_ROWS, SAMPLE_FINDINGS, SAMPLE_PASSED, SAMPLE_FIX } from "@/lib/sample-grade";
+import { fixPrompt } from "@/lib/fix-prompt";
+import CopyFix from "./CopyFix";
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -76,7 +78,8 @@ export default function Home() {
       <section className="hero">
         <h1 className="lede">How much slop is in your app?</h1>
         <p className="deck">
-          Paste a link and Sloptic will poke at your app and score on the slop it finds. Lower is better.
+          Paste a link and Sloptic will score the slop in your app across security, quality,
+          accessibility and performance, then show you how to fix it. Lower is better.
         </p>
 
         <form onSubmit={submit} className="grade-form">
@@ -113,6 +116,8 @@ export default function Home() {
           </p>
         )}
         <p className="hero-alt">
+          Built with Lovable, Bolt or Cursor? <a href="/findings#ai-builders">See what AI-built apps miss.</a>
+          <br />
           Running a hackathon? <a href="/organizers">Rank a whole event.</a>
         </p>
       </section>
@@ -121,16 +126,22 @@ export default function Home() {
         <div className="what-body">
           <h2 className="section-head">What is Sloptic?</h2>
           <p className="what-text">
-            Sloptic is a web app grader. It checks how much slop your web app has, like a leaked
-            secret, a crash, a page taking forever to load, and more. As these are unacceptable to
-            any app, Sloptic can grade any app you point it at no matter what it does.
+            Sloptic is a web app grader. It checks how much slop your web app has in four areas:
+            security, quality, accessibility and performance. Slop is anything no app should ship
+            with, like a leaked secret, a dead button, a control a screen reader can&apos;t use, or a
+            page that takes forever to load. So Sloptic can grade any app you point it at, no matter
+            what it does.
+          </p>
+          <p className="what-text">
+            Each failure comes with how to fix it, a prompt for your AI assistant, and a link to the
+            tool that goes deeper. Sloptic also compares your score against real apps it has graded.
           </p>
           {/* The builder's seat (3.0 handoff): UNDER the definition, never in place of it, because it
               explains why teams miss slop rather than saying what slop is. The handoff's sentence,
               verbatim. */}
           <p className="what-text">
             Sloptic shows you your app from{" "}
-            <a href={SEAT_HREF}>the seats your team never sits in</a>.
+            <a href={SEAT_HREF}>the seats you never sit in</a>.
           </p>
         </div>
 
@@ -148,7 +159,8 @@ export default function Home() {
           <li className="flow-box">
             <span className="n">03</span>
             <p>
-              You get a score with a breakdown on every instance of slop found and what was tested.
+              You get a score, what failed, how to fix it, and a prompt to paste into your AI
+              assistant.
             </p>
           </li>
         </ol>
@@ -251,17 +263,55 @@ export default function Home() {
         />
 
           <div className="sample-findings">
-            {SAMPLE_FINDINGS.map((f) => (
-              <div className="finding-row" data-axis={f.axis} key={f.name}>
-                <span className="finding-dot" />
-                <span className="finding-body">
-                  <span className="finding-cat">{f.name}</span>
-                  <span className="finding-desc">{f.desc}</span>
-                </span>
-                {/* What it ADDED, as the report shows it, so the column sums to the axis above. */}
-                <span className="finding-pen">+{fmtScore(f.points)}</span>
-              </div>
-            ))}
+            {SAMPLE_FINDINGS.map((f, i) => {
+              const row = (
+                <>
+                  <span className="finding-dot" />
+                  <span className="finding-body">
+                    <span className="finding-cat">{f.name}</span>
+                    <span className="finding-desc">{f.desc}</span>
+                  </span>
+                  {/* What it ADDED, as the report shows it, so the column sums to the axis above. */}
+                  <span className="finding-pen">+{fmtScore(f.points)}</span>
+                </>
+              );
+              // The first failure opens the way a report's does, with its fix and prompt.
+              return i === 0 ? (
+                <details className="finding-detail" data-axis={f.axis} key={f.name} open>
+                  <summary className="finding-row">{row}</summary>
+                  <div className="finding-expand">
+                    <div className="row2">
+                      <span className="term">How to fix it</span>
+                      <p className="desc">{SAMPLE_FIX.remediation}</p>
+                    </div>
+                    <p className="sample-deeper">
+                      Go deeper:{" "}
+                      <a href={SAMPLE_FIX.deeper.href} target="_blank" rel="noopener noreferrer">
+                        {SAMPLE_FIX.deeper.name}
+                      </a>{" "}
+                      checks an app&apos;s headers in detail.
+                    </p>
+                    <CopyFix
+                      probeId={`sample:${SAMPLE_FIX.probeId}`}
+                      text={fixPrompt({
+                        origin: "https://your-app.vercel.app",
+                        category: SAMPLE_FIX.category,
+                        probeId: SAMPLE_FIX.probeId,
+                        reason: f.desc,
+                        targets: ["/"],
+                        expected: SAMPLE_FIX.expected,
+                        actual: SAMPLE_FIX.actual,
+                        remediation: SAMPLE_FIX.remediation,
+                      })}
+                    />
+                  </div>
+                </details>
+              ) : (
+                <div className="finding-row" data-axis={f.axis} key={f.name}>
+                  {row}
+                </div>
+              );
+            })}
             {SAMPLE_PASSED.map((f) => (
               <div className="finding-row passed" data-axis={f.axis} key={f.name}>
                 <span className="finding-dot" />

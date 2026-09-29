@@ -96,9 +96,9 @@ export default function AboutPage() {
       <section className="section">
         <h2 className="section-head">Why not a scanner?</h2>
         <p className="section-intro">
-          A scanner, like Burp Suite, Nuclei, Nikto, or even PageSpeed Insights, exists to hand you a list of
-          findings to fix on one app. Sloptic exists to grade and rank, so apps with nothing in common
-          can be compared.
+          Most tools go deep on one area: Burp Suite and Nuclei on security, PageSpeed Insights on speed,
+          WAVE on accessibility. Sloptic goes wide instead. It checks all four areas in one pass,
+          including whether the app works at all, and compares the result against real apps.
         </p>
         <div className="table-scroll">
           <table className="compare-table">
@@ -110,6 +110,11 @@ export default function AboutPage() {
               </tr>
             </thead>
             <tbody>
+              <tr>
+                <th scope="row">what it covers</th>
+                <td>one area, in depth</td>
+                <td className="mine">four areas, in one pass</td>
+              </tr>
               <tr>
                 <th scope="row">what it assumes</th>
                 <td>what you tell it to look for or what the app is meant to do</td>
@@ -123,20 +128,16 @@ export default function AboutPage() {
               <tr>
                 <th scope="row">what it hands back</th>
                 <td>a list of findings</td>
-                <td className="mine">a score</td>
+                <td className="mine">a score, how to fix each finding, and where to go deeper</td>
               </tr>
               <tr>
                 <th scope="row">what it is for</th>
-                <td>fixing one app</td>
-                <td className="mine">comparing and ranking many</td>
+                <td>digging into one kind of problem</td>
+                <td className="mine">finding your slop and seeing how you compare</td>
               </tr>
             </tbody>
           </table>
         </div>
-        <p className="section-intro">
-          Sloptic doesn&apos;t replace those tools. A failed category in a report links to the tool that
-          goes deeper, like PageSpeed Insights for speed or WAVE for accessibility.
-        </p>
       </section>
 
       <section className="section">

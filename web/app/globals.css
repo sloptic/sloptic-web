@@ -758,16 +758,20 @@ a {
   height: 0.55rem;
   display: inline-block;
 }
-.finding-row[data-axis="security"] .finding-dot {
+.finding-row[data-axis="security"] .finding-dot,
+.finding-detail[data-axis="security"] > summary .finding-dot {
   background: var(--security);
 }
-.finding-row[data-axis="qa"] .finding-dot {
+.finding-row[data-axis="qa"] .finding-dot,
+.finding-detail[data-axis="qa"] > summary .finding-dot {
   background: var(--qa);
 }
-.finding-row[data-axis="performance"] .finding-dot {
+.finding-row[data-axis="performance"] .finding-dot,
+.finding-detail[data-axis="performance"] > summary .finding-dot {
   background: var(--performance);
 }
-.finding-row[data-axis="accessibility"] .finding-dot {
+.finding-row[data-axis="accessibility"] .finding-dot,
+.finding-detail[data-axis="accessibility"] > summary .finding-dot {
   background: var(--accessibility);
 }
 .finding-cat {
@@ -2033,6 +2037,9 @@ code {
 .finding-detail { border-bottom: 1px dotted var(--line-strong); }
 .finding-detail:last-child { border-bottom: 0; }
 .finding-detail > summary { cursor: pointer; list-style: none; }
+/* A fourth column for the open/close mark: as a pseudo-element it is a grid item, and in the row's
+   three columns it wrapped onto a line of its own under every finding. */
+.finding-detail > summary.finding-row { grid-template-columns: 0.55rem 1fr auto auto; }
 .finding-detail > summary::-webkit-details-marker { display: none; }
 .finding-detail > summary::after {
   content: "+";
@@ -3921,6 +3928,13 @@ h1.report-url {
 }
 .not-checked p:last-child {
   margin-bottom: 0;
+}
+
+/* The sample's go-deeper line sits inside its opened finding, above the fix prompt. */
+.sample-deeper {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
 }
 
 /* The specialist that goes deeper on a failed category, closing the open group. */
