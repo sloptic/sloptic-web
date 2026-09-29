@@ -5,7 +5,7 @@ import BrandMark from "./BrandMark";
 import ThemeToggle from "./ThemeToggle";
 import NavMenu from "./NavMenu";
 import MobileNav from "./MobileNav";
-import { ACCOUNT, REFERENCE } from "@/lib/nav";
+import { ACCOUNT, PRIMARY, REFERENCE } from "@/lib/nav";
 import { headers } from "next/headers";
 import { currentUser } from "@/lib/auth";
 import "./globals.css";
@@ -103,8 +103,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             />
             {/* The builder's path at the top level: what apps miss, and answers. Organizers are one
                 click further, in the menu. */}
-            <a href="/findings">findings</a>
-            <a href="/faq">faq</a>
+            {PRIMARY.filter((l) => l.short).map((l) => (
+              <a key={l.href} href={l.href}>
+                {l.short}
+              </a>
+            ))}
             {/* Signed OUT, the browser's own list is the only way back to a report, so it stays a
                 top level link. Signed in it moves into the account menu with the rest. */}
             {user ? null : <a href="/grades">your grades</a>}

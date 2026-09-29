@@ -4,23 +4,28 @@
 // not the other, so on a phone (where the footer IS the navigation) it could only be reached by
 // typing the address. Anything that needs a list of pages reads it from here.
 
-export type NavLink = { href: string; label: string };
+export type NavLink = { href: string; label: string; short?: string };
+
+/** Top level destinations, in masthead order. A link with a `short` label sits in the masthead
+ *  itself; home is the wordmark there. Everything here appears once in each menu: a page in the
+ *  masthead is left out of the "about" menu beside it. */
+export const PRIMARY: NavLink[] = [
+  { href: "/", label: "Grade an app" },
+  // The builder's path: what apps miss, and answers.
+  { href: "/findings", label: "What do real apps miss?", short: "findings" },
+  { href: "/faq", label: "Frequently asked questions", short: "faq" },
+];
 
 /** Reference pages: the ones someone goes looking for rather than lands on. */
 export const REFERENCE: NavLink[] = [
   { href: "/about", label: "About Sloptic" },
   { href: "/methodology", label: "How Sloptic finds slop" },
-  { href: "/faq", label: "Frequently asked questions" },
   { href: "/checks", label: "Sloptic's checks" },
-  { href: "/findings", label: "What do real apps miss?" },
   { href: "/verify", label: "Verification" },
   // Hackathons and classes are a channel, not the audience: the site speaks to the builder, and an
   // organizer finds their page in the menu (and from the landing's "Running a hackathon?" line).
   { href: "/organizers", label: "Sloptic for hackathons" },
 ];
-
-/** Top level destinations, in masthead order. */
-export const PRIMARY: NavLink[] = [{ href: "/", label: "Grade an app" }];
 
 /** Only meaningful with an account. */
 export const ACCOUNT: NavLink[] = [

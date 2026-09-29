@@ -40,12 +40,16 @@ describe("the site navigation", () => {
     for (const l of ALL) expect(l.label).not.toMatch(/[—–]/);
   });
 
-  it("keeps the pages that explain the grade in the reference list", () => {
+  it("keeps the pages that explain the grade in the lists every menu renders", () => {
     // These are the pages a reader goes looking for after a report, and the reason the list exists
     // at all: /findings once shipped into the masthead and not the footer, which on a phone meant it
     // could only be reached by typing the address.
-    const hrefs = REFERENCE.map((l) => l.href);
-    expect(hrefs).toEqual(expect.arrayContaining(["/methodology", "/checks", "/verify", "/findings"]));
+    const hrefs = [...PRIMARY, ...REFERENCE].map((l) => l.href);
+    expect(hrefs).toEqual(expect.arrayContaining(["/methodology", "/checks", "/verify", "/findings", "/faq"]));
+  });
+
+  it("gives every masthead link a short label", () => {
+    for (const l of PRIMARY.slice(1)) expect(l.short?.trim()).toBeTruthy();
   });
 
   it("opens on grading an app", () => {
