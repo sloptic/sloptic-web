@@ -98,7 +98,7 @@ describe("the post", () => {
   const card = shareCardFrom(src())!;
 
   it("says what the number means, and stays neutral about who is posting", () => {
-    expect(shareText(card)).toBe("myapp.dev scored 12.4 on Sloptic, cleaner than 91% of hackathon apps. Lower is better.");
+    expect(shareText(card)).toBe("myapp.dev scored 12.4 on Sloptic, cleaner than 91% of apps Sloptic has graded. Lower is better.");
     expect(shareTitle(card)).toBe("myapp.dev scored 12.4 on Sloptic");
   });
 

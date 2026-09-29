@@ -133,10 +133,10 @@ export function shareCardFrom(src: ShareSource): ShareCard | null {
  *  post about someone else's app. Edit the wording freely; the ranges are what the tests hold. */
 export const VERDICTS: { from: number; text: string }[] = [
   { from: 90, text: "One of the cleanest apps Sloptic has graded." },
-  { from: 70, text: "Cleaner than most hackathon apps." },
-  { from: 50, text: "Cleaner than the typical hackathon app." },
-  { from: 30, text: "Sloppier than the typical hackathon app." },
-  { from: 10, text: "Sloppier than most hackathon apps." },
+  { from: 70, text: "Cleaner than most apps Sloptic has graded." },
+  { from: 50, text: "Cleaner than the typical app Sloptic has graded." },
+  { from: 30, text: "Sloppier than the typical app Sloptic has graded." },
+  { from: 10, text: "Sloppier than most apps Sloptic has graded." },
   { from: 0, text: "One of the sloppiest apps Sloptic has graded." },
 ];
 
@@ -150,7 +150,7 @@ export function shareVerdict(card: ShareCard): string | null {
 export function shareText(card: ShareCard): string {
   const placed =
     card.cleanerThan !== null
-      ? `, cleaner than ${Math.round(card.cleanerThan)}% of hackathon apps`
+      ? `, cleaner than ${Math.round(card.cleanerThan)}% of apps Sloptic has graded`
       : "";
   return `${card.host} scored ${fmtShareScore(card.score)} on Sloptic${placed}. Lower is better.`;
 }

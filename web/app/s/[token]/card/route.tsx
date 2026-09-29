@@ -82,7 +82,7 @@ function Card({ card }: { card: ShareCard }) {
             <div style={{ display: "flex", fontSize: 30 }}>slop, lower is better</div>
             {card.cleanerThan !== null ? (
               <div style={{ display: "flex", fontSize: 26, color: MUTED }}>
-                cleaner than {Math.round(card.cleanerThan)}% of hackathon apps
+                cleaner than {Math.round(card.cleanerThan)}% of apps Sloptic has graded
               </div>
             ) : (
               <div style={{ display: "flex" }} />
