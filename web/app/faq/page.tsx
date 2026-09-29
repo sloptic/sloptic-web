@@ -183,6 +183,56 @@ export default function FaqPage() {
         </p>
       </section>
 
+      {/* Builder questions (draft copy for the front-door pivot). The database numbers are the ones
+          /findings shows for full grades, from sloptic-main CORPUS_REPORT.md 4.6. */}
+      <section className="section" id="ai-builders">
+        <h2 className="section-head">Is my Lovable or Bolt app safe?</h2>
+        <p className="section-intro">
+          Not necessarily. In Sloptic&apos;s corpus, apps built with Lovable or Bolt left their database open
+          about 22 times as often as hand built apps.{" "}
+          <a href="/findings#ai-builders">What do real apps miss?</a> has the numbers.
+        </p>
+        <p className="section-intro">
+          A passive grade cannot check your database. You can check it yourself. Supabase&apos;s{" "}
+          <a href="https://supabase.com/docs/guides/database/database-advisors" target="_blank" rel="noopener noreferrer">
+            Security Advisor
+          </a>{" "}
+          lists every table with <a href="#rls">row level security</a> turned off. For a full grade, give
+          your app <a href="#custom-domain">a custom domain</a> and verify it.
+        </p>
+      </section>
+
+      <section className="section" id="rls">
+        <h2 className="section-head">What is row level security?</h2>
+        <p className="section-intro">
+          Supabase gives your app&apos;s browser code a public key. Anyone can read that key from your site.
+          Row level security decides which rows that key may read or change. With it off, anyone holding the
+          key can read or change every row. Supabase&apos;s{" "}
+          <a href="https://supabase.com/docs/guides/database/postgres/row-level-security" target="_blank" rel="noopener noreferrer">
+            guide
+          </a>{" "}
+          shows how to turn it on. Firebase has the same idea, called{" "}
+          <a href="https://firebase.google.com/docs/rules" target="_blank" rel="noopener noreferrer">
+            Security Rules
+          </a>
+          .
+        </p>
+      </section>
+
+      <section className="section" id="custom-domain">
+        <h2 className="section-head">How do I get a full grade on a vercel.app or lovable.app address?</h2>
+        <p className="section-intro">
+          Not on the platform&apos;s address. A full grade needs two proofs that you own the app: a file on
+          your site and a DNS record. The DNS for an address like vercel.app belongs to the platform, so you
+          cannot add a record there.
+        </p>
+        <p className="section-intro">
+          Attach a custom domain instead. Most hosts let you add one in the project&apos;s settings. Then sign
+          in and follow the steps on <a href="/verify">Verification</a>. You serve a file Sloptic gives you and
+          add one TXT record to your domain.
+        </p>
+      </section>
+
       <section className="section" id="no-score">
         <h2 className="section-head">Why didn't I get a score?</h2>
         <p className="section-intro">
