@@ -31,7 +31,7 @@ export default function EventForm({ initialEvent = "" }: { initialEvent?: string
         <input
           type="text"
           inputMode="url"
-          placeholder="https://your-event.devpost.com"
+          placeholder="your-event.devpost.com"
           value={eventUrl}
           onChange={(e) => setEventUrl(e.target.value)}
           aria-label="Devpost event URL"

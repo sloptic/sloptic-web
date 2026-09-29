@@ -1147,14 +1147,14 @@ section.report h2 {
 }
 .row2 {
   display: grid;
-  grid-template-columns: 13rem 1fr;
+  grid-template-columns: 13rem minmax(0, 1fr);
   gap: 1.75rem;
   padding: 1.4rem 0;
   border-bottom: 1px solid var(--line);
 }
 @media (max-width: 42rem) {
   .row2 {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.5rem;
   }
 }
@@ -1171,7 +1171,10 @@ section.report h2 {
   font-size: 0.8rem;
   margin-top: 0.3rem;
 }
+/* Evidence carries URLs, bundle paths and header values with no spaces in them; they break anywhere
+   rather than widening the column (a 700px script URL made a report scroll sideways on a phone). */
 .row2 .desc {
+  overflow-wrap: anywhere;
   margin: 0;
   font-size: 1.05rem;
   line-height: 1.65;
@@ -4190,4 +4193,49 @@ h1.report-url {
   margin: 0.5rem 0 0;
   font-size: 0.86rem;
   color: var(--muted);
+}
+
+/* ===== phones: room to type and room to tap =====
+   Measured at 360, 390 and 412px: the one-row form left the field 112px for a 185px placeholder once
+   the button's label was long ("email me a link"), and several controls were under the 24px target
+   size (WCAG 2.5.8). */
+@media (max-width: 42rem) {
+  /* The field above its button, both full width. */
+  .grade-form {
+    flex-direction: column;
+  }
+  .grade-form input {
+    flex: none;
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+  }
+  .grade-form button {
+    padding: 0.85rem 1rem;
+  }
+  /* The band's checks / slop points switch: two adjacent 18px buttons became 32px. */
+  .mode-toggle button,
+  .mode-toggle a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+  }
+  /* Footer links wrap into rows on a phone; padding keeps each row's targets 24px or more. */
+  .colophon-links a,
+  .colophon-contact {
+    display: inline-block;
+    padding: 0.2rem 0;
+  }
+  /* The report's category rows open and close; a little height makes them easier to hit. */
+  .cat-group > summary.cat-head {
+    padding: 0.25rem 0;
+  }
+}
+/* The narrowest phones (360px and under): the landing placeholder, https://your-app.example.com, was
+   7px wider than the field. Tighter padding fits it without dropping the font under 16px, which is the
+   size under which an iPhone zooms the page when the field is tapped. */
+@media (max-width: 24rem) {
+  .grade-form input {
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
+  }
 }
