@@ -32,6 +32,16 @@ describe("the findings page", () => {
     expect(render()).toMatch(/<a[^>]*aria-current="page"[^>]*>full grades<\/a>/);
   });
 
+  it("shows the AI builders' open databases on full grades only, since passive cannot see a database", () => {
+    const full = render();
+    expect(full).toContain("13.4%");
+    expect(full).toContain("p = 0.16");
+    const passive = render("passive");
+    expect(passive).toContain("Are AI-built apps sloppier?");
+    for (const fullOnly of ["13.4%", "22 times", "p = 0.16"]) expect(passive).not.toContain(fullOnly);
+    expect(passive).toContain("a passive grade cannot check a database");
+  });
+
   it("treats an unknown view as full grades", () => {
     expect(render("everything")).toContain(`graded ${ACTIVE.attrition.graded.toLocaleString()} apps`);
   });

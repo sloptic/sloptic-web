@@ -12,7 +12,7 @@ export const REFERENCE: NavLink[] = [
   { href: "/methodology", label: "How Sloptic finds slop" },
   { href: "/faq", label: "Frequently asked questions" },
   { href: "/checks", label: "Sloptic's checks" },
-  { href: "/findings", label: "What do hackathon apps look like?" },
+  { href: "/findings", label: "What do real apps miss?" },
   { href: "/verify", label: "Verification" },
   // Hackathons and classes are a channel, not the audience: the site speaks to the builder, and an
   // organizer finds their page in the menu (and from the landing's "Running a hackathon?" line).

@@ -70,8 +70,8 @@ export default function AboutPage() {
         </p>
         <p className="section-intro">
           These problems persist year after year. And yet nobody bothers to check because nobody is rewarded for it. 
-          Only when a user complains, or a bug is filed, or a breach occurs, does anyone care. Especially in hackathons,
-          where the demo is what's judged, not where most of the slop lives. 
+          Only when a user complains, or a bug is filed, or a breach occurs, does anyone care. Especially when
+          an app ships fast: a demo shows the happy path, and the slop lives everywhere else. 
         </p>
         <p>Hence the need for Sloptic.</p>
       </section>

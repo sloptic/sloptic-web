@@ -9,7 +9,7 @@ import { PROBE_FACTS, REPORT_URL, probeName } from "@/lib/checks";
 
 // Read from the corpus, like every other number on this page, so it moves when the corpus does.
 export const metadata: Metadata = pageMeta(
-  "What do hackathon apps look like?",
+  "What do real apps miss?",
   `What Sloptic found when it graded ${ACTIVE.attrition.graded.toLocaleString("en-US")} apps in ${ACTIVE.provenance.n_events} hackathons.`,
   "/findings",
 );
@@ -173,13 +173,16 @@ export default function FindingsPage({ searchParams }: { searchParams?: { grades
   const STAR = F.star_finding;
   const RHO = F.axis_independence;
   const full = mode === "active";
+  type BuilderRow = { builder: string; n: number; median: number };
+  const builder = (name: string) =>
+    ((F as { by_builder?: BuilderRow[] }).by_builder ?? []).find((b) => b.builder === name) ?? { builder: name, n: 0, median: 0 };
   const events = comparableEvents(MIN_EVENT_N, mode);
   const spread = events[0].median / events[events.length - 1].median;
 
   return (
     <>
       <div className="page-head">
-        <h1>What do hackathon apps look like?</h1>
+        <h1>What do real apps miss?</h1>
         <p className="page-lead">
           When Sloptic graded {A.graded.toLocaleString()} apps in {F.provenance.n_events} hackathons, it found that...
         </p>
@@ -293,6 +296,50 @@ export default function FindingsPage({ searchParams }: { searchParams?: { grades
           The eight most common findings, by share of graded apps.{" "}
           <a href="/faq#fast-but-bad">Why is my score bad when my app is fast?</a>
         </p>
+      </section>
+
+      {/* AI builders. The medians are read from the figures (by_builder). The backend exposure counts,
+          the 22x rate and both p values are transcribed from sloptic-main CORPUS_REPORT.md 4.6, which
+          reports them for full grades only: the backend checks are active, so a passive grade cannot
+          see a database at all, and the passive view says so rather than borrowing the full numbers. */}
+      <section className="section" id="ai-builders">
+        <h2 className="section-head">Are AI-built apps sloppier?</h2>
+        <p className="section-intro">
+          Not overall. Lovable apps carry a median slop of {fmt(builder("lovable").median)} against{" "}
+          {fmt(builder("hand built").median)} for hand built apps
+          {full ? ", a gap small enough to be chance (p = 0.16)" : ""}. Bolt has only{" "}
+          {builder("bolt").n} apps, too few to compare.
+        </p>
+        {full ? (
+          <>
+            <p className="section-intro">
+              Their backends are the difference. Lovable and Bolt both offer Supabase as a built in database,
+              and the AI rarely locks it down.
+            </p>
+            <div className="kind-cards">
+              <div className="kind-card">
+                <span className="score-fig">13.4%</span>
+                <span className="score-cap">of AI-built apps left their database open</span>
+                <p>11 of 82 Lovable and Bolt apps.</p>
+              </div>
+              <div className="kind-card">
+                <span className="score-fig">0.6%</span>
+                <span className="score-cap">of hand built apps did</span>
+                <p>9 of 1,497. AI-built apps did it about 22 times as often.</p>
+              </div>
+            </div>
+            <p className="section-intro fineprint">
+              A passive grade cannot check a database.{" "}
+              <a href="/faq#ai-builders">Is my Lovable or Bolt app safe?</a>
+            </p>
+          </>
+        ) : (
+          <p className="section-intro">
+            The difference that matters is in the backend, and a passive grade cannot check a database.{" "}
+            <Link href="/findings#ai-builders" scroll={false}>Full grades</Link> show how often AI-built apps
+            leave theirs open.
+          </p>
+        )}
       </section>
 
       <section className="section">
