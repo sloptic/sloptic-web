@@ -133,6 +133,10 @@ export default function AboutPage() {
             </tbody>
           </table>
         </div>
+        <p className="section-intro">
+          Sloptic doesn&apos;t replace those tools. A failed category in a report links to the tool that
+          goes deeper, like PageSpeed Insights for speed or WAVE for accessibility.
+        </p>
       </section>
 
       <section className="section">

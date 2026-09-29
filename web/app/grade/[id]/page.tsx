@@ -12,7 +12,10 @@ import { failureText, ordinal, recoveryMarks } from "@/lib/grades";
 import ScoreBand, { fmtScore } from "@/app/ScoreBand";
 import RecoverySup from "@/app/RecoverySup";
 import { forgetGrade } from "@/lib/history";
-import { shareCardFrom } from "@/lib/share";
+import { hostOf, shareCardFrom } from "@/lib/share";
+import { deeperFor } from "@/lib/deeper";
+import { fixPrompt } from "@/lib/fix-prompt";
+import { platformSuffix } from "@/lib/platform";
 import ShareControls from "./ShareControls";
 
 const POLL_MS = 3000;
@@ -521,6 +524,10 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
         ) : null;
       })()}
 
+      {(r.mode ?? "passive") !== "active" && (
+        <NotChecked origin={view.origin ?? view.url} canGradeActively={!!view.can_grade_actively} />
+      )}
+
       <ChallengeNote
         blocked={r.blocked_probes ?? []}
         retryDueAt={view.retry_due_at}
@@ -534,7 +541,7 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
       <RankDetail r={r} />
 
       <Surface surface={r.surface ?? null} />
-      <Findings findings={r.findings ?? []} card={cardByProbe} />
+      <Findings findings={r.findings ?? []} card={cardByProbe} origin={view.origin ?? view.url} />
       <Passed items={passed} />
       {r.platform && Object.keys(r.platform).length > 0 && <Platform platform={r.platform} />}
       <NotApplicable coverage={r.coverage} />
@@ -1044,7 +1051,15 @@ function Surface({ surface }: { surface: Record<string, unknown> | null }) {
   );
 }
 
-function Findings({ findings, card }: { findings: Finding[]; card: Record<string, CardEntry> }) {
+function Findings({
+  findings,
+  card,
+  origin,
+}: {
+  findings: Finding[];
+  card: Record<string, CardEntry>;
+  origin: string;
+}) {
   if (findings.length === 0) {
     return (
       <>
@@ -1198,14 +1213,131 @@ function Findings({ findings, card }: { findings: Finding[]; card: Record<string
                       {!entry && ev.length === 0 && (
                         <p className="desc">No detail recorded.</p>
                       )}
+                      <CopyFix
+                        probeId={f.probe_id}
+                        text={fixPrompt({
+                          origin,
+                          category: cat.name,
+                          probeId: f.probe_id,
+                          reason: f.reason,
+                          targets,
+                          expected: entry?.expected,
+                          actual: entry?.actual,
+                          remediation: entry?.remediation,
+                        })}
+                      />
                     </div>
                   </details>
                 );
                   })}
+            <Deeper slug={cat.slug} name={cat.name} origin={origin} />
           </details>
         ))}
       </div>
     </>
+  );
+}
+
+/** The next stop for a failed category: the specialist tool that tests it in depth, opened on this
+ *  app, or the page that defines it. Inside the open group, after its rows, so it reads as where to
+ *  go once these are understood. */
+function Deeper({ slug, name, origin }: { slug: string; name: string; origin: string }) {
+  const d = deeperFor(slug, origin);
+  if (!d) return null;
+  const link = (
+    <a href={d.href} target="_blank" rel="noopener noreferrer">
+      {d.name}
+    </a>
+  );
+  return (
+    <p className="cat-deeper">
+      {d.kind === "tool" ? (
+        <>
+          Go deeper: {link} {d.what}
+        </>
+      ) : (
+        <>
+          Read more about {name} at {link}.
+        </>
+      )}
+    </p>
+  );
+}
+
+/** Copies one finding as a prompt for an AI coding assistant. The text is built from what this row
+ *  already shows (lib/fix-prompt.ts), so it never carries a location the report withheld. A browser
+ *  that refuses the clipboard gets the text in a box to copy by hand. */
+function CopyFix({ probeId, text }: { probeId: string; text: string }) {
+  const [copied, setCopied] = useState(false);
+  const [manual, setManual] = useState(false);
+  return (
+    <div className="copy-fix">
+      <button
+        type="button"
+        className="button secondary copy-fix-button"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(text);
+            setCopied(true);
+            track("fix_prompt_copied", { probe: probeId });
+            setTimeout(() => setCopied(false), 2500);
+          } catch {
+            setManual(true);
+          }
+        }}
+      >
+        {copied ? "Copied" : "Copy a fix prompt"}
+      </button>
+      <span className="copy-fix-hint">
+        {copied ? "Paste it into your AI assistant." : "For Cursor, Lovable, Bolt, or any AI assistant."}
+      </span>
+      {manual && (
+        <textarea
+          className="copy-fix-text"
+          readOnly
+          value={text}
+          rows={8}
+          aria-label="Fix prompt"
+          onFocus={(e) => e.currentTarget.select()}
+        />
+      )}
+    </div>
+  );
+}
+
+/** What a passive grade did not look at, said beside the score it qualifies. A clean passive grade
+ *  means clean on what a visitor can see, and without this it reads as clean everywhere. The way to
+ *  the rest depends on the address: a platform subdomain cannot be verified, so it points at the
+ *  custom domain answer rather than a verification it can never finish. */
+function NotChecked({ origin, canGradeActively }: { origin: string; canGradeActively: boolean }) {
+  let host = hostOf(origin);
+  try {
+    host = new URL(origin).hostname;
+  } catch {
+    // hostOf's fallback is the best there is.
+  }
+  const platform = platformSuffix(host);
+  return (
+    <div className="not-checked">
+      <p>
+        A passive grade sees only what any visitor sees. It did not check your database rules, pages
+        behind a login, or how the app handles attacks.
+      </p>
+      <p>
+        {canGradeActively ? (
+          <>You have verified this app, so you can grade it actively above.</>
+        ) : platform ? (
+          <>
+            A {platform} address cannot be verified, so a full grade needs a custom domain.{" "}
+            <a href="/faq#custom-domain">How to get a full grade</a>
+          </>
+        ) : (
+          <>
+            If you own this app, <a href="/verify">verify it</a> for a full grade.
+          </>
+        )}
+      </p>
+    </div>
   );
 }
 
