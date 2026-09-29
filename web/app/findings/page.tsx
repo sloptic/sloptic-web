@@ -303,13 +303,13 @@ export default function FindingsPage({ searchParams }: { searchParams?: { grades
           Not overall. Lovable apps carry a median slop of {fmt(builder("lovable").median)} against{" "}
           {fmt(builder("hand built").median)} for hand built apps
           {full ? ", a gap small enough to be chance (p = 0.16)" : ""}. Bolt has only{" "}
-          {builder("bolt").n} apps, too few to compare.
+          {builder("bolt").n} apps which is too few to compare.
         </p>
         {full ? (
           <>
             <p className="section-intro">
-              Their backends are the difference. Lovable and Bolt both offer Supabase as a built in database,
-              and the AI rarely locks it down.
+              Backends make up the difference, as Lovable and Bolt both offer Supabase as a built in database and
+              AIs rarely configure it properly.
             </p>
             <div className="kind-cards">
               <div className="kind-card">
@@ -323,14 +323,10 @@ export default function FindingsPage({ searchParams }: { searchParams?: { grades
                 <p>9 of 1,497. AI-built apps did it about 22 times as often.</p>
               </div>
             </div>
-            <p className="section-intro fineprint">
-              A passive grade cannot check a database.{" "}
-              <a href="/faq#ai-builders">Is my Lovable or Bolt app safe?</a>
-            </p>
           </>
         ) : (
           <p className="section-intro">
-            The difference that matters is in the backend, and a passive grade cannot check a database.{" "}
+            The difference that matters is in the backend and passive grades can't check them.{" "}
             <Link href="/findings#ai-builders" scroll={false}>Full grades</Link> show how often AI-built apps
             leave theirs open.
           </p>
