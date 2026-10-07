@@ -12,7 +12,7 @@ export type NavLink = { href: string; label: string; short?: string };
 export const PRIMARY: NavLink[] = [
   { href: "/", label: "Grade an app" },
   // The builder's path: what apps miss, and answers.
-  { href: "/findings", label: "What do real apps miss?", short: "findings" },
+  { href: "/findings", label: "What do apps miss?", short: "findings" },
   { href: "/faq", label: "Frequently asked questions", short: "faq" },
 ];
 

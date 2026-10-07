@@ -12,7 +12,7 @@ import Scrolly from "./Scrolly";
 // alone), numbers rounded for a room. Kept out of search and the menus: /findings is the page of record.
 export const metadata: Metadata = {
   ...pageMeta(
-    "What do real apps miss?",
+    "What do apps miss?",
     `What Sloptic found when it graded ${ACTIVE.attrition.graded.toLocaleString("en-US")} apps in ${ACTIVE.provenance.n_events} hackathons.`,
     "/findings-demo",
   ),
@@ -103,10 +103,9 @@ export default function FindingsDemoPage() {
       <Page className="page-cover">
         <header className="story-head">
           <p className="story-kicker">Sloptic findings</p>
-          <h1 className="story-h1">Sloptic graded {graded} real apps, and not one was clean</h1>
+          <h1 className="story-h1">Sloptic graded {graded} apps and none were clean</h1>
           <p className="story-dek">
-            What Sloptic found when it graded apps from {F.provenance.n_events} hackathons: the slop teams miss, who
-            ships it, and whether winning makes a difference.
+            What Sloptic found when it graded apps from {F.provenance.n_events} hackathons
           </p>
           <p className="story-byline">By Ian Sun · October 7, 2026</p>
         </header>
@@ -117,7 +116,7 @@ export default function FindingsDemoPage() {
           <aside className="story-key">
             <p className="story-key-head">Key findings</p>
             <ul>
-              <li>Not one of the {graded} apps scored a clean 0.</li>
+              <li>No apps scored 0.</li>
               <li>{csp}% have no content security policy and {a11y}% have accessibility issues.</li>
               <li>Almost 30% of app links were already dead, and nearly half past 18 months.</li>
               <li>Hackathon winners are no cleaner than everyone else, and their apps are heavier.</li>

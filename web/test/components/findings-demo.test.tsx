@@ -20,7 +20,7 @@ describe("the findings investigation", () => {
   });
 
   it("rounds the corpus for a room", () => {
-    expect(html).toContain("graded 1,500+ real apps");
+    expect(html).toContain("graded 1,500+ apps");
     expect(html).toContain("98% have no content security policy");
     expect(html).not.toContain("1,579");
   });

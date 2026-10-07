@@ -96,9 +96,10 @@ export default function AboutPage() {
       <section className="section">
         <h2 className="section-head">Why not a scanner?</h2>
         <p className="section-intro">
-          Most tools go deep on one area: Burp Suite and Nuclei on security, PageSpeed Insights on speed,
-          WAVE on accessibility. Sloptic goes wide instead. It checks all four areas in one pass,
-          including whether the app works at all, and compares the result against real apps.
+          Most tools go deep on one area. For example, Burp Suite and Nuclei are security tools, 
+          PageSpeed Insights evaluate performance, and WAVE checks accessibility. Sloptic goes wide and 
+          checks all four areas in one pass,
+          including app functionality, and compares the result against other apps.
         </p>
         <div className="table-scroll">
           <table className="compare-table">

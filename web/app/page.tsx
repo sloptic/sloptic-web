@@ -134,7 +134,7 @@ export default function Home() {
           </p>
           <p className="what-text">
             Each failure comes with how to fix it, a prompt for your AI assistant, and a link to the
-            tool that goes deeper. Sloptic also compares your score against real apps it has graded.
+            tool that goes deeper. Sloptic also compares your score against other apps it has graded.
           </p>
           {/* The builder's seat (3.0 handoff): UNDER the definition, never in place of it, because it
               explains why teams miss slop rather than saying what slop is. The handoff's sentence,

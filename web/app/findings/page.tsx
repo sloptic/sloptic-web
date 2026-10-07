@@ -9,7 +9,7 @@ import { PROBE_FACTS, REPORT_URL, probeName } from "@/lib/checks";
 
 // Read from the corpus, like every other number on this page, so it moves when the corpus does.
 export const metadata: Metadata = pageMeta(
-  "What do real apps miss?",
+  "What do apps miss?",
   `What Sloptic found when it graded ${ACTIVE.attrition.graded.toLocaleString("en-US")} apps in ${ACTIVE.provenance.n_events} hackathons.`,
   "/findings",
 );
@@ -182,7 +182,7 @@ export default function FindingsPage({ searchParams }: { searchParams?: { grades
   return (
     <>
       <div className="page-head">
-        <h1>What do real apps miss?</h1>
+        <h1>What do apps miss?</h1>
         <p className="page-lead">
           When Sloptic graded {A.graded.toLocaleString()} apps in {F.provenance.n_events} hackathons, it found that...
         </p>
