@@ -63,9 +63,9 @@ function Versus({ rows, max }: { rows: { who: string; v: number; hot?: boolean }
   );
 }
 
-function Question({ kicker, children }: { kicker: string; children: string }) {
+function Question({ id, kicker, children }: { id: string; kicker: string; children: string }) {
   return (
-    <section className="scene q">
+    <section className="scene q" id={id}>
       <Reveal>
         <p className="sc-kicker">{kicker}</p>
         <h2 className="sc-question">{children}</h2>
@@ -101,7 +101,7 @@ export default function FindingsDemoPage() {
         </p>
       </section>
 
-      <Question kicker="question">Is any app clean?</Question>
+      <Question id="clean" kicker="question">Is any app clean?</Question>
       <section className="scene">
         <Reveal>
           <p className="sc-kicker">nothing is clean</p>
@@ -119,7 +119,7 @@ export default function FindingsDemoPage() {
         </Reveal>
       </section>
 
-      <Question kicker="question">What do teams miss?</Question>
+      <Question id="miss" kicker="question">What do teams miss?</Question>
       <section className="scene">
         <div className="sc-stats">
           <Reveal>
@@ -143,7 +143,7 @@ export default function FindingsDemoPage() {
         </Reveal>
       </section>
 
-      <Question kicker="question">Are AI-built apps sloppier?</Question>
+      <Question id="ai-builders" kicker="question">Are AI-built apps sloppier?</Question>
       <section className="scene">
         <Reveal>
           <p className="sc-answer">Not overall.</p>
@@ -174,7 +174,7 @@ export default function FindingsDemoPage() {
         </Reveal>
       </section>
 
-      <Question kicker="question">Are hackathon winners cleaner?</Question>
+      <Question id="winners" kicker="question">Are hackathon winners cleaner?</Question>
       <section className="scene">
         <Reveal>
           <p className="sc-answer">No, but not dirtier either.</p>
@@ -211,7 +211,7 @@ export default function FindingsDemoPage() {
         </Reveal>
       </section>
 
-      <Question kicker="question">Are faster apps cleaner?</Question>
+      <Question id="speed" kicker="question">Are faster apps cleaner?</Question>
       <section className="scene">
         <Reveal>
           <p className="sc-answer">Not exactly.</p>
@@ -223,7 +223,7 @@ export default function FindingsDemoPage() {
         </Reveal>
       </section>
 
-      <Question kicker="question">Does the hackathon matter?</Question>
+      <Question id="hackathons" kicker="question">Does the hackathon matter?</Question>
       <section className="scene">
         <Reveal>
           <span className="sc-fig accent"><Count to={Number(spread.toFixed(1))} decimals={1} suffix="×" /></span>
@@ -237,7 +237,7 @@ export default function FindingsDemoPage() {
         </Reveal>
       </section>
 
-      <Question kicker="question">How many are exploitable?</Question>
+      <Question id="exploitable" kicker="question">How many are exploitable?</Question>
       <section className="scene">
         <Reveal>
           <p className="sc-answer">Only a few.</p>
