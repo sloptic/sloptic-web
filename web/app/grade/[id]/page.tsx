@@ -521,7 +521,7 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
           verifiedOwner: false,
         });
         return card ? (
-          <ShareControls gradeId={view.id} card={card} claimed={view.claimed} expiresAt={view.expires_at} />
+          <ShareControls gradeId={view.id} card={card} />
         ) : null;
       })()}
 

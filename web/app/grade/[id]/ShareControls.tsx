@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { daysUntil } from "@/lib/retention";
 import { shareTargets, shareText, shareTitle, type ShareCard } from "@/lib/share";
 
 /** Sharing a score, on the report.
@@ -14,17 +13,7 @@ import { shareTargets, shareText, shareTitle, type ShareCard } from "@/lib/share
  *  The share link is fetched when the controls mount, not on click, so each click stays inside its
  *  own user gesture. Safari refuses navigator.share and clipboard writes that come after an await.
  */
-export default function ShareControls({
-  gradeId,
-  card,
-  claimed,
-  expiresAt,
-}: {
-  gradeId: string;
-  card: ShareCard;
-  claimed?: boolean;
-  expiresAt?: string | null;
-}) {
+export default function ShareControls({ gradeId, card }: { gradeId: string; card: ShareCard }) {
   const [url, setUrl] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const [open, setOpen] = useState(false);
@@ -88,8 +77,6 @@ export default function ShareControls({
     }
     setOpen((o) => !o);
   }
-
-  const days = !claimed && expiresAt ? daysUntil(new Date(expiresAt)) : null;
 
   return (
     <div className="share">

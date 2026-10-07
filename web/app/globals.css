@@ -4202,11 +4202,6 @@ h1.report-url {
   background: var(--paper);
   color: var(--ink);
 }
-.share-note {
-  margin: 0.5rem 0 0;
-  font-size: 0.82rem;
-  color: var(--muted);
-}
 .share-manual {
   display: block;
   width: 100%;

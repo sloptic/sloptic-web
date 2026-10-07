@@ -46,7 +46,7 @@ async function ready() {
 describe("ShareControls", () => {
   it("asks for this report's share link once, when it mounts", async () => {
     mockShare();
-    render(<ShareControls gradeId={ID} card={CARD} claimed />);
+    render(<ShareControls gradeId={ID} card={CARD} />);
     await ready();
     expect(fetch).toHaveBeenCalledTimes(1);
     expect((fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0]).toBe(`/api/grade/${ID}/share`);
@@ -54,7 +54,7 @@ describe("ShareControls", () => {
 
   it("copies the share link, never the report's URL", async () => {
     mockShare();
-    render(<ShareControls gradeId={ID} card={CARD} claimed />);
+    render(<ShareControls gradeId={ID} card={CARD} />);
     await ready();
     fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(SHARE_URL));
@@ -63,7 +63,7 @@ describe("ShareControls", () => {
 
   it("opens a menu of the platforms on a desktop, every link carrying the share link", async () => {
     mockShare();
-    const { container } = render(<ShareControls gradeId={ID} card={CARD} claimed />);
+    const { container } = render(<ShareControls gradeId={ID} card={CARD} />);
     await ready();
     const toggle = screen.getByRole("button", { name: /Share/ });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -84,33 +84,23 @@ describe("ShareControls", () => {
 
   it("closes the menu on Escape", async () => {
     mockShare();
-    render(<ShareControls gradeId={ID} card={CARD} claimed />);
+    render(<ShareControls gradeId={ID} card={CARD} />);
     await ready();
     fireEvent.click(screen.getByRole("button", { name: /Share/ }));
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.getByRole("button", { name: /Share/ })).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("says when the link stops working, for a report no account keeps", async () => {
+  it("adds no note under the buttons, whoever keeps the report", async () => {
     mockShare();
-    const in10 = new Date(Date.now() + 10.5 * 86_400_000).toISOString();
-    render(<ShareControls gradeId={ID} card={CARD} claimed={false} expiresAt={in10} />);
+    render(<ShareControls gradeId={ID} card={CARD} />);
     await ready();
-    expect(screen.getByText(/It stops working in 10 days, with the report\./)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Sign in to keep it" })).toHaveAttribute("href", "/grades");
-  });
-
-  it("says nothing about expiry for a report an account keeps", async () => {
-    mockShare();
-    render(<ShareControls gradeId={ID} card={CARD} claimed expiresAt={null} />);
-    await ready();
-    expect(screen.queryByText(/stops working/)).toBeNull();
-    expect(screen.getByText("The link shows the score, not the report.")).toBeInTheDocument();
+    expect(screen.queryByText(/stops working|shows the score, not the report/)).toBeNull();
   });
 
   it("renders nothing when there is no share link to give", async () => {
     mockShare(503);
-    const { container } = render(<ShareControls gradeId={ID} card={CARD} claimed />);
+    const { container } = render(<ShareControls gradeId={ID} card={CARD} />);
     await waitFor(() => expect(container.querySelector(".share")).toBeNull());
   });
 });
