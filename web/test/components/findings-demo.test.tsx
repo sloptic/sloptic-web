@@ -11,7 +11,7 @@ describe("the findings investigation", () => {
   const html = renderToStaticMarkup(<FindingsDemoPage />);
 
   it("tells the winners finding in order, in the pinned chart's steps", () => {
-    const q = html.indexOf("Are winners cleaner?");
+    const q = html.indexOf("Are hackathon winners cleaner?");
     expect(q).toBeGreaterThan(-1);
     const a = html.indexOf("No, but not dirtier either.");
     const b = html.indexOf("But speed does differ");

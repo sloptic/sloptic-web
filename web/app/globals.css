@@ -4308,9 +4308,42 @@ h1.report-url {
 .story {
   --serif: var(--font-serif), Georgia, serif;
 }
+/* Page by page: every page fills the screen and the scroll snaps to the next, so a scroll, the space
+   bar or a presentation clicker turns exactly one page. Scoped to the page that carries .story-snap. */
+:root:has(.story-snap) {
+  scroll-snap-type: y mandatory;
+}
+.page {
+  --page-w: min(64rem, calc(100vw - 2.5rem));
+  width: var(--page-w);
+  margin-left: calc((100% - var(--page-w)) / 2);
+  min-height: 100svh;
+  box-sizing: border-box;
+  padding: 7vh 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  scroll-snap-align: start;
+}
+.page > .reveal,
+.page > header {
+  max-width: 52rem;
+}
+.story-q {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(2.6rem, 7vw, 5.25rem);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  margin: 0;
+  max-width: 15ch;
+}
+.page-end .cta-row {
+  margin: 2rem 0 2.5rem;
+}
 .story-head {
-  max-width: 40rem;
-  margin: 1rem 0 2.5rem;
+  max-width: 44rem;
+  margin: 0;
 }
 .story-kicker {
   font-family: var(--font-mono);
@@ -4343,12 +4376,12 @@ h1.report-url {
   border-top: 1px solid var(--line);
 }
 .story-key {
-  max-width: 40rem;
+  max-width: 44rem;
   background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
-  padding: 1.1rem 1.4rem 1.2rem;
-  margin: 0 0 3.5rem;
+  padding: 1.4rem 1.6rem 1.5rem;
+  margin: 0;
 }
 .story-key-head {
   font-family: var(--font-mono);
@@ -4359,9 +4392,9 @@ h1.report-url {
 }
 .story-key ul {
   margin: 0;
-  padding-left: 1.1rem;
+  padding-left: 1.2rem;
   font-family: var(--serif);
-  font-size: 1.08rem;
+  font-size: clamp(1.15rem, 2.2vw, 1.45rem);
   line-height: 1.5;
 }
 .story-key li + li {
@@ -4433,14 +4466,10 @@ h1.report-url {
   max-width: 22rem;
 }
 .story-method {
+  font-size: 1rem;
+  color: var(--ink-soft);
   border-top: 1px solid var(--line);
-  padding-top: 1.5rem;
-}
-.story-end {
-  padding: 2rem 0 1rem;
-}
-.story-end .cta-row {
-  margin-top: 1.5rem;
+  padding-top: 1.25rem;
 }
 
 /* Bars, shared by the pinned charts and the common-slop figure. */
@@ -4502,7 +4531,7 @@ h1.report-url {
 }
 .scrolly-graphic {
   position: sticky;
-  top: 22vh;
+  top: calc(50svh - 8rem);
   align-self: start;
   margin: 0;
   background: var(--surface);
@@ -4533,13 +4562,11 @@ h1.report-url {
   margin: 1rem 0 0;
   min-height: 1.5em;
 }
-.scrolly-steps {
-  padding: 10vh 0 25vh;
-}
 .step {
-  min-height: 70vh;
+  min-height: 100svh;
   display: flex;
   align-items: center;
+  scroll-snap-align: start;
 }
 .step p {
   font-family: var(--serif);
@@ -4607,11 +4634,11 @@ h1.report-url {
     z-index: 2;
   }
   .scrolly-steps {
-    padding: 25vh 0 15vh;
+    margin-top: -18rem;
   }
   .step {
-    min-height: 75vh;
     align-items: flex-end;
+    padding-bottom: 8svh;
   }
   .scrolly-graphic .sbar {
     grid-template-columns: 6.5rem minmax(0, 1fr) 4.25rem;
