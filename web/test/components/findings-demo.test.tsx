@@ -26,9 +26,14 @@ describe("the findings investigation", () => {
   });
 
   it("keeps an anchor for each section, so a demo can jump to one", () => {
-    for (const id of ["clean", "miss", "ai-builders", "winners", "speed", "hackathons", "exploitable"]) {
+    for (const id of ["clean", "miss", "survive", "winners", "speed", "hackathons", "exploitable"]) {
       expect(html).toContain(`id="${id}"`);
     }
+  });
+
+  it("leaves the database finding out", () => {
+    expect(html).not.toMatch(/database|Supabase/);
+    expect(html).toContain("Do hackathon apps survive?");
   });
 
   it("renders every reveal visible, so the page reads with no script", () => {

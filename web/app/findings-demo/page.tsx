@@ -85,10 +85,6 @@ export default function FindingsDemoPage() {
   const W = F.winners;
   const SEV = F.severity;
   const LH = F.lighthouse;
-  const STAR = F.star_finding;
-  type BuilderRow = { builder: string; n: number; median: number };
-  const builder = (name: string) =>
-    ((F as { by_builder?: BuilderRow[] }).by_builder ?? []).find((b) => b.builder === name) ?? { builder: name, n: 0, median: 0 };
   const events = comparableEvents(MIN_EVENT_N, "active");
   const spread = events[0].median / events[events.length - 1].median;
   const graded = `${(Math.floor(A.graded / 100) * 100).toLocaleString("en-US")}+`;
@@ -122,8 +118,8 @@ export default function FindingsDemoPage() {
             <p className="story-key-head">Key findings</p>
             <ul>
               <li>Not one of the {graded} apps scored a clean 0.</li>
-              <li>{csp}% have no content security policy, and {a11y}% have an accessibility barrier.</li>
-              <li>AI-built apps left their database open about 22 times as often as hand built ones.</li>
+              <li>{csp}% have no content security policy and {a11y}% have accessibility issues.</li>
+              <li>Almost 30% of app links were already dead, and nearly half past 18 months.</li>
               <li>Hackathon winners are no cleaner than everyone else, and their apps are heavier.</li>
             </ul>
           </aside>
@@ -150,10 +146,10 @@ export default function FindingsDemoPage() {
       <Question id="miss" n={2}>What do teams miss?</Question>
       <Page>
         <Reveal>
-          <h2 className="story-h2">The slop nobody sees</h2>
+          <h2 className="story-h2">The slop that nobody sees are...</h2>
           <p className="story-p">
-            The most common kinds of slop are missing security headers, accessibility issues, and slow performance.
-            Most are invisible to the teams building the apps.
+            missing security headers, accessibility issues, and slow performance.
+            Most are invisible to the builders.
           </p>
         </Reveal>
         <Reveal delay={200}>
@@ -174,35 +170,41 @@ export default function FindingsDemoPage() {
         </Reveal>
       </Page>
 
-      <Question id="ai-builders" n={3}>Are AI-built apps sloppier?</Question>
+      {/* Link rot: CORPUS_REPORT.md 2.2 (sloptic-main). Of the 2,685 links handed to the grader, 800 were
+          dead before it could grade them, and the dead share grows with time since the event. /findings
+          counts the dead links under "What didn't get graded". */}
+      <Question id="survive" n={3}>Do hackathon apps survive?</Question>
       <Scrolly
         steps={[
           {
-            text: `Not overall. Lovable apps carry a median slop of ${r0(builder("lovable").median)} against ${r0(builder("hand built").median)} for hand built apps, a gap small enough to be chance.`,
-            chart: "median slop, lower is better",
-            max: 60,
+            text: "Not for long. Under three months after a hackathon, 15% of app links were already dead.",
+            chart: "app links that were dead, by time since the hackathon",
+            max: 50,
             rows: [
-              { who: "Lovable", v: builder("lovable").median, show: String(r0(builder("lovable").median)), hot: true },
-              { who: "hand built", v: builder("hand built").median, show: String(r0(builder("hand built").median)) },
+              { who: "under 3 months", v: 15, show: "15%", hot: true },
+              { who: "3 to 12 months", v: 0, show: "" },
+              { who: "over 18 months", v: 0, show: "" },
             ],
           },
           {
-            text: "Backends make up the difference, as Lovable and Bolt both offer Supabase as a built in database and AIs rarely configure it properly.",
-            chart: "left their database open",
-            max: 15,
+            text: "From three to twelve months, the share held near 29%, mostly free tiers that expired or apps that were taken down.",
+            chart: "app links that were dead, by time since the hackathon",
+            max: 50,
             rows: [
-              { who: "Lovable and Bolt", v: 13.4, show: "13%", hot: true },
-              { who: "hand built", v: 0.6, show: "under 1%" },
+              { who: "under 3 months", v: 15, show: "15%" },
+              { who: "3 to 12 months", v: 29, show: "29%", hot: true },
+              { who: "over 18 months", v: 0, show: "" },
             ],
           },
           {
-            text: "That means AI-built apps left their database open about 22 times as often as hand built apps.",
-            chart: "left their database open",
-            note: "about 22 times as often",
-            max: 15,
+            text: "Past eighteen months, it reached 48%. Nearly half of the apps were gone.",
+            chart: "app links that were dead, by time since the hackathon",
+            note: "almost 30% of all links were dead",
+            max: 50,
             rows: [
-              { who: "Lovable and Bolt", v: 13.4, show: "13%", hot: true },
-              { who: "hand built", v: 0.6, show: "under 1%" },
+              { who: "under 3 months", v: 15, show: "15%" },
+              { who: "3 to 12 months", v: 29, show: "29%" },
+              { who: "over 18 months", v: 48, show: "48%", hot: true },
             ],
           },
         ]}
@@ -277,8 +279,7 @@ export default function FindingsDemoPage() {
           </p>
           <p className="story-p">
             The largest class is a credential in the bundle, most often ({GEMINI_LIVE_APPS} apps) a Google API key
-            that can call the Gemini API. Next is an open Supabase or Firebase database, as {STAR.apps} apps lacked row
-            level security which allowed an anonymous client to read or write rows.
+            that can call the Gemini API.
           </p>
         </Reveal>
       </Page>
