@@ -187,7 +187,7 @@ export default function FindingsDemoPage() {
             ],
           },
           {
-            text: "From three to twelve months, the share held near 29%, mostly free tiers that expired or apps that were taken down.",
+            text: "From three to twelve months, the share held near 29%.",
             chart: "app links that were dead, by time since the hackathon",
             max: 50,
             rows: [
@@ -223,7 +223,7 @@ export default function FindingsDemoPage() {
             ],
           },
           {
-            text: "No, but not dirtier either. That gap can be chalked up to chance, as winners' apps crash, leak secrets and have nonfunctioning buttons at the same rates as everyone else.",
+            text: "No, but not dirtier either. Winners' apps crash, leak secrets and have nonfunctioning buttons at the same rates as everyone else.",
             chart: "median slop, lower is better",
             note: "about the same",
             max: 60,
@@ -249,9 +249,8 @@ export default function FindingsDemoPage() {
         <Reveal>
           <h2 className="story-h2">Not exactly</h2>
           <p className="story-p">
-            When we measured performance (via Lighthouse) against the slop without the performance axis, the
-            correlation was close enough to zero to call the two independent. A fast app is no more likely to be clean
-            everywhere else.
+            Speed and the rest of the slop are independent. A fast app is no more likely to be clean everywhere
+            else.
           </p>
         </Reveal>
       </Page>
@@ -292,11 +291,6 @@ export default function FindingsDemoPage() {
               Grade an app
             </a>
           </div>
-          <p className="story-p story-method">
-            Sloptic graded every app from the outside, the way any visitor sees it, against the same checks. Every
-            number here is on <a href="/findings">What do real apps miss?</a>, and the method is on{" "}
-            <a href="/methodology">How Sloptic finds slop</a>.
-          </p>
         </Reveal>
       </Page>
     </article>

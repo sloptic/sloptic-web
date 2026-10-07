@@ -4339,7 +4339,7 @@ h1.report-url {
   max-width: 15ch;
 }
 .page-end .cta-row {
-  margin: 2rem 0 2.5rem;
+  margin: 2rem 0 0;
 }
 .story-head {
   max-width: 44rem;
@@ -4464,12 +4464,6 @@ h1.report-url {
   font-size: 0.95rem;
   color: var(--muted);
   max-width: 22rem;
-}
-.story-method {
-  font-size: 1rem;
-  color: var(--ink-soft);
-  border-top: 1px solid var(--line);
-  padding-top: 1.25rem;
 }
 
 /* Bars, shared by the pinned charts and the common-slop figure. */
