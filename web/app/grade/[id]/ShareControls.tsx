@@ -130,18 +130,6 @@ export default function ShareControls({
       {manual && url && (
         <input className="share-manual" readOnly value={url} aria-label="Share link" onFocus={(e) => e.target.select()} />
       )}
-      <p className="share-note">
-        The link shows the score, not the report.
-        {days !== null && (
-          <>
-            {" "}
-            {days === 0
-              ? "It stops working today, with the report."
-              : `It stops working in ${days} day${days === 1 ? "" : "s"}, with the report.`}{" "}
-            <a href="/grades">Sign in to keep it</a>.
-          </>
-        )}
-      </p>
     </div>
   );
 }
