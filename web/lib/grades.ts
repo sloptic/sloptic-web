@@ -19,7 +19,7 @@ export function failureText(raw: string | null | undefined): string {
   if (s.startsWith("the grader process was killed"))
     return "The grade stopped before it finished. Grading it again usually works.";
   if (s.startsWith("grading did not finish within"))
-    return `${s.charAt(0).toUpperCase()}${s.slice(1)}. Very large apps can exceed the time one grade gets.`;
+    return `${s.charAt(0).toUpperCase()}${s.slice(1)}. Large apps can exceed the time one grade gets.`;
   return s;
 }
 

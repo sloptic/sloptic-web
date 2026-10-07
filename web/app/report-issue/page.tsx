@@ -33,7 +33,7 @@ export default function ReportIssuePage() {
         <p className="section-intro">
           Because Sloptic reads an app from the outside like a visitor would, with no source code or spec, 
           it can get things wrong. Every DAST tool does. It can miss a control or deduct points for something you handle elsewhere 
-          or might actually be the correct behavior. Tell us and we will look.
+          or might be the correct behavior. Tell us and we will look.
         </p>
         <p className="section-intro">
           Email{" "}

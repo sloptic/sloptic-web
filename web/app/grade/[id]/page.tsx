@@ -856,7 +856,7 @@ function RankDetail({ r }: { r: GradeResult }) {
         {num(rk.categories_applied) !== null && (
           <li>
             <span className="k">{rk.categories_applied}</span>
-            <span className="v">different faults were actually testable.</span>
+            <span className="v">different faults were testable.</span>
           </li>
         )}
         {rep.attack_surface_coverage ? (

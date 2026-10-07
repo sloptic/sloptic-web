@@ -48,7 +48,7 @@ describe("failureText", () => {
 
   it("keeps the deadline the worker measured, as a sentence", () => {
     expect(failureText("grading did not finish within 15 minutes and was stopped")).toBe(
-      "Grading did not finish within 15 minutes and was stopped. Very large apps can exceed the time one grade gets."
+      "Grading did not finish within 15 minutes and was stopped. Large apps can exceed the time one grade gets."
     );
   });
 

@@ -22,7 +22,7 @@ export default function PrivacyPage() {
         <p className="callout-label">draft</p>
         <p>
           A working draft, not reviewed by a lawyer. Every retention window below is the one the code
-          actually enforces.
+          enforces.
         </p>
       </div>
 

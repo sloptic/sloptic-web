@@ -51,7 +51,7 @@ export default function AboutPage() {
         </p>
         <p className="section-intro">
           It's tempting to call these minor, since none of them are break-ins. Yet you don't need a break-in
-          to frustrate a user. Many apps fail in such frustrating ways, such as dead buttons, crashes, 
+          to frustrate a user. Many apps fail in other ways, such as dead buttons, crashes, 
           and pages that take "forever" to load.
           {" "}
           <a
@@ -66,7 +66,7 @@ export default function AboutPage() {
         <p className="section-intro">
           <em>Oh, and concerning the break-ins, {" "}
           <a href="https://www.veracode.com/blog/genai-code-security-report/" target="_blank" rel="noopener noreferrer">according to Veracode</a>
-          , AI produces vulnerable code 45% of the time, which is alarmingly high!</em>
+          , AI produces vulnerable code 45% of the time!</em>
         </p>
         <p className="section-intro">
           These problems persist year after year. And yet nobody bothers to check because nobody is rewarded for it. 

@@ -239,7 +239,7 @@ export default function FindingsPage({ searchParams }: { searchParams?: { grades
         <h2 className="section-head">What was the slop like?</h2>
         <p className="section-intro">
           Different slop have different severities. While most are chronic and indicative of hygiene, 
-          quite a few apps have serious or even critical problems. The table below shows the 
+          quite a few apps have serious or critical problems. The table below shows the 
           number of instances of slop of each kind and how many apps have what:
         </p>
         <Bands SEV={SEV} />

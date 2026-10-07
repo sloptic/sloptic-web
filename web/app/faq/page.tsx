@@ -156,8 +156,8 @@ export default function FaqPage() {
           <li>
             <span className="k">a population</span>
             <span className="v">
-              More than 1,600 real deployed apps, which shows how often a fault occurs but not
-              whether one actually exists or not.
+              More than 1,600 deployed apps, which shows how often a fault occurs but not
+              whether one exists or not.
             </span>
           </li>
         </ul>

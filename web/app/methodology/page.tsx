@@ -32,8 +32,8 @@ export default function MethodologyPage() {
         <h2 className="section-head">What counts as slop?</h2>
         <p className="section-intro">
           Sloptic defines &quot;slop&quot; as <em>issues that no app should ever have no matter what</em>.
-          Some apps may exhibit behavior that is wrong for this particular app but may be correct for 
-          another app, or even a different use case. For example, a table any visitor can read can be right for a marketplace's
+          Some apps may exhibit behavior that is wrong for this app but may be correct for 
+          another app, or a different use case. For example, a table any visitor can read can be right for a marketplace's
           product listing but wrong for a user database. Allowing duplicates may be correct for logs but incorrect for payment transactions. 
         </p>
         <p className="section-intro">
@@ -45,7 +45,7 @@ export default function MethodologyPage() {
           You might disagree with this definition of slop, but Sloptic operates this way so it can compare
           two apps against each other, which depends on an issue being an issue in every app. Without this 
           criterion, we run into the oracle problem, which states that there is no way to determine correct
-          behavior without knowing what &quot;correct&quot; even means.
+          behavior without knowing what &quot;correct&quot; means.
         </p>
       </section>
 

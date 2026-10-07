@@ -64,10 +64,10 @@ export const AREAS: { id: Area; label: string; probes: number; passive: number; 
 /** What the landing says about each area. Editorial, so it lives here rather than in the catalog. */
 export const AREA_BLURBS: Record<Area, string> = {
   security:
-    "Insecure apps are a goldmine for attackers to steal your users' data or even your own. To ensure security, Sloptic checks for missing defenses, bad access control, secrets leakage, and more, adhering to the OWASP Top 10 and ASVS.",
+    "Insecure apps are a goldmine for attackers to steal your users' data or your own. To ensure security, Sloptic checks for missing defenses, bad access control, secrets leakage, and more, adhering to the OWASP Top 10 and ASVS.",
   qa: "Apps that are unusable or crash unexpectedly frustrate users, so Sloptic checks for these and other quality issues that degrade the user experience.",
   accessibility:
-    "Inaccessible apps fail those users with disabilities, impairments, or even in bad environments. Sloptic checks your app to ensure it meets the bare minimum accessibility standards as stipulated by WCAG 2 A/AA, including (but not limited to) color contrast, button labeling, image alt text, and viewports.",
+    "Inaccessible apps fail those users with disabilities, impairments, or in bad environments. Sloptic checks your app to ensure it meets the minimum accessibility standards as stipulated by WCAG 2 A/AA, including (but not limited to) color contrast, button labeling, image alt text, and viewports.",
   performance:
     "Most people will not wait for a slow app, so Sloptic uses Lighthouse to measure your app's load speed.",
 };

@@ -21,7 +21,7 @@ export default function TermsPage() {
       <div className="callout" data-tone="warn">
         <p className="callout-label">draft</p>
         <p>
-          This is a working draft, not reviewed by a lawyer. It describes what Sloptic actually does
+          This is a working draft, not reviewed by a lawyer. It describes what Sloptic does
           today and is written for accuracy. The sections on testing sites you
           do not own, and on liability, are the ones a lawyer should see before this is relied on.
         </p>
