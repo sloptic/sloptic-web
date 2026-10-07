@@ -18,8 +18,8 @@ export const metadata: Metadata = pageMeta(
 // read what any visitor sees, curve passive-2026.2) are different measurements of the same apps, so
 // the page shows one at a time and never mixes them. Both figure files have the same shape; a few
 // numbers are transcribed from CORPUS_REPORT.md and exist for full grades only (the winners p values,
-// "4 in 5" low contrast, the exploitable classes), so the passive view leaves them out rather than
-// borrowing them.
+// the exploitable classes), so the passive view leaves them out rather than borrowing them. "4 in 5"
+// low contrast shows in both: the accessibility checks are passive, so both grades run the same ones.
 type Mode = "active" | "passive";
 type Figures = typeof ACTIVE;
 const FIGURES: Record<Mode, Figures> = { active: ACTIVE, passive: PASSIVE as Figures };
@@ -253,7 +253,7 @@ export default function FindingsPage({ searchParams }: { searchParams?: { grades
       {/* The two findings a team rarely sees coming: common, and invisible from the team's own laptop.
           Every number is read from the corpus except "4 in 5", which is transcribed from sloptic-main
           CORPUS_REPORT.md 4.8 (contrast is 80.5% of apps with an accessibility violation); the figures
-          file does not carry it. */}
+          file does not carry it. It holds for passive grades too, which run the same accessibility checks. */}
       <section className="section">
         <h2 className="section-head">What do teams miss?</h2>
         <p className="section-intro">

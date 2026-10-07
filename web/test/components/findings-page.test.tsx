@@ -21,7 +21,9 @@ describe("the findings page", () => {
     const html = render("passive");
     expect(html).toContain(`graded ${PASSIVE.attrition.graded.toLocaleString()} apps`);
     expect(html).toContain(`median ${PASSIVE.distribution.median}`);
-    for (const fullOnly of ["p = 0.22", "p = 0.003", "4 in 5", "Gemini"]) expect(html).not.toContain(fullOnly);
+    for (const fullOnly of ["p = 0.22", "p = 0.003", "Gemini"]) expect(html).not.toContain(fullOnly);
+    // The accessibility checks are passive, so the low-contrast share holds for both grades.
+    expect(html).toContain("About 4 in 5 of those have low contrast text.");
     expect(html).toContain("a passive grade can see");
   });
 
