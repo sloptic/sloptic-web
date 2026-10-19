@@ -451,11 +451,6 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
     <section className="report">
       {view.event && <EventCrumb slug={view.event.slug} />}
       <h1 className="report-url">{view.origin ?? view.url}</h1>
-      {/* A grade is pinned to the origin, so a submitted path would be a claim about a page this
-          report never singles out. */}
-      {view.origin && view.origin !== view.url.replace(/\/+$/, "") && (
-        <p className="section-intro fineprint">Submitted as {view.url}. A grade covers the whole origin.</p>
-      )}
 
       {/* One band for the whole verdict: score, placement, the bars, and what qualifies it. The
           findings and their evidence stay below, unchanged; nothing up here explains a fault. */}
@@ -464,26 +459,11 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
         cleanerThanPct={r.ranking?.cleaner_than_pct ?? null}
         mode={(r.mode ?? "passive") === "active" ? "active" : "passive"}
         rows={rows}
-        referenceMark={!!r.ranking?.reference}
         footer={
           <>
-            {r.ranking?.reference || !r.ruler ? (
-              <div>
-                {r.ranking?.reference && (
-                  <p className="band-footnote">* compared against {r.ranking.reference}.</p>
-                )}
-                {/* The grader's own rule for a record with no stamp: it predates the stamp, so it is
-                    never shown as the current ruler. Its percentile was placed on the old curve too,
-                    which is the part a reader would otherwise compare against a fresh grade. */}
-                {!r.ruler && (
-                  <p className="band-footnote">
-                    Graded before Sloptic 3.0, so this score does not compare to a current one.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <span />
-            )}
+            {/* No footnotes under the score. A grade from before the ruler stamp still says so, in
+                the "ruler unspecified" tag beside it, so it is never read as current. */}
+            <span />
             <div className="score-chips">
               <span className="tag">{r.mode ?? "passive"}</span>
               {/* The ruler this grade was scored against, read from the stamp the grader wrote at grade
@@ -595,7 +575,7 @@ function Withheld({ view, blocked, now, onResume }: { view: GradeView; blocked: 
             <ResumeRun event={view.event} onResumed={onResume} />
           </>
         ) : (
-          (retry ?? "Grading again later may get through.")
+          (retry ?? "Try grading it again later.")
         )}
         </p>
       </div>
@@ -814,7 +794,6 @@ function RankDetail({ r }: { r: GradeResult }) {
   const applicable = num(rep.probes_applicable);
   const cleanRate = num(rep.clean_rate);
   const untested = (rep.untested_families as string[] | undefined) ?? [];
-  const limited = rep.status === "limited_engagement";
 
   return (
     <>
@@ -828,8 +807,7 @@ function RankDetail({ r }: { r: GradeResult }) {
         <li>
           <span className="k">{fmtScore(worst)}</span>
           <span className="v">
-            worst single finding. Apps with worse single findings tend to have significant issues that
-            degrade the user experience or allow bad actors easy unauthorized access.
+            worst single finding.
           </span>
         </li>
         {/* Zero exposure is a real reading (nothing in the battery applied), and dividing by it
@@ -849,7 +827,6 @@ function RankDetail({ r }: { r: GradeResult }) {
             <span className="k">{applicable}</span>
             <span className="v">
               checks applied out of the {r.passive_probe_count ?? TOTALS.passive} in this battery.
-              {limited ? "*" : ""}
             </span>
           </li>
         )}
@@ -869,13 +846,6 @@ function RankDetail({ r }: { r: GradeResult }) {
           </li>
         ) : null}
       </ul>
-      {/* Only when it applies. A footnote explaining Limited Engagement under a grade that ran the
-          whole battery is a note about something that did not happen. */}
-      {limited && (
-        <p className="section-intro fineprint">
-          *Marked for limited engagement: too few checks applied for a fair read.
-        </p>
-      )}
     </>
   );
 }
