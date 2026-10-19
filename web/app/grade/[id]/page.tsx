@@ -1136,9 +1136,8 @@ function Findings({
                         <div className="row2">
                           <span className="term">What we saw instead</span>
                           <p className="desc">
-                            This is a rather sensitive finding which lets attackers easily
-                            able to exploit your app, so we are not showing it to everyone.{" "}
-                            <a href="/verify">Verify you own the app</a> to see it and remediate this
+                            This is a rather sensitive finding that could help an attacker, so we are not showing this to everyone.{" "}
+                            <a href="/verify">Verify your ownership</a> to see it and remediate this
                             issue ASAP.
                           </p>
                         </div>
