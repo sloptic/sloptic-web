@@ -1196,6 +1196,10 @@ section.report h2 {
   gap: 0.75rem;
   flex-wrap: wrap;
 }
+/* The board's export button sits between two paragraphs, so it needs room below as well as above. */
+.cta-row.board-export {
+  margin: 1.25rem 0 1.5rem;
+}
 .button {
   display: inline-block;
   /* An <a class="button"> gets this from the browser; a real <button> does not, so every actual

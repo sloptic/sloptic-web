@@ -78,7 +78,7 @@ export default function BoardStats({ rows }: { rows: BoardRow[] }) {
       </figure>
 
       <p className="section-intro fineprint">
-        Middle half of the field between {f1(q1)} and {f1(q3)}. {n} entries graded.
+        Middle half of the field between {f1(q1)} and {f1(q3)}. {n} ranked entries.
       </p>
     </div>
   );

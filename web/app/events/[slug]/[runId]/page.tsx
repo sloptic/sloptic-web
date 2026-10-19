@@ -300,7 +300,8 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         </p>
       <h1>{run.slug}</h1>
         <p className="page-lead">
-          {ranked.length + gated.length} of {total} entries {run.mode}ly graded.
+          {ranked.length + gated.length} of {total} entries {run.mode}ly graded
+          {gated.length > 0 ? `: ${ranked.length} ranked, ${gated.length} not ranked.` : "."}
           {run.paused
             ? " Grading paused by the organizer."
             : pending.length > 0
@@ -332,7 +333,7 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         </p>
         {/* Above the table rather than below it: an organizer who has come here to get the field out
             should not have to page to the end of it first. */}
-        <div className="cta-row">
+        <div className="cta-row board-export">
           <ExportCsv
             rows={csvRows}
             slug={run.slug}
@@ -395,8 +396,9 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         <section className="section">
           <h2 className="section-head">Not ranked</h2>
           <p className="section-intro">
-            These carry a finding an attacker could use today, such as a served secret or an open
-            backend. A low score does not make up for one, therefore they are not ranked.
+            These have a finding that helps an attacker, such as exposed secrets or injections.
+            Even if they had a low score otherwise, it would not change that fact. Thus they are not
+            ranked.
           </p>
           <AsideTable
             rows={gated.map((r) => ({
