@@ -170,7 +170,7 @@ describe("a board that straddles a ruler change", () => {
     // regraded after holds both, ranked against each other with nothing in the table to say so.
     twoGrades({ full: "2026.4", passive: "passive-2026.2" }, null);
     const html = await markup();
-    expect(html).toContain("more than one version of Sloptic");
+    expect(html).toContain("multiple versions of Sloptic");
     expect(html).toContain("passive-2026.2");
     expect(html).toContain("before 3.0");
   });
@@ -178,6 +178,6 @@ describe("a board that straddles a ruler change", () => {
   it("says nothing when every score is on one ruler", async () => {
     const r3 = { full: "2026.4", passive: "passive-2026.2" };
     twoGrades(r3, r3);
-    expect(await markup()).not.toContain("more than one version of Sloptic");
+    expect(await markup()).not.toContain("multiple versions of Sloptic");
   });
 });
