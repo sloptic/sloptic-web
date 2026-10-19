@@ -522,7 +522,7 @@ describe("the run card's chips", () => {
 
   it("notes an incomplete gallery, so the field is not read as the whole one", () => {
     show({ initialRuns: [run({ status: "ready", gallery_complete: false, event_entries: [entry()] })] });
-    expect(screen.getByText("Incomplete gallery, so this is not the whole field.")).toBeInTheDocument();
+    expect(screen.getByText("Incomplete gallery")).toBeInTheDocument();
   });
 
   it("says nothing about the gallery when it came back whole", () => {
@@ -534,7 +534,7 @@ describe("the run card's chips", () => {
     show({
       initialRuns: [run({ status: "ready", refresh_new_submissions: 0, refresh_modified_submissions: 0, event_entries: [entry()] })],
     });
-    expect(screen.getByText(/the gallery has not changed/)).toBeInTheDocument();
+    expect(screen.getByText("The last refresh found nothing new.")).toBeInTheDocument();
   });
 
   it("counts one new submission in the singular", () => {

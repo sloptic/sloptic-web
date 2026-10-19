@@ -61,9 +61,9 @@ function retryStatus(
   if (retryDueAt) {
     const mins = Math.max(1, Math.round((Date.parse(retryDueAt) - now) / 60000));
     if (Date.parse(retryDueAt) - now > 45000) {
-      return `Next attempt in about ${mins} min.`;
+      return `Next attempt in about ${mins} min`;
     }
-    return "Next attempt runs shortly.";
+    return "Next attempt soon";
   }
   if ((retryPasses ?? 0) > 0 && blocked > 0) {
     return `Still blocked after ${retryPasses} more ${retryPasses === 1 ? "try" : "tries"}.`;
@@ -283,7 +283,7 @@ export default function GradePage({ params }: { params: { id: string } }) {
             <ResumeRun event={view.event} onResumed={() => pollRef.current()} />
           </p>
         ) : (
-          <p className="note">This takes a few minutes. This page updates itself.</p>
+          <p className="note">This will take a few minutes. Feel free to refresh or exit the page.</p>
         )}
       </section>
     );
@@ -473,8 +473,8 @@ function Report({ view, now, onResume }: { view: GradeView; now: number; onResum
                 className="tag"
                 title={
                   r.ruler
-                    ? "The frozen reference this grade was scored and ranked against."
-                    : "This grade predates ruler labelling and does not compare to a current score."
+                    ? "The reference that this grade was ranked against."
+                    : "This grade predates ruler labelling and therefore doesn't compare."
                 }
               >
                 {r.ruler
@@ -676,7 +676,7 @@ function ChallengeNote({
 function DisputeLink() {
   return (
     <p className="section-intro fineprint">
-      Think this grade is wrong? <a href="/report-issue">Tell us which check and why</a>.
+      Think this grade is wrong? <a href="/report-issue">Tell us which check(s) failed and why</a>.
     </p>
   );
 }
@@ -724,8 +724,8 @@ function ReportKeep({ view }: { view: GradeView }) {
       {known && view.claimed ? "Saved to your account." : null}
       {known && !view.claimed && days !== null
         ? days === 0
-          ? "This report is deleted today unless you sign in and save it."
-          : `This report is deleted in ${days} day${days === 1 ? "" : "s"} unless you sign in and save it.`
+          ? "(This report is deleted today unless you sign in and save it)"
+          : `(This report is deleted in ${days} day${days === 1 ? "" : "s"} unless you sign in and save it)`
         : null}
       {known && !view.claimed ? (
         <>
@@ -1004,18 +1004,9 @@ function Surface({ surface }: { surface: Record<string, unknown> | null }) {
                 show more ({more})
               </button>
             )}
-            {current.total !== null && current.total > current.items.length && (
-              // The grader keeps a capped list, so a big app has more than it recorded. Saying so
-              // beats showing forty and implying that was all of them.
-              <p className="fineprint">
-                {current.items.length} of {current.total} recorded.
-              </p>
-            )}
           </>
         ) : (
-          <p className="fineprint">
-            {current.total ? `${current.total} found. This grade did not record which ones.` : "None found."}
-          </p>
+          <p className="fineprint">None found.</p>
         )}
       </div>
     </details>
@@ -1145,9 +1136,10 @@ function Findings({
                         <div className="row2">
                           <span className="term">What we saw instead</span>
                           <p className="desc">
-                            Where this is, and how to reproduce it, is shown only to a verified owner of
-                            this app, since anyone holding this link could otherwise use it.{" "}
-                            <a href="/verify">Verify you own the app</a> to see it.
+                            This is a rather sensitive finding which lets attackers easily
+                            able to exploit your app, so we are not showing it to everyone.{" "}
+                            <a href="/verify">Verify you own the app</a> to see it and remediate this
+                            issue ASAP.
                           </p>
                         </div>
                       )}
@@ -1250,12 +1242,8 @@ function NotChecked({ origin, canGradeActively }: { origin: string; canGradeActi
   return (
     <div className="not-checked">
       <p>
-        A passive grade sees only what a visitor sees and does not run attacks or writes to the 
-        app. 
-      </p>
-      <p>
         {canGradeActively ? (
-          <>You have verified this app, so you can grade it actively above.</>
+          <>You have verified this app so you can grade it actively above.</>
         ) : platform ? (
           <>
             This app appears to be hosted on {platform}. Add a custom domain to allow full grading.{" "}

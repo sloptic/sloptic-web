@@ -323,8 +323,8 @@ export default async function BoardPage({ params }: { params: { slug: string; ru
         <h2 className="section-head">The board</h2>
         {mixedRulers && (
           <p className="section-intro closed-note">
-            This board holds scores from more than one version of Sloptic ({[...rulersOnBoard].join(", ")}),
-            and those do not compare. Grade the event again for a board on one ruler.
+            Note: This board contains scores from more than one version of Sloptic ({[...rulersOnBoard].join(", ")}).
+            Grade again on one version for better comparisons.
           </p>
         )}
         <p className="section-intro">
