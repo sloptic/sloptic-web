@@ -808,6 +808,9 @@ a {
   line-height: 1.65;
   color: var(--ink-soft);
 }
+.what-text + .what-text {
+  margin-top: 1rem;
+}
 .what-text a {
   color: var(--ink);
   text-decoration: underline;

@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { AREAS, AREA_BLURBS, categoriesFor } from "@/lib/checks";
 import { provisionalCleanerThan } from "@/lib/corpus";
 import ScoreBand, { fmtScore } from "./ScoreBand";
-import { SEAT_HREF } from "@/lib/seat";
 import { SAMPLE_SCORE, SAMPLE_ROWS, SAMPLE_FINDINGS, SAMPLE_PASSED, SAMPLE_FIX } from "@/lib/sample-grade";
 import { fixPrompt } from "@/lib/fix-prompt";
 import CopyFix from "./CopyFix";
@@ -126,22 +125,16 @@ export default function Home() {
         <div className="what-body">
           <h2 className="section-head">What is Sloptic?</h2>
           <p className="what-text">
-            Sloptic is a web app grader. It checks how much slop your web app has in four areas:
-            security, quality, accessibility and performance. Slop is anything no app should ship
-            with, like a leaked secret, a dead button, a control a screen reader can&apos;t use, or a
-            page that takes forever to load. So Sloptic can grade any app you point it at, no matter
-            what it does.
+            Sloptic is a web app grader. It checks how much "slop" your web app has in terms of
+            security, quality, accessibility and performance, and it penalizes things that no app should
+            ever have.
           </p>
           <p className="what-text">
-            Each failure comes with how to fix it, a prompt for your AI assistant, and a link to the
-            tool that goes deeper. Sloptic also compares your score against other apps it has graded.
+            Sloptic can be used by solo app builders to do a quick check of their app's reliability, 
+            and by hackathon organizers to rank apps on it. 
           </p>
-          {/* The builder's seat (3.0 handoff): UNDER the definition, never in place of it, because it
-              explains why teams miss slop rather than saying what slop is. The handoff's sentence,
-              verbatim. */}
           <p className="what-text">
-            Sloptic shows you your app from{" "}
-            <a href={SEAT_HREF}>the seats you never sit in</a>.
+            Learn more about how Sloptic grades{" "}<a href="/methodology">here</a>.
           </p>
         </div>
 
@@ -153,14 +146,14 @@ export default function Home() {
           <li className="flow-conn" aria-hidden />
           <li className="flow-box">
             <span className="n">02</span>
-            <p>Sloptic opens it in a browser and checks what any visitor sees.</p>
+            <p>Sloptic examines your app and checks for problems no app should have.</p>
           </li>
           <li className="flow-conn" aria-hidden />
           <li className="flow-box">
             <span className="n">03</span>
             <p>
-              You get a score, what failed, how to fix it, and a prompt to paste into your AI
-              assistant.
+              You get a report card consisting of your score, your standings, the issues Sloptic found, 
+              and how to remediate them (with an AI prompt you can copy/paste).
             </p>
           </li>
         </ol>
