@@ -77,8 +77,7 @@ export default function Home() {
       <section className="hero">
         <h1 className="lede">How much slop is in your app?</h1>
         <p className="deck">
-          Paste a link and Sloptic will score the slop in your app across security, quality,
-          accessibility and performance, then show you how to fix it. Lower is better.
+          Paste a link and Sloptic will score the slop in your app. Less is better.
         </p>
 
         <form onSubmit={submit} className="grade-form">
