@@ -420,7 +420,7 @@ a {
   line-height: 1.6;
   color: var(--ink-soft);
   max-width: 62ch;
-  margin: 0 0 1.75rem;
+  margin: 1.75rem 0;
 }
 .channels-note em {
   font-style: normal;
